@@ -7,6 +7,25 @@ if (!connectionString) {
   throw new Error('DATABASE_URL environment variable is required for PostgreSQL');
 }
 
+// Validate connection string format
+if (!connectionString.startsWith('postgresql://') && !connectionString.startsWith('postgres://')) {
+  console.error('❌ Invalid DATABASE_URL format. Expected: postgresql://user:password@host/dbname');
+  console.error('   Current value starts with:', connectionString.substring(0, 20) + '...');
+  throw new Error('DATABASE_URL must start with postgresql:// or postgres://');
+}
+
+// Log connection info (without password) for debugging
+try {
+  const url = new URL(connectionString);
+  console.log('🔌 Connecting to PostgreSQL:');
+  console.log('   Host:', url.hostname);
+  console.log('   Database:', url.pathname.substring(1));
+  console.log('   User:', url.username);
+} catch (e) {
+  console.error('❌ Failed to parse DATABASE_URL:', e.message);
+  throw new Error('Invalid DATABASE_URL format. Please check your connection string.');
+}
+
 // Create connection pool
 const pool = new Pool({
   connectionString: connectionString,
