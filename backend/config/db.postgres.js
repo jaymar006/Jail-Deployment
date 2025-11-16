@@ -1,16 +1,36 @@
 const { Pool } = require('pg');
 
 // Get database URL from environment variable (Neon provides this)
-const connectionString = process.env.DATABASE_URL;
+let connectionString = process.env.DATABASE_URL;
 
 if (!connectionString) {
   throw new Error('DATABASE_URL environment variable is required for PostgreSQL');
 }
 
+// Clean up common mistakes: remove psql command, quotes, etc.
+connectionString = connectionString.trim();
+
+// Remove psql command prefix if present
+if (connectionString.startsWith('psql')) {
+  console.warn('⚠️  Removing "psql" prefix from DATABASE_URL');
+  // Extract the connection string from psql command
+  const match = connectionString.match(/(?:psql\s+)?['"]?(postgresql?:\/\/[^'"]+)['"]?/);
+  if (match && match[1]) {
+    connectionString = match[1];
+  } else {
+    // Fallback: remove psql and quotes
+    connectionString = connectionString.replace(/^psql\s+/, '').replace(/^['"]|['"]$/g, '');
+  }
+}
+
+// Remove surrounding quotes if present
+connectionString = connectionString.replace(/^['"]|['"]$/g, '').trim();
+
 // Validate connection string format
 if (!connectionString.startsWith('postgresql://') && !connectionString.startsWith('postgres://')) {
   console.error('❌ Invalid DATABASE_URL format. Expected: postgresql://user:password@host/dbname');
-  console.error('   Current value starts with:', connectionString.substring(0, 20) + '...');
+  console.error('   Current value starts with:', connectionString.substring(0, 50) + '...');
+  console.error('   💡 Make sure you copied ONLY the connection string, not the psql command');
   throw new Error('DATABASE_URL must start with postgresql:// or postgres://');
 }
 
