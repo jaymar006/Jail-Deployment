@@ -12,7 +12,9 @@
     "install-all": "npm run install-backend && npm run install-frontend",
     "build": "npm run install-all && cd frontend && npm run build",
     "serve": "cd frontend && npx serve -s build -l 3000",
-    "start-prod": "npm run build && npm run serve"
+    "start-prod": "npm run build && npm run serve",
+    "db:export": "node backend/scripts/exportDatabase.js",
+    "db:import": "node backend/scripts/importDatabase.js"
   },
   "engines": {
     "node": ">=16.0.0",

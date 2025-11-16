@@ -142,3 +142,11 @@ vite.config.ts.timestamp-*
 .docker/
 docker-compose.override.yml
 *.dockerignore.local
+
+# Database files (keep exports, ignore binary files)
+*.sqlite
+*.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
+backend/data/*.sqlite
+!database_export.sql

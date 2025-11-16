@@ -156,7 +156,9 @@ Should see the login page.
 
 ### 3. Test Login
 1. Open browser DevTools → **Network** tab
-2. Try to login
+2. Try to login with default credentials:
+   - **Username**: `admin`
+   - **Password**: `admin123`
 3. Check the login request URL - it should be: `https://your-app-name.onrender.com/auth/login`
 4. If it shows `localhost` or wrong URL, rebuild is needed
 
@@ -167,6 +169,46 @@ In Render Dashboard → Environment tab, verify:
 - ✅ `JWT_SECRET` is set (long random string)
 - ✅ `NODE_ENV` = `production`
 - ✅ `PORT` = `3001`
+
+### 5. Check Default User Creation
+In Render Dashboard → Logs, look for:
+```
+🔐 No admin user found. Creating default admin user...
+✅ Default admin user created successfully!
+   Username: admin
+   Password: admin123
+```
+
+---
+
+## 🔐 Default Login Credentials
+
+After deployment, a default admin user is automatically created:
+
+- **Username**: `admin`
+- **Password**: `admin123`
+
+⚠️ **IMPORTANT**: Change this password immediately after first login!
+
+The default user is automatically recreated if the database is reset (which happens on Render's free tier when the service sleeps or redeploys).
+
+---
+
+## 💾 Database Persistence Warning
+
+**⚠️ CRITICAL**: Render's **free tier** does NOT persist data!
+
+Your SQLite database will be reset when:
+- The service goes to sleep (after 15 minutes of inactivity)
+- You redeploy the service
+- The container restarts
+
+**Solutions:**
+1. **Upgrade to Render Starter** ($7/month) - Provides persistent disk storage
+2. **Use Render PostgreSQL** (free tier available) - Migrate from SQLite
+3. **Use external database** - Supabase, Railway, Neon, etc.
+
+See `RENDER_DATABASE_FIX.md` for detailed solutions.
 
 ---
 
