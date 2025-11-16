@@ -1,15 +1,28 @@
 const fs = require('fs');
 const path = require('path');
-const sqlite3 = require('sqlite3').verbose();
 
-// Ensure data directory exists
-const dataDir = path.join(__dirname, '..', 'data');
-if (!fs.existsSync(dataDir)) {
-  fs.mkdirSync(dataDir, { recursive: true });
-}
+// Check if DATABASE_URL is set (PostgreSQL/Neon) or use SQLite
+const usePostgres = !!process.env.DATABASE_URL;
 
-const dbFilePath = path.join(dataDir, 'jail_visitation.sqlite');
-const sqliteDb = new sqlite3.Database(dbFilePath);
+let db;
+if (usePostgres) {
+  // Use PostgreSQL (Neon)
+  console.log('🔌 Using PostgreSQL database (Neon)');
+  db = require('./db.postgres');
+  module.exports = db;
+} else {
+  // Use SQLite (local development)
+  console.log('🔌 Using SQLite database (local)');
+  const sqlite3 = require('sqlite3').verbose();
+
+  // Ensure data directory exists
+  const dataDir = path.join(__dirname, '..', 'data');
+  if (!fs.existsSync(dataDir)) {
+    fs.mkdirSync(dataDir, { recursive: true });
+  }
+
+  const dbFilePath = path.join(dataDir, 'jail_visitation.sqlite');
+  const sqliteDb = new sqlite3.Database(dbFilePath);
 
 // Initialize schema (SQLite-compatible)
 const schemaStatements = `
@@ -216,7 +229,8 @@ function query(sql, params, cb) {
   return executor();
 }
 
-module.exports = {
-  query,
-  _raw: sqliteDb
-};
+  module.exports = {
+    query,
+    _raw: sqliteDb
+  };
+}
