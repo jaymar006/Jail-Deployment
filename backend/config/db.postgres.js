@@ -209,6 +209,34 @@ const ensureColumns = async (client) => {
 // Initialize schema on module load
 initializeSchema().catch(console.error);
 
+// Convert MySQL/SQLite style ? placeholders to PostgreSQL $1, $2, etc.
+function convertPlaceholders(sql, params) {
+  if (!Array.isArray(params) || params.length === 0) {
+    return { sql, params };
+  }
+
+  let paramIndex = 1;
+  const convertedSql = sql.replace(/\?/g, () => `$${paramIndex++}`);
+  return { sql: convertedSql, params };
+}
+
+// Add RETURNING id to INSERT statements if not present (for PostgreSQL)
+function addReturningClause(sql) {
+  const trimmedSql = sql.trim();
+  if (/^\s*insert/i.test(trimmedSql) && !/returning/i.test(trimmedSql)) {
+    // Check if table has an id column (most tables do)
+    const tableMatch = trimmedSql.match(/insert\s+into\s+(\w+)/i);
+    if (tableMatch) {
+      // Add RETURNING id before semicolon or at end
+      if (trimmedSql.endsWith(';')) {
+        return trimmedSql.slice(0, -1) + ' RETURNING id;';
+      }
+      return trimmedSql + ' RETURNING id';
+    }
+  }
+  return sql;
+}
+
 // Provide mysql2-like interface for compatibility: db.query(sql, params?)
 async function query(sql, params, cb) {
   const hasCallback = typeof params === 'function' || typeof cb === 'function';
@@ -216,27 +244,56 @@ async function query(sql, params, cb) {
   const effectiveParams = Array.isArray(params) ? params : (cb ? params : []);
 
   try {
-    const result = await pool.query(sql, effectiveParams);
+    // Convert ? placeholders to $1, $2, etc. for PostgreSQL
+    const { sql: convertedSql, params: convertedParams } = convertPlaceholders(sql, effectiveParams);
+    
+    // Add RETURNING id to INSERT statements
+    const finalSql = addReturningClause(convertedSql);
+    
+    const result = await pool.query(finalSql, convertedParams);
     
     // Mimic mysql2 result format
     const rows = result.rows;
     
-    // For INSERT statements, get the inserted ID from RETURNING clause or first row
+    // For INSERT statements, get the inserted ID from RETURNING clause
     let insertId = null;
-    if (/^\s*insert/i.test(sql) && rows.length > 0 && rows[0].id) {
-      insertId = rows[0].id;
-    } else if (/^\s*insert/i.test(sql) && result.insertId) {
-      insertId = result.insertId;
+    if (/^\s*insert/i.test(finalSql)) {
+      if (rows.length > 0 && rows[0] && rows[0].id) {
+        insertId = rows[0].id;
+      }
     }
 
-    if (hasCallback) {
-      // Return rows array to match mysql2 format [rows]
-      callback(null, [rows]);
-      return;
+    // Handle different query types
+    const isSelect = /^\s*select/i.test(finalSql);
+    const isInsert = /^\s*insert/i.test(finalSql);
+    const isUpdate = /^\s*update/i.test(finalSql);
+    const isDelete = /^\s*delete/i.test(finalSql);
+
+    if (isSelect) {
+      // SELECT queries: return [rows] where rows is an array
+      if (hasCallback) {
+        callback(null, [rows]);
+        return;
+      }
+      return [rows];
+    } else {
+      // INSERT/UPDATE/DELETE: return [result] where result has insertId and affectedRows
+      const mysql2Result = {
+        insertId: insertId,
+        affectedRows: result.rowCount || 0,
+        rows: rows
+      };
+
+      if (hasCallback) {
+        callback(null, [mysql2Result]);
+        return;
+      }
+      
+      return [mysql2Result];
     }
-    
-    return [rows];
   } catch (error) {
+    console.error('❌ Database query error:', error.message);
+    console.error('SQL:', sql);
     if (hasCallback) {
       callback(error);
       return;
