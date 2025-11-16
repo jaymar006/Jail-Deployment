@@ -1,0 +1,25 @@
+{
+  "name": "jail-information-system",
+  "version": "1.0.0",
+  "description": "Jail Information System - Local Deployment",
+  "main": "backend/server.js",
+  "scripts": {
+    "build": "npm run build:frontend && npm run build:backend",
+    "build:frontend": "echo 'Building frontend...' && mkdir -p dist && echo '<!DOCTYPE html><html><head><title>Jail Information System</title></head><body><h1>Jail Information System</h1><p>System is running on localhost</p></body></html>' > dist/index.html",
+    "build:backend": "echo 'Backend ready for deployment'",
+    "start": "node backend/server.js",
+    "dev": "npm run build && npm start",
+    "serve": "npm run build && npm start"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "path": "^0.12.7"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
+  "keywords": ["jail", "information", "system", "local", "deployment"],
+  "author": "",
+  "license": "MIT"
+}

@@ -1,0 +1,47 @@
+version: '3.8'
+
+# Development Docker Compose - with hot reload
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: jail-system-backend-dev
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=development
+      - PORT=3001
+      - JWT_SECRET=${JWT_SECRET:-dev_secret_key_change_in_production}
+      - DB_PATH=/app/data/jail_visitation.sqlite
+      - FRONTEND_URL=http://192.168.18.181:3000
+    volumes:
+      # Mount source code for hot reload (requires nodemon in package.json)
+      - ./backend:/app
+      - /app/node_modules
+      - ./backend/data:/app/data
+      - ./.env:/app/.env:ro
+    restart: unless-stopped
+    command: sh -c "npm install && node server.js"
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+      target: builder
+    container_name: jail-system-frontend-dev
+    ports:
+      - "3000:3000"
+    environment:
+      - REACT_APP_API_URL=http://192.168.18.181:3001
+      - CHOKIDAR_USEPOLLING=true
+    volumes:
+      # Mount source code for hot reload
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+    restart: unless-stopped
+    command: npm start
+
+

@@ -1,0 +1,522 @@
+body, .common-container {
+  font-family: Arial, sans-serif;
+  background-color: #f9fafb;
+  color: #333;
+  padding: 0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  margin: 0;
+  width: 100vw;
+  height: 100vh;
+  box-sizing: border-box;
+  /* Prevent layout shifts during navigation */
+  overflow-x: hidden;
+  position: relative;
+  /* Smooth rendering */
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.common-container main {
+  flex: 1 1 auto;
+  padding: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Table wrapper for scrollable table */
+.table-wrapper {
+  max-height: calc(100vh - 450px);
+  overflow-y: auto;
+  overflow-x: auto;
+  margin-bottom: 20px;
+  border-radius: 10px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  background-color: #fff;
+  position: relative;
+}
+
+/* Sticky table header */
+.table-wrapper .common-table thead {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+/* Table styles */
+.common-table {
+  width: 100%;
+  max-width: 1400px;
+  border-collapse: separate;
+  border-spacing: 0;
+  background-color: #fff;
+  border-radius: 10px;
+  table-layout: auto;
+  word-wrap: break-word;
+  margin: 0;
+}
+
+.common-table th, .common-table td {
+  border: none;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  padding: 10px 12px;
+  text-align: center;
+  font-size: 12px;
+  vertical-align: middle;
+  transition: all 0.2s ease;
+}
+
+.common-table thead {
+  background: linear-gradient(135deg, #4b5563 0%, #374151 100%);
+  color: white;
+  font-weight: 600;
+  position: relative;
+}
+
+.common-table thead th {
+  padding: 12px 14px;
+  font-size: 13px;
+  letter-spacing: 0.2px;
+  text-transform: uppercase;
+  border-bottom: none;
+  position: relative;
+}
+
+.common-table thead th:first-child {
+  border-top-left-radius: 10px;
+}
+
+.common-table thead th:last-child {
+  border-top-right-radius: 10px;
+}
+
+.common-table tbody tr {
+  transition: all 0.2s ease;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.common-table tbody tr:hover {
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  cursor: pointer;
+}
+
+.common-table tbody tr:last-child td:first-child {
+  border-bottom-left-radius: 10px;
+}
+
+.common-table tbody tr:last-child td:last-child {
+  border-bottom-right-radius: 10px;
+}
+
+.common-table tbody tr:last-child {
+  border-bottom: none;
+}
+
+/* Clickable sortable headers */
+.sortable-th {
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.sortable-th:hover {
+  background: linear-gradient(135deg, #374151 0%, #1f2937 100%);
+  transform: translateY(-1px);
+}
+
+/* Enhanced checkbox styling */
+.common-table input[type="checkbox"] {
+  width: 14px;
+  height: 14px;
+  border: 2px solid #d1d5db;
+  border-radius: 3px;
+  background-color: #fff;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+}
+
+.common-table input[type="checkbox"]:hover {
+  border-color: #4b5563;
+  transform: scale(1.1);
+}
+
+.common-table input[type="checkbox"]:checked {
+  background: linear-gradient(135deg, #4b5563 0%, #374151 100%);
+  border-color: #4b5563;
+  transform: scale(1.1);
+}
+
+.common-table input[type="checkbox"]:checked::after {
+  content: '✓';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: white;
+  font-size: 10px;
+  font-weight: bold;
+}
+
+/* Buttons */
+.common-button {
+  font-weight: bold;
+  padding: 8px 14px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.2s ease-in-out;
+  color: white;
+  background-color: #2563eb;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  justify-content: center;
+}
+
+.common-button:hover {
+  background-color: #1e40af; 
+}
+
+.common-button:disabled {
+  background-color: #9ca3af;
+  cursor: not-allowed;
+}
+
+/* Specific button variants */
+.common-button.add {
+  background-color: #10b981;
+}
+
+.common-button.add:hover {
+  background-color: #047857;
+}
+
+.common-button.edit {
+  background-color: #2563eb;
+}
+
+.common-button.edit:hover {
+  background-color: #1e40af;
+}
+
+.common-button.delete {
+  background-color: #ef4444;
+}
+
+.common-button.delete:hover {
+  background-color: #b91c1c;
+}
+
+/* Modal styles */
+.common-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0,0,0,0.4);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.common-modal-content {
+  background-color: white;
+  padding: 25px;
+  border-radius: 8px;
+  width: 400px;
+  max-width: 90%;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+}
+
+.common-modal-content h3 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  color: #333;
+}
+
+.common-modal-content form {
+  display: flex;
+  flex-direction: column;
+}
+
+.common-modal-content label {
+  margin-top: 10px;
+  font-weight: bold;
+  color: #555;
+}
+
+.common-modal-content input,
+.common-modal-content select {
+  padding: 8px;
+  margin-top: 4px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.common-modal-buttons {
+  margin-top: 20px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.common-modal-buttons button {
+  padding: 8px 12px;
+  border: none;
+  border-radius: 6px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.common-modal-buttons button[type="submit"] {
+  background-color: #2563eb;
+  color: white;
+}
+
+.common-modal-buttons button[type="submit"]:hover {
+  background-color: #1e40af;
+}
+
+.common-modal-buttons button[type="button"] {
+  background-color: #ccc;
+  color: #333;
+}
+
+.common-modal-buttons button[type="button"]:hover {
+  background-color: #999;
+}
+
+/* Utility classes */
+.text-center {
+  text-align: center;
+}
+
+.no-data {
+  color: #6b7280;
+  font-style: italic;
+  padding: 40px 20px;
+  text-align: center;
+  font-size: 16px;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border-radius: 12px;
+  margin: 20px 0;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 1rem;
+}
+
+.action-buttons-row {
+  display: flex;
+  gap: 4px;
+  justify-content: flex-start;
+  align-items: center;
+}
+
+/* Compact action buttons with text */
+.action-buttons-row .common-button {
+  padding: 6px 10px;
+  min-width: auto;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  gap: 4px;
+}
+
+.action-buttons-row .common-button .button-icon {
+  width: 12px;
+  height: 12px;
+}
+
+/* Icon styles for buttons */
+.button-icon {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+  flex-shrink: 0;
+}
+
+/* Enhanced table wrapper for better spacing */
+.visitor-table-wrapper {
+  background: #fff;
+  border-radius: 16px;
+  padding: 0;
+  margin: 16px auto;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+}
+
+/* Search and filter styling */
+.search-filter-container {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding: 16px;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border-radius: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.search-filter-container input[type="text"] {
+  padding: 8px 12px;
+  border: 2px solid #e5e7eb;
+  border-radius: 6px;
+  font-size: 12px;
+  transition: all 0.2s ease;
+  background: #fff;
+  min-width: 160px;
+}
+
+.search-filter-container input[type="text"]:focus {
+  outline: none;
+  border-color: #4b5563;
+  box-shadow: 0 0 0 3px rgba(75, 85, 99, 0.1);
+}
+
+.search-filter-container select {
+  padding: 8px 12px;
+  border: 2px solid #e5e7eb;
+  border-radius: 6px;
+  font-size: 12px;
+  background: #fff;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.search-filter-container select:focus {
+  outline: none;
+  border-color: #4b5563;
+  box-shadow: 0 0 0 3px rgba(75, 85, 99, 0.1);
+}
+
+/* Enhanced pagination styling */
+.pagination-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  margin: 24px 0;
+  padding: 16px;
+}
+
+.pagination-button {
+  padding: 8px 12px;
+  border: 2px solid #e5e7eb;
+  background: #fff;
+  color: #4b5563;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 13px;
+  transition: all 0.2s ease;
+  min-width: 40px;
+  text-align: center;
+}
+
+.pagination-button:hover {
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border-color: #4b5563;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.pagination-button.active {
+  background: linear-gradient(135deg, #4b5563 0%, #374151 100%);
+  border-color: #4b5563;
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(75, 85, 99, 0.3);
+}
+
+.pagination-button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  background: #f3f4f6;
+  border-color: #e5e7eb;
+}
+
+.pagination-button:disabled:hover {
+  transform: none;
+  box-shadow: none;
+  background: #f3f4f6;
+  border-color: #e5e7eb;
+}
+
+.pagination-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 10px;
+  min-width: 40px;
+}
+
+.pagination-ellipsis {
+  padding: 8px 4px;
+  color: #6b7280;
+  font-weight: 600;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 40px;
+}
+
+.pagination-info {
+  margin-left: 16px;
+  padding: 8px 12px;
+  color: #6b7280;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* Form grid utilities for better UX in modals */
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px 12px;
+}
+
+.form-row {
+  display: contents;
+}
+
+.form-col {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Make modal wider when using grid */
+.common-modal-content.wide {
+  width: 720px;
+  max-width: 95%;
+}
+
+@media (max-width: 640px) {
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+  .common-modal-content.wide {
+    width: 95%;
+  }
+}

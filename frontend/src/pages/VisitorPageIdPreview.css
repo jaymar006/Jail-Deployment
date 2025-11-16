@@ -1,0 +1,144 @@
+/* ID Preview Styles */
+#id-preview-container {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.id-card {
+  position: relative;
+  background-color: transparent;
+  width: 332px; /* twice the original width */
+  height: 150px; /* half the original height */
+  border-radius: 8px;
+  box-shadow: 0 0 10px rgba(0,0,0,0.1);
+  overflow: hidden;
+  display: flex;
+  justify-content: space-between;
+}
+
+.id-card-background {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 0;
+  border-radius: 8px;
+  display: flex;
+  justify-content: space-between;
+  padding: 0;
+  overflow: hidden;
+  width: 100%;
+  height: 100%;
+}
+
+.id-card-background img {
+  width: 50%;
+  height: 100%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.id-card-background img.left {
+  border-radius: 8px 0 0 8px;
+}
+
+.id-card-background img.right {
+  border-radius: 0 8px 8px 0;
+}
+
+.id-card-side.left,
+.id-card-side.right {
+  position: relative;
+  z-index: 1;
+  padding: 10px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.id-card-side.left {
+  width: 50%;
+}
+
+.id-card-side.right {
+  width: 50%;
+}
+
+.id-card-logos {
+  display: flex;
+  justify-content: flex-start;
+  padding: 0;
+  gap: 5px;
+  width: auto;
+}
+
+.id-card-logos img {
+  margin: 0;
+  width: 65px;
+  height: 65px;
+  object-fit: contain;
+}
+
+.id-card-title {
+  font-weight: bold;
+  margin-top: 5px;
+  margin-bottom: 10px;
+  font-size: 1rem;
+  text-align: center;
+}
+
+.id-card-photo-placeholder {
+  width: 104px;
+  height: 104px;
+  background-color: #ccc;
+  margin: 10px auto;
+  display: block;
+  flex-shrink: 0;
+  text-align: center;
+  line-height: 104px;
+  font-weight: bold;
+  color: #666;
+}
+
+.id-card-info {
+  font-size: 0.9rem;
+  margin-top: 5px;
+  text-align: center;
+}
+
+.id-card-qr {
+  background-color: transparent;
+  padding: 5px;
+  object-fit: fill;
+  position: relative;
+  z-index: 9999;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.id-card-contact {
+  font-size: 0.9rem;
+  margin-top: 10px;
+  text-align: center;
+}
+
+/* ID Preview Button Container */
+.id-preview-buttons {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  margin-top: 20px;
+  padding: 10px;
+}
+
+.id-preview-buttons .common-button {
+  min-width: 140px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}

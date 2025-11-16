@@ -1,0 +1,182 @@
+/* Container Layout */
+.datas-container {
+  font-family: Arial, sans-serif;
+}
+
+.logos img {
+  height: 80px;
+  margin-right: 10px;
+}
+
+.header-text h1 {
+  font-size: 1.5rem;
+}
+
+/* Button Styling */
+button {
+  font-weight: bold;
+  padding: 8px 14px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+/* Add button */
+.action-buttons button {
+  background-color: #10b981;
+  color: white;
+  margin-bottom: 10px;
+}
+
+/* Edit button */
+.edit-btn {
+  background-color: #3b82f6;
+  color: white;
+  margin-right: 5px;
+}
+
+/* Delete button */
+.delete-btn {
+  background-color: #ef4444;
+  color: white;
+}
+
+/* Disabled button */
+button:disabled {
+  background-color: #9ca3af;
+  cursor: not-allowed;
+}
+
+/* Main Content Layout */
+.main-content {
+  display: flex;
+  height: calc(100vh - 70px);
+}
+
+.left-panel {
+  width: 40%;
+  padding: 20px;
+  border-right: 1px solid #ddd;
+  overflow-y: auto;
+}
+
+.right-panel {
+  width: 60%;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.left-panel h2 {
+  margin-top: 0;
+}
+
+/* Table Layout */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+}
+
+th,
+td {
+  border: 1px solid #ccc;
+  padding: 8px;
+  text-align: left;
+  font-size: 13px;
+  vertical-align: top;
+}
+
+th {
+  background-color: #1e1e2f;
+  color: white;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+td {
+  white-space: nowrap;
+}
+
+table td:nth-child(n+2) {
+  white-space: normal;
+}
+
+tr:hover {
+  background-color: #f3f4f6;
+  cursor: pointer;
+}
+
+.selected {
+  background-color: #e0f2fe !important;
+}
+
+/* Visitor Panel */
+.no-pdl-selected {
+  color: #6b7280;
+  font-style: italic;
+}
+
+/* Modals */
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0,0,0,0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 999;
+}
+
+.modal-content {
+  background-color: white;
+  padding: 20px;
+  width: 400px;
+  border-radius: 8px;
+}
+
+.modal-content h3 {
+  margin-top: 0;
+}
+
+.modal-content form {
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-content label {
+  margin-bottom: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+}
+
+.modal-content input,
+.modal-content select {
+  margin-bottom: 10px;
+  padding: 8px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .main-content {
+    flex-direction: column;
+  }
+
+  .left-panel,
+  .right-panel {
+    width: 100%;
+  }
+
+  .modal-content {
+    width: 90%;
+  }
+
+  table {
+    font-size: 12px;
+  }
+}

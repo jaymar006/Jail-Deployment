@@ -1,0 +1,182 @@
+.print-only {
+  display: none;
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .print-section, .print-section * {
+    visibility: visible;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .print-section {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
+  .print-section h1 {
+    text-align: center;
+    margin-bottom: 20px;
+    font-size: 24px;
+    font-weight: bold;
+  }
+  .print-section div.print-only {
+    display: block;
+    text-align: center;
+    margin-bottom: 10px;
+  }
+  .print-section div.print-only img {
+    height: 60px;
+    margin-right: 10px;
+  }
+
+  /* Hide Manual Edit and Delete buttons in print */
+  #printable-dashboard > button.common-button,
+  #printable-dashboard > button.common-button.delete {
+    display: none;
+  }
+
+  /* Hide checkbox column and other no-print elements */
+  .no-print {
+    display: none !important;
+  }
+}
+
+.dashboard-main {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+/* Modal buttons styling to match Datas.js Add PDL modal buttons */
+.common-modal-buttons {
+  margin-top: 20px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.common-modal-buttons button {
+  padding: 8px 12px;
+  border: none;
+  border-radius: 6px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.common-modal-buttons button[type="submit"] {
+  background-color: #2563eb;
+  color: white;
+}
+
+.common-modal-buttons button[type="submit"]:hover {
+  background-color: #1e40af;
+}
+
+.common-modal-buttons button[type="button"] {
+  background-color: #ccc;
+  color: #333;
+}
+
+.common-modal-buttons button[type="button"]:hover {
+  background-color: #999;
+}
+
+/* Purpose Modal Styling */
+.purpose-modal {
+  max-width: 600px;
+  width: 90%;
+}
+
+.purpose-button {
+  border: none;
+  background: none;
+  padding: 0;
+  width: 100%;
+}
+
+.purpose-button:focus {
+  outline: 2px solid #4b5563;
+  outline-offset: 2px;
+}
+
+.purpose-button:active {
+  transform: translateY(1px) !important;
+}
+
+/* Camera retry animation */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Toast notification animation */
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+/* Schedule Modal Styling */
+.schedule-modal .common-modal-content {
+  max-width: 500px;
+}
+
+.schedule-cell-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 2px solid #e5e7eb;
+  background: #fff;
+}
+
+.schedule-cell-item.scheduled {
+  background: #ecfdf5;
+  border-color: #10b981;
+}
+
+.schedule-cell-item:hover {
+  border-color: #4b5563;
+}
+
+.schedule-cell-checkbox {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+}
+
+.schedule-cell-info {
+  flex: 1;
+}
+
+.schedule-cell-name {
+  font-weight: 600;
+  color: #111827;
+}
+
+.schedule-cell-details {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.schedule-status-badge {
+  background: #10b981;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+}

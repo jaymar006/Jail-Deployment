@@ -1,0 +1,61 @@
+.page-transition {
+  width: 100%;
+  min-height: 100%;
+  position: relative;
+  /* Prevent layout shifts */
+  contain: layout style paint;
+  /* Smooth rendering */
+  transform: translateZ(0);
+  will-change: opacity, transform;
+  /* Start visible to prevent initial flash */
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.page-transition-entering {
+  animation: fadeIn 0.2s ease-out forwards;
+}
+
+.page-transition-exiting {
+  animation: fadeOut 0.08s ease-out forwards;
+}
+
+.page-transition-entered {
+  opacity: 1;
+  transform: translateY(0);
+  /* Remove animation properties when transition is complete */
+  animation: none;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(1px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0.5;
+    transform: translateY(0);
+  }
+}
+
+/* Prevent content flash and layout shifts */
+.page-transition > * {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  /* Prevent layout shifts */
+  min-height: 1px;
+  /* Ensure content is always visible during transition */
+  opacity: inherit;
+}
+

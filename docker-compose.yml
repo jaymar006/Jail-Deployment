@@ -1,0 +1,82 @@
+version: '3.8'
+
+services:
+  # backend:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile.backend
+  #   container_name: jail-system-backend
+  #   ports:
+  #     - "3001:3001"
+  #   environment:
+  #     - NODE_ENV=production
+  #     - PORT=3001
+  #     - JWT_SECRET=${JWT_SECRET:-change_this_to_a_secure_secret}
+  #     - DB_PATH=/app/data/jail_visitation.sqlite
+  #     - FRONTEND_URL=http://localhost:3000
+  #   volumes:
+  #     # Persist SQLite database
+  #     - ./backend/data:/app/data
+  #     # Mount .env file if it exists
+  #     - ./.env:/app/backend/.env:ro
+  #   restart: unless-stopped
+  #   healthcheck:
+  #     test: ["CMD", "node", "-e", "require('http').get('http://localhost:3001/api/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+  #     interval: 30s
+  #     timeout: 3s
+  #     retries: 3
+  #     start_period: 10s
+
+  # frontend:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile.frontend
+  #     args:
+  #       - REACT_APP_API_URL=${REACT_APP_API_URL:-http://localhost:3001}
+  #   container_name: jail-system-frontend
+  #   ports:
+  #     - "3000:80"
+  #   depends_on:
+  #     - backend
+  #   restart: unless-stopped
+  #   healthcheck:
+  #     test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
+  #     interval: 30s
+  #     timeout: 3s
+  #     retries: 3
+  #     start_period: 10s
+
+  # Alternative: Single service that runs both (simpler for small deployments)
+  # Uncomment this and comment out backend/frontend services above if preferred
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - REACT_APP_API_URL=${REACT_APP_API_URL:-http://localhost:3001}
+    container_name: jail-system-app
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - JWT_SECRET=${JWT_SECRET:-change_this_to_a_secure_secret}
+      - DB_PATH=/app/backend/data/jail_visitation.sqlite
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:3001}
+    volumes:
+      # Persist SQLite database
+      - ./backend/data:/app/backend/data
+      # Mount .env file if it exists (optional, environment variables work too)
+      - ./.env:/app/backend/.env:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3001/api/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  database_data:
+    driver: local
+
