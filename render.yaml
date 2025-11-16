@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: jail-information-system
+    env: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: free
+    # Note: Render will automatically pass environment variables as build args
+    # Make sure REACT_APP_API_URL is set in Render dashboard before deploying
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3001
+      - key: JWT_SECRET
+        generateValue: true
+      - key: DB_PATH
+        value: ./backend/data/jail_visitation.sqlite
+      - key: FRONTEND_URL
+        sync: false  # Set this manually to your Render URL after first deploy
+      - key: REACT_APP_API_URL
+        sync: false  # Set this manually to your Render URL after first deploy
+    healthCheckPath: /api/health
+
