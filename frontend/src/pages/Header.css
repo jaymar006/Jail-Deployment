@@ -1,6 +1,8 @@
 .dashboard-header {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
   background: #e5e7eb; /* light gray navbar */
   color: #111827; /* near-black text */
   padding: 1rem 2rem;
@@ -19,9 +21,9 @@
 
 .header-top {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  width: 100%;
+  flex: 1;
+  gap: 2rem;
 }
 
 .header-left img {
@@ -103,7 +105,7 @@
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  width: 100%;
+  flex-shrink: 0; /* Prevent nav buttons from shrinking */
 }
 
 .nav-buttons a {
@@ -278,6 +280,7 @@
 /* Responsive Design */
 @media (max-width: 768px) {
   .dashboard-header {
+    flex-direction: column;
     padding: 1rem;
   }
 
@@ -287,6 +290,7 @@
     align-items: center;
     width: 100%;
     gap: 1rem;
+    flex: none;
   }
   
   .header-text {
@@ -315,6 +319,7 @@
     margin-top: 1rem;
     padding-top: 1rem;
     border-top: 1px solid rgba(0, 0, 0, 0.1);
+    margin-left: 0;
   }
 
   .nav-buttons.mobile-open {

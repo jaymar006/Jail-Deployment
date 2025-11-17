@@ -6,6 +6,17 @@
   background: #f9fafb;
   min-height: 100vh;
   box-sizing: border-box;
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+/* Responsive Settings Container */
+@media (max-width: 1200px) {
+  .settings-container {
+    padding: 16px;
+    max-width: 100%;
+  }
 }
 
 .settings-container h2 {

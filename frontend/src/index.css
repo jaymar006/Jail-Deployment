@@ -10,10 +10,14 @@ html {
   /* Better font rendering on mobile */
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
+  width: 100%;
+  max-width: 100vw;
+  box-sizing: border-box;
 }
 
 body {
   margin: 0;
+  padding: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
     sans-serif;
@@ -23,19 +27,29 @@ body {
   overflow-x: hidden;
   position: relative;
   min-height: 100vh;
+  width: 100%;
+  max-width: 100vw;
   /* Smooth rendering */
   transform: translateZ(0);
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
   /* Better touch scrolling on iOS */
   -webkit-overflow-scrolling: touch;
+  /* Responsive base font size */
+  font-size: 16px;
+  line-height: 1.5;
 }
 
 #root {
   min-height: 100vh;
   position: relative;
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
   /* Prevent layout shifts */
   contain: layout style paint;
+  display: flex;
+  flex-direction: column;
 }
 
 code {
@@ -43,14 +57,84 @@ code {
     monospace;
 }
 
-/* Mobile-specific improvements */
+/* Responsive Typography and Spacing */
+@media (max-width: 1200px) {
+  body {
+    font-size: 15px;
+  }
+}
+
 @media (max-width: 768px) {
   body {
     font-size: 16px; /* Prevent iOS zoom on input focus */
+    padding: 0;
+  }
+
+  #root {
+    padding: 0;
   }
   
   /* Better touch targets */
   button, a, input, select, textarea {
     min-height: 44px; /* iOS recommended touch target size */
   }
+
+  /* Responsive headings */
+  h1 {
+    font-size: 1.75rem;
+  }
+
+  h2 {
+    font-size: 1.5rem;
+  }
+
+  h3 {
+    font-size: 1.25rem;
+  }
+
+  h4 {
+    font-size: 1.1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  body {
+    font-size: 15px;
+  }
+
+  h1 {
+    font-size: 1.5rem;
+  }
+
+  h2 {
+    font-size: 1.3rem;
+  }
+
+  h3 {
+    font-size: 1.15rem;
+  }
+
+  h4 {
+    font-size: 1rem;
+  }
+}
+
+/* Ensure media elements are responsive */
+img, video, iframe, embed, object {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Prevent pre elements from causing overflow */
+pre {
+  max-width: 100%;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+/* Ensure all containers respect viewport */
+.container, .wrapper, .content, .main-content {
+  max-width: 100%;
+  overflow-x: hidden;
 }

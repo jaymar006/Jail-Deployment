@@ -51,6 +51,16 @@
   margin: 0 auto;
   padding: 20px;
   box-sizing: border-box;
+  width: 100%;
+  overflow-x: hidden;
+}
+
+/* Responsive Dashboard */
+@media (max-width: 1200px) {
+  .dashboard-main {
+    padding: 16px;
+    max-width: 100%;
+  }
 }
 
 /* Modal buttons styling to match Datas.js Add PDL modal buttons */
