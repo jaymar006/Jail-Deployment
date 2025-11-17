@@ -334,9 +334,9 @@
     flex-shrink: 0;
   }
 
-  .mobile-menu-toggle:hover {
+  .mobile-menu-toggle:active {
     background: #374151;
-    border-color: #111827;
+    transform: scale(0.95);
   }
 
   /* Mobile Sidebar Overlay */
@@ -481,10 +481,10 @@
   .mobile-sidebar-header {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: center;
     padding: 1.5rem 1.25rem;
     border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-    background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
+    background: transparent;
   }
 
   .mobile-sidebar-logos {
@@ -496,31 +496,6 @@
   .mobile-sidebar-logos img {
     height: 50px;
     object-fit: contain;
-  }
-
-  .mobile-sidebar-close {
-    background: transparent;
-    border: none;
-    color: #374151;
-    cursor: pointer;
-    padding: 0.5rem;
-    border-radius: 8px;
-    transition: all 0.2s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 44px;
-    min-height: 44px;
-  }
-
-  .mobile-sidebar-close:hover {
-    background: #e5e7eb;
-    color: #111827;
-  }
-
-  .mobile-sidebar-close svg {
-    width: 24px;
-    height: 24px;
   }
 
   .dropdown {
