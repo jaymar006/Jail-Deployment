@@ -282,24 +282,20 @@
   }
 
   .header-top {
-    flex-wrap: wrap;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
     gap: 1rem;
   }
   
   .header-text {
-    order: 2;
-    width: 100%;
-    text-align: center;
-    margin: 0;
-  }
-  
-  .header-text h2 {
-    font-size: 1.1rem;
+    display: none; /* Hide title on mobile */
   }
   
   .logos {
     gap: 0.5rem;
-    flex: 1;
+    flex: 0 0 auto;
   }
   
   .logos img {
@@ -308,6 +304,7 @@
 
   .mobile-menu-toggle {
     display: flex !important;
+    margin-left: auto; /* Push to the right */
   }
   
   .nav-buttons {
@@ -360,9 +357,8 @@
     gap: 0.75rem;
   }
   
-  .header-text h2 {
-    font-size: 1rem;
-    line-height: 1.2;
+  .header-text {
+    display: none; /* Ensure title is hidden on small mobile too */
   }
   
   .logos {
