@@ -1,7 +1,7 @@
 const db = require('../config/db');
 
 const Cell = {
-  getAll: () => {
+  getAll: async () => {
     const sql = `
       SELECT 
         id, cell_number, cell_name, capacity, status,
@@ -9,15 +9,11 @@ const Cell = {
       FROM cells
       ORDER BY cell_number
     `;
-    return new Promise((resolve, reject) => {
-      db.query(sql, (err, results) => {
-        if (err) reject(err);
-        else resolve(results);
-      });
-    });
+    const [results] = await db.query(sql);
+    return results;
   },
 
-  getActive: () => {
+  getActive: async () => {
     const sql = `
       SELECT 
         id, cell_number, cell_name, capacity, status
@@ -25,15 +21,11 @@ const Cell = {
       WHERE status = 'active'
       ORDER BY cell_number
     `;
-    return new Promise((resolve, reject) => {
-      db.query(sql, (err, results) => {
-        if (err) reject(err);
-        else resolve(results);
-      });
-    });
+    const [results] = await db.query(sql);
+    return results;
   },
 
-  getById: (id) => {
+  getById: async (id) => {
     const sql = `
       SELECT 
         id, cell_number, cell_name, capacity, status,
@@ -41,15 +33,11 @@ const Cell = {
       FROM cells
       WHERE id = ?
     `;
-    return new Promise((resolve, reject) => {
-      db.query(sql, [id], (err, results) => {
-        if (err) reject(err);
-        else resolve(results.length > 0 ? results[0] : null);
-      });
-    });
+    const [results] = await db.query(sql, [id]);
+    return results.length > 0 ? results[0] : null;
   },
 
-  getByCellNumber: (cellNumber) => {
+  getByCellNumber: async (cellNumber) => {
     const sql = `
       SELECT 
         id, cell_number, cell_name, capacity, status,
@@ -57,15 +45,11 @@ const Cell = {
       FROM cells
       WHERE cell_number = ?
     `;
-    return new Promise((resolve, reject) => {
-      db.query(sql, [cellNumber], (err, results) => {
-        if (err) reject(err);
-        else resolve(results.length > 0 ? results[0] : null);
-      });
-    });
+    const [results] = await db.query(sql, [cellNumber]);
+    return results.length > 0 ? results[0] : null;
   },
 
-  add: (data) => {
+  add: async (data) => {
     const {
       cell_number,
       cell_name,
@@ -78,20 +62,16 @@ const Cell = {
         cell_number, cell_name, capacity, status
       ) VALUES (?, ?, ?, ?)
     `;
-    return new Promise((resolve, reject) => {
-      db.query(sql, [
-        cell_number,
-        cell_name || null,
-        capacity || 1,
-        status || 'active'
-      ], (err, result) => {
-        if (err) reject(err);
-        else resolve(result);
-      });
-    });
+    const [result] = await db.query(sql, [
+      cell_number,
+      cell_name || null,
+      capacity || 1,
+      status || 'active'
+    ]);
+    return result;
   },
 
-  update: (id, data) => {
+  update: async (id, data) => {
     const {
       cell_number,
       cell_name,
@@ -102,30 +82,22 @@ const Cell = {
     const sql = `
       UPDATE cells SET
         cell_number = ?, cell_name = ?, capacity = ?, status = ?,
-        updated_at = datetime('now')
+        updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
     `;
-    return new Promise((resolve, reject) => {
-      db.query(sql, [
-        cell_number,
-        cell_name || null,
-        capacity || 1,
-        status || 'active',
-        id
-      ], (err, result) => {
-        if (err) reject(err);
-        else resolve(result);
-      });
-    });
+    const [result] = await db.query(sql, [
+      cell_number,
+      cell_name || null,
+      capacity || 1,
+      status || 'active',
+      id
+    ]);
+    return result;
   },
 
-  delete: (id) => {
-    return new Promise((resolve, reject) => {
-      db.query('DELETE FROM cells WHERE id = ?', [id], (err, result) => {
-        if (err) reject(err);
-        else resolve(result);
-      });
-    });
+  delete: async (id) => {
+    const [result] = await db.query('DELETE FROM cells WHERE id = ?', [id]);
+    return result;
   }
 };
 
