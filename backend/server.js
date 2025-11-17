@@ -70,7 +70,10 @@ app.use(errorHandler);
 // Serve frontend static files if in production or build folder exists
 const path = require('path');
 const fs = require('fs');
-const buildPath = path.join(__dirname, '..', 'frontend', 'build');
+// In Docker, frontend build is copied to ./public, otherwise check ../frontend/build
+const buildPath = fs.existsSync(path.join(__dirname, 'public')) 
+  ? path.join(__dirname, 'public')
+  : path.join(__dirname, '..', 'frontend', 'build');
 
 if (fs.existsSync(buildPath)) {
   app.use(express.static(buildPath));
