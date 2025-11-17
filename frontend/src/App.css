@@ -16,3 +16,26 @@ li {
   margin: 5px 0;
   cursor: pointer;
 }
+
+/* Mobile Responsive Styles */
+@media (max-width: 768px) {
+  .app-container {
+    padding: 12px;
+  }
+
+  .pdl-list-container,
+  .visitor-list-container {
+    margin-bottom: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .app-container {
+    padding: 8px;
+  }
+
+  .pdl-list-container,
+  .visitor-list-container {
+    margin-bottom: 12px;
+  }
+}

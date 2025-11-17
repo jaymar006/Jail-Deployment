@@ -180,3 +180,61 @@
   font-size: 12px;
   font-weight: 600;
 }
+
+/* Mobile Responsive Styles */
+@media (max-width: 768px) {
+  .dashboard-main {
+    padding: 12px;
+  }
+
+  .purpose-modal {
+    width: 95%;
+    max-width: 95%;
+  }
+
+  .schedule-modal .common-modal-content {
+    width: 95%;
+    max-width: 95%;
+  }
+
+  .schedule-cell-item {
+    padding: 10px;
+  }
+
+  .schedule-cell-name {
+    font-size: 14px;
+  }
+
+  .schedule-cell-details {
+    font-size: 11px;
+  }
+
+  .common-modal-buttons {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .common-modal-buttons button {
+    width: 100%;
+    padding: 12px;
+    font-size: 16px;
+    min-height: 44px;
+  }
+}
+
+@media (max-width: 480px) {
+  .dashboard-main {
+    padding: 8px;
+  }
+
+  .schedule-cell-item {
+    padding: 8px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .schedule-cell-checkbox {
+    align-self: flex-start;
+  }
+}

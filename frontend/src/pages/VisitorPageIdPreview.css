@@ -142,3 +142,82 @@
   white-space: nowrap;
   flex-shrink: 0;
 }
+
+/* Mobile Responsive Styles */
+@media (max-width: 768px) {
+  #id-preview-container {
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .id-card {
+    width: 100%;
+    max-width: 400px;
+    height: auto;
+    min-height: 150px;
+  }
+
+  .id-card-logos img {
+    width: 50px;
+    height: 50px;
+  }
+
+  .id-card-title {
+    font-size: 0.9rem;
+  }
+
+  .id-card-info,
+  .id-card-contact {
+    font-size: 0.8rem;
+  }
+
+  .id-card-photo-placeholder {
+    width: 80px;
+    height: 80px;
+    line-height: 80px;
+    font-size: 0.8rem;
+  }
+
+  .id-preview-buttons {
+    flex-direction: column;
+    width: 100%;
+    padding: 12px;
+  }
+
+  .id-preview-buttons .common-button {
+    width: 100%;
+    min-width: auto;
+    padding: 12px;
+    font-size: 14px;
+    min-height: 44px;
+  }
+}
+
+@media (max-width: 480px) {
+  .id-card {
+    max-width: 100%;
+  }
+
+  .id-card-logos img {
+    width: 40px;
+    height: 40px;
+  }
+
+  .id-card-title {
+    font-size: 0.85rem;
+    margin-bottom: 8px;
+  }
+
+  .id-card-info,
+  .id-card-contact {
+    font-size: 0.75rem;
+  }
+
+  .id-card-photo-placeholder {
+    width: 70px;
+    height: 70px;
+    line-height: 70px;
+    font-size: 0.75rem;
+  }
+}

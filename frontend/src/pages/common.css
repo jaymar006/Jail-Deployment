@@ -512,11 +512,147 @@ body, .common-container {
   max-width: 95%;
 }
 
+/* Mobile Responsive Styles */
+@media (max-width: 768px) {
+  .common-container main {
+    padding: 12px;
+  }
+
+  .table-wrapper {
+    max-height: calc(100vh - 300px);
+    margin-bottom: 12px;
+    border-radius: 8px;
+  }
+
+  .common-table {
+    font-size: 11px;
+  }
+
+  .common-table th, .common-table td {
+    padding: 8px 6px;
+    font-size: 11px;
+  }
+
+  .common-table thead th {
+    padding: 10px 8px;
+    font-size: 11px;
+  }
+
+  .search-filter-container {
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px;
+  }
+
+  .search-filter-container input[type="text"],
+  .search-filter-container select {
+    width: 100%;
+    min-width: auto;
+  }
+
+  .action-buttons {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .action-buttons .common-button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .action-buttons-row {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .action-buttons-row .common-button {
+    flex: 1 1 auto;
+    min-width: calc(50% - 3px);
+  }
+
+  .common-modal-content {
+    width: 95%;
+    max-width: 95%;
+    padding: 16px;
+    margin: 10px;
+  }
+
+  .common-modal-content.wide {
+    width: 95%;
+  }
+
+  .pagination-container {
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 12px 8px;
+  }
+
+  .pagination-button {
+    padding: 10px 14px;
+    font-size: 14px;
+    min-width: 44px; /* Touch-friendly */
+  }
+
+  .pagination-info {
+    margin-left: 0;
+    margin-top: 8px;
+    width: 100%;
+    text-align: center;
+  }
+
+  .no-data {
+    padding: 24px 12px;
+    font-size: 14px;
+  }
+}
+
 @media (max-width: 640px) {
   .form-grid {
     grid-template-columns: 1fr;
   }
+  
   .common-modal-content.wide {
     width: 95%;
+  }
+
+  .common-table th, .common-table td {
+    padding: 6px 4px;
+    font-size: 10px;
+  }
+
+  .common-table thead th {
+    padding: 8px 6px;
+    font-size: 10px;
+  }
+
+  .table-wrapper {
+    max-height: calc(100vh - 250px);
+  }
+}
+
+@media (max-width: 480px) {
+  .common-container main {
+    padding: 8px;
+  }
+
+  .common-table th, .common-table td {
+    padding: 6px 3px;
+    font-size: 9px;
+  }
+
+  .common-table thead th {
+    padding: 8px 4px;
+    font-size: 9px;
+  }
+
+  .common-button {
+    padding: 10px 12px;
+    font-size: 14px;
+  }
+
+  .pagination-button {
+    padding: 8px 10px;
+    font-size: 12px;
+    min-width: 36px;
   }
 }

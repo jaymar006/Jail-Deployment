@@ -163,20 +163,86 @@ tr:hover {
 
 /* Responsive */
 @media (max-width: 768px) {
+  .datas-container {
+    padding: 0;
+  }
+
   .main-content {
     flex-direction: column;
+    height: auto;
+    min-height: calc(100vh - 70px);
   }
 
   .left-panel,
   .right-panel {
     width: 100%;
+    padding: 12px;
+    border-right: none;
+    border-bottom: 1px solid #ddd;
+  }
+
+  .right-panel {
+    border-bottom: none;
   }
 
   .modal-content {
-    width: 90%;
+    width: 95%;
+    max-width: 95%;
+    padding: 16px;
+    margin: 10px;
   }
 
   table {
-    font-size: 12px;
+    font-size: 11px;
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+
+  th, td {
+    padding: 6px 8px;
+    font-size: 11px;
+  }
+
+  .action-buttons button {
+    width: 100%;
+    margin-bottom: 8px;
+    padding: 10px;
+    font-size: 14px;
+    min-height: 44px;
+  }
+
+  .edit-btn,
+  .delete-btn {
+    width: 100%;
+    margin-right: 0;
+    margin-bottom: 4px;
+    padding: 10px;
+    font-size: 14px;
+    min-height: 44px;
+  }
+}
+
+@media (max-width: 480px) {
+  .left-panel,
+  .right-panel {
+    padding: 8px;
+  }
+
+  table {
+    font-size: 10px;
+  }
+
+  th, td {
+    padding: 4px 6px;
+    font-size: 10px;
+  }
+
+  .header-text h1 {
+    font-size: 1.2rem;
+  }
+
+  .logos img {
+    height: 60px;
   }
 }
