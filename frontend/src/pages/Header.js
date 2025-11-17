@@ -103,7 +103,14 @@ const Header = ({ activePage }) => {
           <div className="header-text">
             <h2>SILANG MUNICIPAL JAIL VISITATION MANAGEMENT SYSTEM</h2>
           </div>
-          <button className="mobile-menu-toggle" onClick={toggleMobileMenu} aria-label="Toggle menu">
+          <button 
+            className="mobile-menu-toggle" 
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleMobileMenu();
+            }} 
+            aria-label="Toggle menu"
+          >
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               {mobileMenuOpen ? (
                 <>

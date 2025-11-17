@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import ReactDOM from 'react-dom';
 import axios from '../services/api';
 import './Settings.css';
 
@@ -26,13 +27,15 @@ const Modal = ({ children, onClose }) => {
     };
   }, []);
 
-  return (
+  // Render modal at document body level to ensure it covers everything
+  return ReactDOM.createPortal(
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content" onClick={e => e.stopPropagation()}>
         <button className="modal-close" onClick={onClose}>×</button>
         {children}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 
