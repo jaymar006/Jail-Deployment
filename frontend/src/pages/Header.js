@@ -122,11 +122,18 @@ const Header = ({ activePage }) => {
         </div>
         <nav className={`nav-buttons ${mobileMenuOpen ? 'mobile-open' : ''}`} ref={mobileMenuRef}>
           <div className="mobile-sidebar-header">
-            <div className="mobile-sidebar-logo">
-              <img src="/logo1.png" alt="Logo 1" />
-              <img src="/logo2.png" alt="Logo 2" />
+            <div className="mobile-sidebar-header-top">
+              <div className="mobile-sidebar-logo">
+                <img src="/logo1.png" alt="Logo 1" />
+                <img src="/logo2.png" alt="Logo 2" />
+              </div>
+              <button className="mobile-sidebar-close" onClick={toggleMobileMenu} aria-label="Close menu">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"/>
+                  <line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </button>
             </div>
-            <h3>Navigation</h3>
           </div>
         <Link to="/" onClick={handleNavClick}>
           <button className={location.pathname === '/' ? 'active' : ''}>
