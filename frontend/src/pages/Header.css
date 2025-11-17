@@ -108,6 +108,15 @@
   flex-shrink: 0; /* Prevent nav buttons from shrinking */
 }
 
+/* Hide mobile sidebar header on desktop */
+.mobile-sidebar-header {
+  display: none;
+}
+
+.mobile-sidebar-overlay {
+  display: none;
+}
+
 .nav-buttons a {
   text-decoration: none !important;
 }
@@ -331,6 +340,11 @@
     opacity: 0;
     visibility: hidden;
     transition: opacity 0.3s ease, visibility 0.3s ease;
+  }
+
+  /* Show mobile sidebar header on mobile */
+  .mobile-sidebar-header {
+    display: block;
   }
 
   .mobile-sidebar-overlay.active {
