@@ -87,12 +87,18 @@ const Header = ({ activePage }) => {
 
   const handleNavClick = () => {
     setMobileMenuOpen(false);
+    setDropdownOpen(false); // Also close dropdown when navigating
+  };
+
+  const closeMobileMenu = () => {
+    setMobileMenuOpen(false);
+    setDropdownOpen(false);
   };
 
   return (
     <>
       {/* Mobile Sidebar Overlay */}
-      <div className={`mobile-sidebar-overlay ${mobileMenuOpen ? 'active' : ''}`} onClick={toggleMobileMenu}></div>
+      <div className={`mobile-sidebar-overlay ${mobileMenuOpen ? 'active' : ''}`} onClick={closeMobileMenu}></div>
       
       <header className="dashboard-header">
         <div className="header-top">
@@ -127,7 +133,20 @@ const Header = ({ activePage }) => {
             </svg>
           </button>
         </div>
-        <nav className={`nav-buttons ${mobileMenuOpen ? 'mobile-open' : ''}`} ref={mobileMenuRef}>
+        <nav className={`nav-buttons ${mobileMenuOpen ? 'mobile-open' : ''}`} ref={mobileMenuRef} onClick={(e) => e.stopPropagation()}>
+          {/* Mobile Sidebar Header with Logos */}
+          <div className="mobile-sidebar-header">
+            <div className="mobile-sidebar-logos">
+              <img src="/logo1.png" alt="Logo 1" />
+              <img src="/logo2.png" alt="Logo 2" />
+            </div>
+            <button className="mobile-sidebar-close" onClick={closeMobileMenu} aria-label="Close menu">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"/>
+                <line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
+          </div>
         <Link to="/" onClick={handleNavClick}>
           <button className={location.pathname === '/' ? 'active' : ''}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -165,7 +184,7 @@ const Header = ({ activePage }) => {
         </Link>
         {isAuthenticated && (
           <div className="dropdown" ref={dropdownRef}>
-            <button className="dropdown-toggle" onClick={toggleDropdown}>
+            <button className={`dropdown-toggle ${dropdownOpen ? 'dropdown-open' : ''}`} onClick={toggleDropdown}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
                 <circle cx="12" cy="7" r="4"/>
@@ -177,14 +196,14 @@ const Header = ({ activePage }) => {
             </button>
             {dropdownOpen && (
               <div className="dropdown-menu">
-                <Link to="/settings" className="dropdown-item" onClick={() => { setDropdownOpen(false); handleNavClick(); }}>
+                <Link to="/settings" className="dropdown-item" onClick={() => { setDropdownOpen(false); closeMobileMenu(); }}>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <circle cx="12" cy="12" r="3"/>
                     <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1 1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
                   </svg>
                   Settings
                 </Link>
-                <button className="dropdown-item" onClick={handleLogout}>
+                <button className="dropdown-item" onClick={() => { setDropdownOpen(false); handleLogout(); }}>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
                     <polyline points="16,17 21,12 16,7"/>

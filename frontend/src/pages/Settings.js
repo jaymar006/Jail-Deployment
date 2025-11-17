@@ -459,27 +459,106 @@ const Settings = () => {
           </div>
         )}
         <div className="settings-chooser">
-          <button onClick={() => openModal('username')}>Change Username</button>
-          <button onClick={() => openModal('password')}>Change Password</button>
-          <button onClick={() => openModal('cell')}>Manage Cells</button>
-          <button 
-            onClick={() => openModal('deleteLogs')}
-            style={{
-              background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-              color: 'white'
-            }}
-          >
-            Delete Logs
-          </button>
-          <button 
-            onClick={() => openModal('deleteAllPdls')}
-            style={{
-              background: 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)',
-              color: 'white'
-            }}
-          >
-            Delete All PDLs
-          </button>
+          <div className="settings-card" onClick={() => openModal('username')}>
+            <div className="settings-card-icon" style={{ background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)' }}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                <circle cx="12" cy="7" r="4"/>
+                <path d="M12 11v6"/>
+                <path d="M9 14h6"/>
+              </svg>
+            </div>
+            <div className="settings-card-content">
+              <h3>Change Username</h3>
+              <p>Update your account username</p>
+            </div>
+            <div className="settings-card-arrow">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M5 12h14M12 5l7 7-7 7"/>
+              </svg>
+            </div>
+          </div>
+
+          <div className="settings-card" onClick={() => openModal('password')}>
+            <div className="settings-card-icon" style={{ background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)' }}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+              </svg>
+            </div>
+            <div className="settings-card-content">
+              <h3>Change Password</h3>
+              <p>Update your account password</p>
+            </div>
+            <div className="settings-card-arrow">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M5 12h14M12 5l7 7-7 7"/>
+              </svg>
+            </div>
+          </div>
+
+          <div className="settings-card" onClick={() => openModal('cell')}>
+            <div className="settings-card-icon" style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)' }}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                <line x1="9" y1="3" x2="9" y2="21"/>
+                <line x1="15" y1="3" x2="15" y2="21"/>
+                <line x1="3" y1="9" x2="21" y2="9"/>
+                <line x1="3" y1="15" x2="21" y2="15"/>
+              </svg>
+            </div>
+            <div className="settings-card-content">
+              <h3>Manage Cells</h3>
+              <p>Add, edit, or remove cells</p>
+            </div>
+            <div className="settings-card-arrow">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M5 12h14M12 5l7 7-7 7"/>
+              </svg>
+            </div>
+          </div>
+
+          <div className="settings-card settings-card-warning" onClick={() => openModal('deleteLogs')}>
+            <div className="settings-card-icon" style={{ background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)' }}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3 6h18"/>
+                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
+                <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+                <line x1="10" y1="11" x2="10" y2="17"/>
+                <line x1="14" y1="11" x2="14" y2="17"/>
+              </svg>
+            </div>
+            <div className="settings-card-content">
+              <h3>Delete Logs</h3>
+              <p>Remove visitor log records</p>
+            </div>
+            <div className="settings-card-arrow">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M5 12h14M12 5l7 7-7 7"/>
+              </svg>
+            </div>
+          </div>
+
+          <div className="settings-card settings-card-danger" onClick={() => openModal('deleteAllPdls')}>
+            <div className="settings-card-icon" style={{ background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)' }}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3 6h18"/>
+                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
+                <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+                <line x1="10" y1="11" x2="10" y2="17"/>
+                <line x1="14" y1="11" x2="14" y2="17"/>
+              </svg>
+            </div>
+            <div className="settings-card-content">
+              <h3>Delete All PDLs</h3>
+              <p>Permanently remove all PDL records</p>
+            </div>
+            <div className="settings-card-arrow">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M5 12h14M12 5l7 7-7 7"/>
+              </svg>
+            </div>
+          </div>
         </div>
 
         {/* QR Upload Setting Toggle */}
