@@ -246,7 +246,7 @@ body, .common-container {
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 1000;
+  z-index: 9999;
   overflow-y: auto;
   overflow-x: hidden;
 }
@@ -258,6 +258,8 @@ body, .common-container {
   width: 400px;
   max-width: 90%;
   box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+  position: relative;
+  z-index: 10000;
 }
 
 .common-modal-content h3 {
