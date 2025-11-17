@@ -72,6 +72,7 @@ const toYMD = (value) => {
 
 const Datas = () => {
   const [pdls, setPdls] = useState([]);
+  const [loadingPdls, setLoadingPdls] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [sortOption, setSortOption] = useState('none');
   const [currentPage, setCurrentPage] = useState(1);
@@ -304,6 +305,7 @@ const Datas = () => {
 
   const fetchPdls = async () => {
     try {
+      setLoadingPdls(true);
       const res = await axios.get('/pdls');
       const pdlsWithFormattedDates = res.data.map(pdl => {
         const formatLocalDate = (dateStr) => {
@@ -324,6 +326,8 @@ const Datas = () => {
       setPdls(pdlsWithFormattedDates);
     } catch (err) {
       console.error('Failed to fetch PDLs:', err);
+    } finally {
+      setLoadingPdls(false);
     }
   };
 
@@ -1868,6 +1872,27 @@ const exportPdlsWithVisitorsToExcel = async () => {
         </div>
         
         <div className="table-wrapper" ref={tableWrapperRef}>
+          {loadingPdls ? (
+            <div style={{ 
+              display: 'flex', 
+              flexDirection: 'column', 
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              padding: '60px 20px',
+              minHeight: '300px'
+            }}>
+              <div style={{
+                width: '48px',
+                height: '48px',
+                border: '4px solid #e5e7eb',
+                borderTop: '4px solid #4b5563',
+                borderRadius: '50%',
+                animation: 'spin 1s linear infinite',
+                marginBottom: '16px'
+              }}></div>
+              <p style={{ color: '#6b7280', fontSize: '14px', margin: 0 }}>Loading PDL data...</p>
+            </div>
+          ) : (
           <table className="common-table">
             <thead>
             <tr>
@@ -1954,6 +1979,7 @@ const exportPdlsWithVisitorsToExcel = async () => {
             ))}
           </tbody>
         </table>
+          )}
         </div>
 
         {totalPages > 1 && (

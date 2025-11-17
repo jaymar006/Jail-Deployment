@@ -42,7 +42,7 @@ const QRCodeScanner = ({ onScan, resetTrigger }) => {
 
     startAttemptRef.current = true;
 
-    const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+    const config = { fps: 10, qrbox: null };
 
     try {
       // Check if camera is available before starting

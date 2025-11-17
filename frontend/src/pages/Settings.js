@@ -405,7 +405,22 @@ const Settings = () => {
   };
 
   if (loading) {
-    return <div>Loading...</div>;
+    return (
+      <div className="settings-container" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{
+            width: '48px',
+            height: '48px',
+            border: '4px solid #e5e7eb',
+            borderTop: '4px solid #4b5563',
+            borderRadius: '50%',
+            animation: 'spin 1s linear infinite',
+            margin: '0 auto 16px'
+          }}></div>
+          <p style={{ color: '#6b7280', fontSize: '14px', margin: 0 }}>Loading...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -584,7 +599,13 @@ const Settings = () => {
 
         {modalOpen === 'username' && (
           <Modal onClose={closeModal}>
-            <h3>Change Username</h3>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px', justifyContent: 'center' }}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#4b5563' }}>
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                <circle cx="12" cy="7" r="4"/>
+              </svg>
+              <h3 style={{ margin: 0 }}>Change Username</h3>
+            </div>
             <form onSubmit={handleUsernameSubmit} className="settings-form">
               <label htmlFor="username">New Username:</label>
               <input
@@ -601,7 +622,13 @@ const Settings = () => {
 
         {modalOpen === 'password' && (
           <Modal onClose={closeModal}>
-            <h3>Change Password</h3>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px', justifyContent: 'center' }}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#4b5563' }}>
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+              </svg>
+              <h3 style={{ margin: 0 }}>Change Password</h3>
+            </div>
             <form onSubmit={handlePasswordSubmit} className="settings-form">
               <label htmlFor="currentPassword">Current Password:</label>
               <input
@@ -909,7 +936,30 @@ const Settings = () => {
 
         {modalOpen === 'deleteAllPdls' && (
           <Modal onClose={closeModal}>
-            <h3 style={{ color: '#dc2626', textAlign: 'center' }}>⚠️ Delete All PDLs</h3>
+            <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+              <div style={{
+                width: '64px',
+                height: '64px',
+                margin: '0 auto 16px',
+                background: 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)',
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                border: '2px solid #fca5a5'
+              }}>
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#dc2626' }}>
+                  <path d="M3 6h18"/>
+                  <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
+                  <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+                  <line x1="10" y1="11" x2="10" y2="17"/>
+                  <line x1="14" y1="11" x2="14" y2="17"/>
+                </svg>
+              </div>
+              <h3 style={{ margin: '0 0 8px 0', fontSize: '24px', fontWeight: '700', color: '#dc2626' }}>
+                Delete All PDLs
+              </h3>
+            </div>
             
             <div style={{ marginBottom: '20px', textAlign: 'center' }}>
               <p style={{ marginBottom: '15px', fontSize: '16px', color: '#374151' }}>

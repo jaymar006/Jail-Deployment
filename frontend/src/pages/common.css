@@ -20,6 +20,12 @@ body, .common-container {
   -webkit-backface-visibility: hidden;
 }
 
+/* Loading spinner animation */
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
 .common-container {
   width: 100%;
   max-width: 100vw;
