@@ -555,13 +555,11 @@ body, .common-container {
     font-size: 11px;
     display: table;
     width: 100%;
-    min-width: 600px; /* Ensure table doesn't get too compressed */
   }
 
   .common-table th, .common-table td {
     padding: 8px 6px;
     font-size: 11px;
-    white-space: nowrap;
   }
 
   .common-table thead th {
@@ -569,18 +567,22 @@ body, .common-container {
     font-size: 11px;
   }
 
-  /* Make important columns stay visible */
-  .common-table th:first-child,
-  .common-table td:first-child {
-    position: sticky;
-    left: 0;
-    background: inherit;
-    z-index: 5;
-    box-shadow: 2px 0 4px rgba(0, 0, 0, 0.1);
+  /* Hide less important columns on mobile - show only essential ones */
+  .common-table th:nth-child(n+6),
+  .common-table td:nth-child(n+6) {
+    display: none;
   }
 
-  .common-table thead th:first-child {
-    z-index: 6;
+  /* Always show first 5 columns: checkbox, name fields, and actions */
+  .common-table th:nth-child(-n+5),
+  .common-table td:nth-child(-n+5) {
+    display: table-cell;
+  }
+
+  /* Show actions column (usually last) */
+  .common-table th:last-child,
+  .common-table td:last-child {
+    display: table-cell;
   }
 
   .search-filter-container {
@@ -666,7 +668,7 @@ body, .common-container {
   }
 
   .common-table {
-    min-width: 800px; /* Wider minimum for better readability */
+    width: 100%;
   }
 
   .common-table th, .common-table td {
@@ -677,6 +679,20 @@ body, .common-container {
   .common-table thead th {
     padding: 8px 6px;
     font-size: 10px;
+  }
+
+  /* On very small screens, show even fewer columns */
+  .common-table th:nth-child(n+5),
+  .common-table td:nth-child(n+5) {
+    display: none;
+  }
+
+  /* Show only: checkbox, first name, last name, and actions */
+  .common-table th:nth-child(-n+4),
+  .common-table td:nth-child(-n+4),
+  .common-table th:last-child,
+  .common-table td:last-child {
+    display: table-cell;
   }
 }
 
@@ -702,7 +718,7 @@ body, .common-container {
   }
 
   .common-table {
-    min-width: 900px; /* Even wider for very small screens */
+    width: 100%;
   }
 
   .common-table th, .common-table td {

@@ -382,31 +382,28 @@
   
   .cell-management-table {
     font-size: 11px;
-    display: block;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    min-width: 600px;
+    display: table;
+    width: 100%;
   }
   
   .cell-management-table th,
   .cell-management-table td {
     padding: 8px 10px;
     font-size: 11px;
-    white-space: nowrap;
   }
 
-  /* Sticky first column */
-  .cell-management-table th:first-child,
-  .cell-management-table td:first-child {
-    position: sticky;
-    left: 0;
-    background: inherit;
-    z-index: 5;
-    box-shadow: 2px 0 4px rgba(0, 0, 0, 0.1);
+  /* Hide less important columns - show only essential */
+  .cell-management-table th:nth-child(n+4),
+  .cell-management-table td:nth-child(n+4) {
+    display: none;
   }
 
-  .cell-management-table thead th:first-child {
-    z-index: 6;
+  /* Show: cell number, cell name, status, actions */
+  .cell-management-table th:nth-child(-n+3),
+  .cell-management-table td:nth-child(-n+3),
+  .cell-management-table th:last-child,
+  .cell-management-table td:last-child {
+    display: table-cell;
   }
   
   .table-action-buttons {
@@ -444,7 +441,7 @@
 
   .cell-management-table {
     font-size: 10px;
-    min-width: 700px;
+    width: 100%;
   }
 
   .cell-management-table th,

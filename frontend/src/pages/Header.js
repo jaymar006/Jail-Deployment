@@ -73,38 +73,61 @@ const Header = ({ activePage }) => {
     };
   }, [dropdownOpen, mobileMenuOpen]);
 
+  // Prevent body scroll when sidebar is open
+  useEffect(() => {
+    if (mobileMenuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [mobileMenuOpen]);
+
   const handleNavClick = () => {
     setMobileMenuOpen(false);
   };
 
   return (
-    <header className="dashboard-header">
-      <div className="header-top">
-        <div className="logos">
-          <img src="/logo1.png" alt="Logo 1" />
-          <img src="/logo2.png" alt="Logo 2" />
+    <>
+      {/* Mobile Sidebar Overlay */}
+      <div className={`mobile-sidebar-overlay ${mobileMenuOpen ? 'active' : ''}`} onClick={toggleMobileMenu}></div>
+      
+      <header className="dashboard-header">
+        <div className="header-top">
+          <div className="logos">
+            <img src="/logo1.png" alt="Logo 1" />
+            <img src="/logo2.png" alt="Logo 2" />
+          </div>
+          <div className="header-text">
+            <h2>SILANG MUNICIPAL JAIL VISITATION MANAGEMENT SYSTEM</h2>
+          </div>
+          <button className="mobile-menu-toggle" onClick={toggleMobileMenu} aria-label="Toggle menu">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              {mobileMenuOpen ? (
+                <>
+                  <line x1="18" y1="6" x2="6" y2="18"/>
+                  <line x1="6" y1="6" x2="18" y2="18"/>
+                </>
+              ) : (
+                <>
+                  <line x1="3" y1="12" x2="21" y2="12"/>
+                  <line x1="3" y1="6" x2="21" y2="6"/>
+                  <line x1="3" y1="18" x2="21" y2="18"/>
+                </>
+              )}
+            </svg>
+          </button>
         </div>
-        <div className="header-text">
-          <h2>SILANG MUNICIPAL JAIL VISITATION MANAGEMENT SYSTEM</h2>
-        </div>
-        <button className="mobile-menu-toggle" onClick={toggleMobileMenu} aria-label="Toggle menu">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            {mobileMenuOpen ? (
-              <>
-                <line x1="18" y1="6" x2="6" y2="18"/>
-                <line x1="6" y1="6" x2="18" y2="18"/>
-              </>
-            ) : (
-              <>
-                <line x1="3" y1="12" x2="21" y2="12"/>
-                <line x1="3" y1="6" x2="21" y2="6"/>
-                <line x1="3" y1="18" x2="21" y2="18"/>
-              </>
-            )}
-          </svg>
-        </button>
-      </div>
-      <nav className={`nav-buttons ${mobileMenuOpen ? 'mobile-open' : ''}`} ref={mobileMenuRef}>
+        <nav className={`nav-buttons ${mobileMenuOpen ? 'mobile-open' : ''}`} ref={mobileMenuRef}>
+          <div className="mobile-sidebar-header">
+            <div className="mobile-sidebar-logo">
+              <img src="/logo1.png" alt="Logo 1" />
+              <img src="/logo2.png" alt="Logo 2" />
+            </div>
+            <h3>Navigation</h3>
+          </div>
         <Link to="/" onClick={handleNavClick}>
           <button className={location.pathname === '/' ? 'active' : ''}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -175,6 +198,7 @@ const Header = ({ activePage }) => {
         )}
       </nav>
     </header>
+    </>
   );
 };
 

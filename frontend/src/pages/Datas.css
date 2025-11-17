@@ -198,31 +198,27 @@ tr:hover {
 
   table {
     font-size: 11px;
-    display: block;
-    overflow-x: auto;
-    white-space: nowrap;
-    -webkit-overflow-scrolling: touch;
-    min-width: 600px;
+    display: table;
+    width: 100%;
   }
 
   th, td {
     padding: 6px 8px;
     font-size: 11px;
-    white-space: nowrap;
   }
 
-  /* Sticky first column */
-  th:first-child,
-  td:first-child {
-    position: sticky;
-    left: 0;
-    background: inherit;
-    z-index: 5;
-    box-shadow: 2px 0 4px rgba(0, 0, 0, 0.1);
+  /* Hide less important columns on mobile */
+  table th:nth-child(n+7),
+  table td:nth-child(n+7) {
+    display: none;
   }
 
-  thead th:first-child {
-    z-index: 6;
+  /* Show: checkbox, last name, first name, middle name, cell number, criminal case, actions */
+  table th:nth-child(-n+6),
+  table td:nth-child(-n+6),
+  table th:last-child,
+  table td:last-child {
+    display: table-cell;
   }
 
   .action-buttons button {
@@ -252,12 +248,26 @@ tr:hover {
 
   table {
     font-size: 10px;
-    min-width: 800px;
+    width: 100%;
   }
 
   th, td {
     padding: 4px 6px;
     font-size: 10px;
+  }
+
+  /* Show even fewer columns on very small screens */
+  table th:nth-child(n+5),
+  table td:nth-child(n+5) {
+    display: none;
+  }
+
+  /* Show only: checkbox, last name, first name, cell number, actions */
+  table th:nth-child(-n+4),
+  table td:nth-child(-n+4),
+  table th:last-child,
+  table td:last-child {
+    display: table-cell;
   }
 
   .header-text h1 {
