@@ -522,20 +522,42 @@ body, .common-container {
     max-height: calc(100vh - 300px);
     margin-bottom: 12px;
     border-radius: 8px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    display: block;
+    width: 100%;
   }
 
   .common-table {
     font-size: 11px;
+    display: table;
+    width: 100%;
+    min-width: 600px; /* Ensure table doesn't get too compressed */
   }
 
   .common-table th, .common-table td {
     padding: 8px 6px;
     font-size: 11px;
+    white-space: nowrap;
   }
 
   .common-table thead th {
     padding: 10px 8px;
     font-size: 11px;
+  }
+
+  /* Make important columns stay visible */
+  .common-table th:first-child,
+  .common-table td:first-child {
+    position: sticky;
+    left: 0;
+    background: inherit;
+    z-index: 5;
+    box-shadow: 2px 0 4px rgba(0, 0, 0, 0.1);
+  }
+
+  .common-table thead th:first-child {
+    z-index: 6;
   }
 
   .search-filter-container {
@@ -615,6 +637,15 @@ body, .common-container {
     width: 95%;
   }
 
+  .table-wrapper {
+    max-height: calc(100vh - 250px);
+    overflow-x: auto;
+  }
+
+  .common-table {
+    min-width: 800px; /* Wider minimum for better readability */
+  }
+
   .common-table th, .common-table td {
     padding: 6px 4px;
     font-size: 10px;
@@ -624,15 +655,22 @@ body, .common-container {
     padding: 8px 6px;
     font-size: 10px;
   }
-
-  .table-wrapper {
-    max-height: calc(100vh - 250px);
-  }
 }
 
 @media (max-width: 480px) {
   .common-container main {
     padding: 8px;
+  }
+
+  .table-wrapper {
+    margin-left: -8px;
+    margin-right: -8px;
+    width: calc(100% + 16px);
+    border-radius: 0;
+  }
+
+  .common-table {
+    min-width: 900px; /* Even wider for very small screens */
   }
 
   .common-table th, .common-table td {

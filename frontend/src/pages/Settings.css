@@ -373,12 +373,29 @@
     font-size: 11px;
     display: block;
     overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    min-width: 600px;
   }
   
   .cell-management-table th,
   .cell-management-table td {
     padding: 8px 10px;
     font-size: 11px;
+    white-space: nowrap;
+  }
+
+  /* Sticky first column */
+  .cell-management-table th:first-child,
+  .cell-management-table td:first-child {
+    position: sticky;
+    left: 0;
+    background: inherit;
+    z-index: 5;
+    box-shadow: 2px 0 4px rgba(0, 0, 0, 0.1);
+  }
+
+  .cell-management-table thead th:first-child {
+    z-index: 6;
   }
   
   .table-action-buttons {
@@ -416,6 +433,7 @@
 
   .cell-management-table {
     font-size: 10px;
+    min-width: 700px;
   }
 
   .cell-management-table th,
