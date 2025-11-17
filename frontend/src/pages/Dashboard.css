@@ -230,6 +230,47 @@
     font-size: 16px;
     min-height: 44px;
   }
+
+  /* Mobile responsive table - Dashboard Allowed Visitors */
+  /* Hide columns except Visitor's Name, Time In, Time Out */
+  .dashboard-main .common-table thead th:nth-child(1),
+  .dashboard-main .common-table tbody td:nth-child(1) {
+    display: none; /* Hide checkbox column */
+  }
+  
+  .dashboard-main .common-table thead th:nth-child(3),
+  .dashboard-main .common-table tbody td:nth-child(3),
+  .dashboard-main .common-table thead th:nth-child(4),
+  .dashboard-main .common-table tbody td:nth-child(4),
+  .dashboard-main .common-table thead th:nth-child(5),
+  .dashboard-main .common-table tbody td:nth-child(5),
+  .dashboard-main .common-table thead th:nth-child(8),
+  .dashboard-main .common-table tbody td:nth-child(8) {
+    display: none; /* Hide PDL's to be Visited, Cell, Purpose, Actions columns */
+  }
+  
+  /* Make table scrollable horizontally if needed */
+  .dashboard-main .common-table {
+    min-width: 300px;
+    font-size: 11px;
+  }
+  
+  /* Keep Visitor's Name, Time In, Time Out visible */
+  .dashboard-main .common-table thead th:nth-child(2),
+  .dashboard-main .common-table tbody td:nth-child(2),
+  .dashboard-main .common-table thead th:nth-child(6),
+  .dashboard-main .common-table tbody td:nth-child(6),
+  .dashboard-main .common-table thead th:nth-child(7),
+  .dashboard-main .common-table tbody td:nth-child(7) {
+    display: table-cell;
+  }
+  
+  /* Adjust padding for mobile */
+  .dashboard-main .common-table th,
+  .dashboard-main .common-table td {
+    padding: 8px 6px;
+    font-size: 11px;
+  }
 }
 
 @media (max-width: 480px) {

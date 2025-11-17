@@ -1,8 +1,44 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import ReactDOM from 'react-dom';
 import QRCodeScanner from '../components/QRCodeScanner';
 import { Html5Qrcode } from 'html5-qrcode';
 import api from '../services/api';
 import './Dashboard.css';
+
+const Modal = ({ children, onClose }) => {
+  // Prevent body scroll when modal is open and ensure overlay covers everything
+  React.useEffect(() => {
+    const originalOverflow = document.body.style.overflow;
+    const originalHtmlOverflow = document.documentElement.style.overflow;
+    const originalBgColor = document.body.style.backgroundColor;
+    const originalHtmlBgColor = document.documentElement.style.backgroundColor;
+    
+    // Prevent scrolling on both body and html
+    document.body.style.overflow = 'hidden';
+    document.documentElement.style.overflow = 'hidden';
+    
+    // Ensure background doesn't show white behind modal
+    document.body.style.backgroundColor = '#f9fafb';
+    document.documentElement.style.backgroundColor = '#f9fafb';
+    
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      document.documentElement.style.overflow = originalHtmlOverflow;
+      document.body.style.backgroundColor = originalBgColor;
+      document.documentElement.style.backgroundColor = originalHtmlBgColor;
+    };
+  }, []);
+
+  // Render modal at document body level to ensure it covers everything
+  return ReactDOM.createPortal(
+    <div className="common-modal" onClick={onClose}>
+      <div className="common-modal-content" onClick={e => e.stopPropagation()}>
+        {children}
+      </div>
+    </div>,
+    document.body
+  );
+};
 
 const Dashboard = () => {
   const [visitors, setVisitors] = useState([]);
@@ -1055,8 +1091,8 @@ const Dashboard = () => {
 
         {/* Schedule Modal */}
         {showScheduleModal && (
-          <div className="common-modal">
-            <div className="common-modal-content" style={{ maxWidth: '500px' }}>
+          <Modal onClose={() => setShowScheduleModal(false)}>
+            <div style={{ maxWidth: '500px' }}>
               <h3 style={{ textAlign: 'center', marginBottom: '24px', fontSize: '24px', fontWeight: '600', color: '#111827' }}>
                 Schedule Cell Visits
               </h3>
@@ -1231,7 +1267,7 @@ const Dashboard = () => {
                 </button>
               </div>
             </div>
-          </div>
+          </Modal>
         )}
       </main>
     </div>
