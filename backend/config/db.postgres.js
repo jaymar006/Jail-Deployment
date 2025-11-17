@@ -404,6 +404,20 @@ function convertPlaceholders(sql, params) {
   return { sql: convertedSql, params };
 }
 
+// Convert SQLite datetime functions to PostgreSQL equivalents
+function convertSQLiteFunctions(sql) {
+  // Convert datetime('now') to CURRENT_TIMESTAMP
+  sql = sql.replace(/datetime\s*\(\s*['"]now['"]\s*\)/gi, 'CURRENT_TIMESTAMP');
+  
+  // Convert date('now') to CURRENT_DATE
+  sql = sql.replace(/date\s*\(\s*['"]now['"]\s*\)/gi, 'CURRENT_DATE');
+  
+  // Convert time('now') to CURRENT_TIME
+  sql = sql.replace(/time\s*\(\s*['"]now['"]\s*\)/gi, 'CURRENT_TIME');
+  
+  return sql;
+}
+
 // Add RETURNING id to INSERT statements if not present (for PostgreSQL)
 function addReturningClause(sql) {
   const trimmedSql = sql.trim();
@@ -428,8 +442,11 @@ async function query(sql, params, cb) {
   const effectiveParams = Array.isArray(params) ? params : (cb ? params : []);
 
   try {
+    // Convert SQLite functions to PostgreSQL equivalents
+    const sqlWithPostgresFunctions = convertSQLiteFunctions(sql);
+    
     // Convert ? placeholders to $1, $2, etc. for PostgreSQL
-    const { sql: convertedSql, params: convertedParams } = convertPlaceholders(sql, effectiveParams);
+    const { sql: convertedSql, params: convertedParams } = convertPlaceholders(sqlWithPostgresFunctions, effectiveParams);
     
     // Add RETURNING id to INSERT statements
     const finalSql = addReturningClause(convertedSql);
