@@ -84,7 +84,7 @@ if (fs.existsSync(buildPath)) {
 // Initialize default admin user on startup (after database is ready)
 const initDefaultUser = require('./scripts/initDefaultUser');
 
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 10000;
 
 // Wait for database schema to be ready before starting server
 const startServer = async () => {
