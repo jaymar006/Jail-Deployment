@@ -835,8 +835,8 @@ const Dashboard = () => {
 
         {/* Purpose Selection Modal */}
         {showPurposeModal && (
-          <div className="common-modal">
-            <div className="common-modal-content purpose-modal" style={{ maxWidth: '600px' }}>
+          <Modal onClose={() => setShowPurposeModal(false)}>
+            <div className="purpose-modal" style={{ maxWidth: '600px' }}>
               {/* Header Section */}
               <div style={{ textAlign: 'center', marginBottom: '32px' }}>
                 <div style={{
@@ -1086,7 +1086,7 @@ const Dashboard = () => {
                 </div>
               </form>
             </div>
-          </div>
+          </Modal>
         )}
 
         {/* Schedule Modal */}

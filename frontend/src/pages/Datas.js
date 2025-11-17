@@ -1,8 +1,44 @@
 import React, { useState, useEffect, useRef } from 'react';
+import ReactDOM from 'react-dom';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import axios from '../services/api';
 import * as XLSX from 'xlsx';
 import './common.css';
+
+const Modal = ({ children, onClose, wide = false }) => {
+  // Prevent body scroll when modal is open and ensure overlay covers everything
+  React.useEffect(() => {
+    const originalOverflow = document.body.style.overflow;
+    const originalHtmlOverflow = document.documentElement.style.overflow;
+    const originalBgColor = document.body.style.backgroundColor;
+    const originalHtmlBgColor = document.documentElement.style.backgroundColor;
+    
+    // Prevent scrolling on both body and html
+    document.body.style.overflow = 'hidden';
+    document.documentElement.style.overflow = 'hidden';
+    
+    // Ensure background doesn't show white behind modal
+    document.body.style.backgroundColor = '#f9fafb';
+    document.documentElement.style.backgroundColor = '#f9fafb';
+    
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      document.documentElement.style.overflow = originalHtmlOverflow;
+      document.body.style.backgroundColor = originalBgColor;
+      document.documentElement.style.backgroundColor = originalHtmlBgColor;
+    };
+  }, []);
+
+  // Render modal at document body level to ensure it covers everything
+  return ReactDOM.createPortal(
+    <div className="common-modal" onClick={onClose}>
+      <div className={`common-modal-content ${wide ? 'wide' : ''}`} onClick={e => e.stopPropagation()}>
+        {children}
+      </div>
+    </div>,
+    document.body
+  );
+};
 
 // eslint-disable-next-line no-unused-vars
 const formatDateOnly = (dateStr) => {
@@ -2061,8 +2097,8 @@ const exportPdlsWithVisitorsToExcel = async () => {
       </main>
 
       {showAddModal && (
-        <div className="common-modal">
-          <div className="common-modal-content wide" style={{ maxHeight: '90vh', overflowY: 'auto' }}>
+        <Modal onClose={() => setShowAddModal(false)} wide={true}>
+          <div style={{ maxHeight: '90vh', overflowY: 'auto' }}>
             <h3 style={{ textAlign: 'center', marginBottom: '24px', fontSize: '24px', fontWeight: '600', color: '#111827' }}>Add a PDL</h3>
             <form onSubmit={handleAddSubmit}>
               <div style={{ 
@@ -2376,12 +2412,12 @@ const exportPdlsWithVisitorsToExcel = async () => {
               </div>
             </form>
           </div>
-        </div>
+        </Modal>
       )}
 
       {showEditModal && (
-        <div className="common-modal">
-          <div className="common-modal-content wide" style={{ maxHeight: '90vh', overflowY: 'auto' }}>
+        <Modal onClose={() => setShowEditModal(false)} wide={true}>
+          <div style={{ maxHeight: '90vh', overflowY: 'auto' }}>
             <h3 style={{ textAlign: 'center', marginBottom: '24px', fontSize: '24px', fontWeight: '600', color: '#111827' }}>Edit PDL</h3>
             <form onSubmit={handleEditSubmit}>
               <div style={{ 
@@ -2695,13 +2731,13 @@ const exportPdlsWithVisitorsToExcel = async () => {
               </div>
             </form>
           </div>
-        </div>
+        </Modal>
       )}
 
       {/* Duplicate PDL Selection Modal */}
       {showDuplicateModal && (
-        <div className="common-modal" style={{ zIndex: 10000 }}>
-          <div className="common-modal-content" style={{ zIndex: 10001 }}>
+        <Modal onClose={() => setShowDuplicateModal(false)}>
+          <div>
             <h3 style={{ textAlign: 'center', marginBottom: '20px', fontSize: '20px', fontWeight: '600', color: '#111827' }}>
               Select PDL for Visitor
             </h3>
@@ -2781,8 +2817,8 @@ const exportPdlsWithVisitorsToExcel = async () => {
 
       {/* Import Summary Modal */}
       {showImportSummaryModal && (
-        <div className="common-modal" style={{ zIndex: 10002 }}>
-          <div className="common-modal-content" style={{ maxWidth: '800px', maxHeight: '80vh', zIndex: 10003 }}>
+        <Modal onClose={() => setShowImportSummaryModal(false)}>
+          <div style={{ maxWidth: '800px', maxHeight: '80vh' }}>
             <h3 style={{ textAlign: 'center', marginBottom: '20px', fontSize: '20px', fontWeight: '600', color: '#111827' }}>
               Import Summary
             </h3>
@@ -2902,13 +2938,13 @@ const exportPdlsWithVisitorsToExcel = async () => {
               </button>
             </div>
           </div>
-        </div>
+        </Modal>
       )}
 
       {/* PDL Import Summary Modal */}
       {showPdlImportSummaryModal && (
-        <div className="common-modal" style={{ zIndex: 10004 }}>
-          <div className="common-modal-content" style={{ maxWidth: '800px', maxHeight: '80vh', zIndex: 10005 }}>
+        <Modal onClose={() => setShowPdlImportSummaryModal(false)}>
+          <div style={{ maxWidth: '800px', maxHeight: '80vh' }}>
             <h3 style={{ textAlign: 'center', marginBottom: '20px', fontSize: '20px', fontWeight: '600', color: '#111827' }}>
               PDL Import Summary
             </h3>
@@ -3026,7 +3062,7 @@ const exportPdlsWithVisitorsToExcel = async () => {
               </button>
             </div>
           </div>
-        </div>
+        </Modal>
       )}
 
     </div>

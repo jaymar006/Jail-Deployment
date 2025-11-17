@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef, useContext } from 'react';
+import ReactDOM from 'react-dom';
 import { VisitorContext } from '../context/VisitorContext';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import api from '../services/api';
@@ -8,6 +9,41 @@ import './VisitorPageIdPreview.css';
 import { QRCodeCanvas } from 'qrcode.react';
 import ID_Background from '../assets/ID_Background.png';
 import { toPng } from 'html-to-image';
+
+const Modal = ({ children, onClose, wide = false }) => {
+  // Prevent body scroll when modal is open and ensure overlay covers everything
+  React.useEffect(() => {
+    const originalOverflow = document.body.style.overflow;
+    const originalHtmlOverflow = document.documentElement.style.overflow;
+    const originalBgColor = document.body.style.backgroundColor;
+    const originalHtmlBgColor = document.documentElement.style.backgroundColor;
+    
+    // Prevent scrolling on both body and html
+    document.body.style.overflow = 'hidden';
+    document.documentElement.style.overflow = 'hidden';
+    
+    // Ensure background doesn't show white behind modal
+    document.body.style.backgroundColor = '#f9fafb';
+    document.documentElement.style.backgroundColor = '#f9fafb';
+    
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      document.documentElement.style.overflow = originalHtmlOverflow;
+      document.body.style.backgroundColor = originalBgColor;
+      document.documentElement.style.backgroundColor = originalHtmlBgColor;
+    };
+  }, []);
+
+  // Render modal at document body level to ensure it covers everything
+  return ReactDOM.createPortal(
+    <div className="common-modal" onClick={onClose}>
+      <div className={`common-modal-content ${wide ? 'wide' : ''}`} onClick={e => e.stopPropagation()}>
+        {children}
+      </div>
+    </div>,
+    document.body
+  );
+};
 
 const VisitorPage = () => {
   const { pdlId } = useParams();
@@ -462,8 +498,8 @@ const VisitorPage = () => {
         )}
 
         {showAddModal && (
-          <div className="common-modal">
-            <div className="common-modal-content wide" style={{ maxHeight: '90vh', overflowY: 'auto' }}>
+          <Modal onClose={() => setShowAddModal(false)} wide={true}>
+            <div style={{ maxHeight: '90vh', overflowY: 'auto' }}>
               <h3 style={{ textAlign: 'center', marginBottom: '24px', fontSize: '24px', fontWeight: '600', color: '#111827' }}>Add Visitor</h3>
               <form onSubmit={handleAddVisitor}>
                 <div style={{ 
@@ -735,12 +771,12 @@ const VisitorPage = () => {
                 </div>
               </form>
             </div>
-          </div>
+          </Modal>
         )}
 
         {showEditModal && (
-          <div className="common-modal">
-            <div className="common-modal-content wide" style={{ maxHeight: '90vh', overflowY: 'auto' }}>
+          <Modal onClose={() => setShowEditModal(false)} wide={true}>
+            <div style={{ maxHeight: '90vh', overflowY: 'auto' }}>
               <h3 style={{ textAlign: 'center', marginBottom: '24px', fontSize: '24px', fontWeight: '600', color: '#111827' }}>Edit Visitor</h3>
               <form onSubmit={handleEditVisitor}>
                 <div style={{ 
@@ -1012,7 +1048,7 @@ const VisitorPage = () => {
                 </div>
               </form>
             </div>
-          </div>
+          </Modal>
         )}
 
         {showIdPreview && (
@@ -1165,26 +1201,24 @@ const VisitorPage = () => {
 
         {/* Camera Modal */}
         {showCameraModal && (
-          <div className="modal fade show" style={{ display: 'block' }} tabIndex="-1" role="dialog" aria-modal="true">
-            <div className="modal-dialog" role="document" style={{ maxWidth: '400px' }}>
-              <div className="modal-content">
-                <div className="modal-header">
-                  <h5 className="modal-title">Capture Photo</h5>
-                  <button type="button" className="close" aria-label="Close" onClick={closeCameraModal}>
-                    <span aria-hidden="true">&times;</span>
-                  </button>
-                </div>
-                <div className="modal-body" style={{ textAlign: 'center' }}>
-                  <video ref={videoRef} autoPlay playsInline style={{ width: '100%', borderRadius: '8px' }} />
-                  <canvas ref={canvasRef} style={{ display: 'none' }} />
-                </div>
-                <div className="modal-footer">
-                  <button className="btn btn-primary" onClick={capturePhoto}>Capture</button>
-                  <button className="btn btn-secondary" onClick={closeCameraModal}>Cancel</button>
-                </div>
+          <Modal onClose={closeCameraModal}>
+            <div style={{ maxWidth: '400px', width: '100%' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', paddingBottom: '10px', borderBottom: '1px solid #dee2e6' }}>
+                <h5 style={{ margin: 0, fontSize: '1.25rem', fontWeight: '500' }}>Capture Photo</h5>
+                <button type="button" style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#6b7280' }} aria-label="Close" onClick={closeCameraModal}>
+                  <span aria-hidden="true">&times;</span>
+                </button>
+              </div>
+              <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+                <video ref={videoRef} autoPlay playsInline style={{ width: '100%', borderRadius: '8px' }} />
+                <canvas ref={canvasRef} style={{ display: 'none' }} />
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', paddingTop: '10px', borderTop: '1px solid #dee2e6' }}>
+                <button className="btn btn-primary" onClick={capturePhoto}>Capture</button>
+                <button className="btn btn-secondary" onClick={closeCameraModal}>Cancel</button>
               </div>
             </div>
-          </div>
+          </Modal>
         )}
       </main>
     </div>
