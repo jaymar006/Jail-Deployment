@@ -36,6 +36,8 @@ RUN npm install
 # If not set, will fallback to window.location.origin in the frontend code
 ARG REACT_APP_API_URL
 ENV REACT_APP_API_URL=${REACT_APP_API_URL}
+# Disable source maps to avoid warnings from html5-qrcode package
+ENV GENERATE_SOURCEMAP=false
 RUN npm run build
 
 # Create data directory for SQLite
