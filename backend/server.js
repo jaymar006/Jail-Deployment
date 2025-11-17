@@ -85,14 +85,41 @@ if (fs.existsSync(buildPath)) {
 const initDefaultUser = require('./scripts/initDefaultUser');
 
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, async () => {
-  console.log(`Server running on port ${PORT}`);
-  
-  // Wait a moment for database to initialize, then create default user
-  setTimeout(async () => {
-    await initDefaultUser();
-  }, 1000);
-});
+
+// Wait for database schema to be ready before starting server
+const startServer = async () => {
+  try {
+    // If using PostgreSQL, wait for schema initialization
+    if (process.env.DATABASE_URL) {
+      const db = require('./config/db');
+      if (db.waitForSchema) {
+        console.log('⏳ Waiting for database schema to initialize...');
+        await db.waitForSchema();
+        console.log('✅ Database schema ready');
+      }
+    }
+    
+    // Start the server
+    app.listen(PORT, async () => {
+      console.log(`Server running on port ${PORT}`);
+      
+      // Wait a moment for everything to settle, then create default user
+      setTimeout(async () => {
+        try {
+          await initDefaultUser();
+        } catch (error) {
+          console.error('⚠️  Failed to initialize default user:', error.message);
+          // Don't crash - server can still run
+        }
+      }, 1000);
+    });
+  } catch (error) {
+    console.error('❌ Failed to start server:', error);
+    process.exit(1);
+  }
+};
+
+startServer();
 
 
   

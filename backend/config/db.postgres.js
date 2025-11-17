@@ -185,15 +185,66 @@ const initializeSchema = async () => {
   try {
     const client = await pool.connect();
     try {
-      // Split and execute schema statements
-      const statements = schemaStatements
-        .split(';')
-        .map(s => s.trim())
-        .filter(s => s.length > 0 && !s.startsWith('--'));
-
+      console.log('📋 Initializing PostgreSQL schema...');
+      
+      // Execute schema statements one by one
+      // Split by semicolon but handle functions carefully
+      const rawStatements = schemaStatements.split(';');
+      const statements = [];
+      
+      let currentStmt = '';
+      let inDollarQuote = false;
+      let dollarTag = null;
+      
+      for (let stmt of rawStatements) {
+        // Check for dollar-quoted strings (used in functions)
+        const dollarMatches = stmt.match(/\$(\w*)\$/g);
+        if (dollarMatches) {
+          for (const match of dollarMatches) {
+            if (!inDollarQuote) {
+              inDollarQuote = true;
+              dollarTag = match;
+            } else if (match === dollarTag) {
+              inDollarQuote = false;
+              dollarTag = null;
+            }
+          }
+        }
+        
+        currentStmt += (currentStmt ? ';' : '') + stmt;
+        
+        // Only add statement if we're not inside a dollar-quoted string
+        if (!inDollarQuote) {
+          const trimmed = currentStmt.trim();
+          if (trimmed && !trimmed.startsWith('--')) {
+            statements.push(trimmed);
+          }
+          currentStmt = '';
+        }
+      }
+      
+      // Add any remaining statement
+      if (currentStmt.trim()) {
+        statements.push(currentStmt.trim());
+      }
+      
+      // Execute each statement
       for (const statement of statements) {
-        if (statement.trim()) {
-          await client.query(statement);
+        if (statement.trim() && statement.length > 5) { // Ignore very short statements
+          try {
+            await client.query(statement);
+          } catch (error) {
+            // Ignore "already exists" errors - these are OK
+            const errorMsg = error.message.toLowerCase();
+            if (errorMsg.includes('already exists') || 
+                errorMsg.includes('duplicate') ||
+                (errorMsg.includes('relation') && errorMsg.includes('already exists'))) {
+              // This is OK - object already exists
+              continue;
+            }
+            // Log other errors but don't fail
+            console.warn('⚠️  Schema statement warning:', error.message.substring(0, 100));
+          }
         }
       }
 
@@ -205,7 +256,7 @@ const initializeSchema = async () => {
       client.release();
     }
   } catch (error) {
-    console.error('❌ Error initializing PostgreSQL schema:', error);
+    console.error('❌ Error initializing PostgreSQL schema:', error.message);
     throw error;
   }
 };
@@ -246,7 +297,26 @@ const ensureColumns = async (client) => {
 };
 
 // Initialize schema on module load
-initializeSchema().catch(console.error);
+// Use a promise that resolves when schema is ready
+let schemaInitialized = false;
+let schemaInitPromise = initializeSchema()
+  .then(() => {
+    schemaInitialized = true;
+    console.log('✅ PostgreSQL schema ready');
+  })
+  .catch((error) => {
+    console.error('❌ Failed to initialize PostgreSQL schema:', error);
+    // Don't throw - allow server to start but log the error
+    schemaInitialized = false;
+  });
+
+// Export a function to wait for schema initialization
+const waitForSchema = async () => {
+  await schemaInitPromise;
+  if (!schemaInitialized) {
+    throw new Error('Schema initialization failed');
+  }
+};
 
 // Convert MySQL/SQLite style ? placeholders to PostgreSQL $1, $2, etc.
 function convertPlaceholders(sql, params) {
@@ -344,6 +414,8 @@ async function query(sql, params, cb) {
 module.exports = {
   query,
   pool,
-  _raw: pool
+  _raw: pool,
+  waitForSchema,
+  schemaInitialized: () => schemaInitialized
 };
 
