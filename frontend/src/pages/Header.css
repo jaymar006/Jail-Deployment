@@ -312,12 +312,7 @@
   }
   
   .logos {
-    gap: 0.5rem;
-    flex: 0 0 auto;
-  }
-  
-  .logos img {
-    height: 50px;
+    display: none; /* Hide logos on mobile */
   }
 
   .mobile-menu-toggle {
