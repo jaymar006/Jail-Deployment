@@ -1051,13 +1051,13 @@ const Dashboard = () => {
                 </button>
               </div>
             </div>
-          </div>
+          </Modal>
         )}
 
         {/* Edit Modal */}
         {showEditModal && (
-          <div className="common-modal">
-            <div className="common-modal-content">
+          <Modal onClose={() => setShowEditModal(false)}>
+            <div>
               <h3>Edit Visitor Times</h3>
               <form onSubmit={handleEditSubmit}>
                 <label>
