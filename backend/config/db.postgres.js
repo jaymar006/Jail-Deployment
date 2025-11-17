@@ -187,63 +187,138 @@ const initializeSchema = async () => {
     try {
       console.log('📋 Initializing PostgreSQL schema...');
       
-      // Execute schema statements one by one
-      // Split by semicolon but handle functions carefully
-      const rawStatements = schemaStatements.split(';');
-      const statements = [];
-      
-      let currentStmt = '';
-      let inDollarQuote = false;
-      let dollarTag = null;
-      
-      for (let stmt of rawStatements) {
-        // Check for dollar-quoted strings (used in functions)
-        const dollarMatches = stmt.match(/\$(\w*)\$/g);
-        if (dollarMatches) {
-          for (const match of dollarMatches) {
-            if (!inDollarQuote) {
-              inDollarQuote = true;
-              dollarTag = match;
-            } else if (match === dollarTag) {
-              inDollarQuote = false;
-              dollarTag = null;
-            }
+      // Create tables first (simpler statements)
+      const tableStatements = [
+        `CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`,
+        `CREATE TABLE IF NOT EXISTS pdls (
+          id SERIAL PRIMARY KEY,
+          last_name VARCHAR(255) NOT NULL,
+          first_name VARCHAR(255) NOT NULL,
+          middle_name VARCHAR(255),
+          cell_number VARCHAR(50) NOT NULL,
+          criminal_case_no VARCHAR(100),
+          offense_charge VARCHAR(255),
+          court_branch VARCHAR(255),
+          arrest_date DATE,
+          commitment_date DATE,
+          first_time_offender INTEGER DEFAULT 0,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )`,
+        `CREATE TABLE IF NOT EXISTS visitors (
+          id SERIAL PRIMARY KEY,
+          pdl_id INTEGER NOT NULL,
+          visitor_id VARCHAR(50) NOT NULL UNIQUE,
+          name VARCHAR(255) NOT NULL,
+          relationship VARCHAR(100) NOT NULL,
+          age INTEGER,
+          address VARCHAR(255) NOT NULL,
+          valid_id VARCHAR(255) NOT NULL,
+          date_of_application DATE NOT NULL,
+          contact_number VARCHAR(50) NOT NULL,
+          verified_conjugal INTEGER DEFAULT 0,
+          time_in TIMESTAMP,
+          time_out TIMESTAMP,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (pdl_id) REFERENCES pdls(id) ON DELETE CASCADE
+        )`,
+        `CREATE TABLE IF NOT EXISTS denied_visitors (
+          id SERIAL PRIMARY KEY,
+          visitor_name VARCHAR(255) NOT NULL,
+          pdl_name VARCHAR(255) NOT NULL,
+          cell VARCHAR(50) NOT NULL,
+          time_in TIMESTAMP NOT NULL,
+          reason TEXT NOT NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )`,
+        `CREATE TABLE IF NOT EXISTS scanned_visitors (
+          id SERIAL PRIMARY KEY,
+          visitor_name VARCHAR(255) NOT NULL,
+          pdl_name VARCHAR(255) NOT NULL,
+          cell VARCHAR(50) NOT NULL,
+          time_in TIMESTAMP NOT NULL,
+          time_out TIMESTAMP,
+          scan_date TIMESTAMP NOT NULL,
+          relationship VARCHAR(100),
+          contact_number VARCHAR(50),
+          purpose TEXT,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )`,
+        `CREATE TABLE IF NOT EXISTS users (
+          id SERIAL PRIMARY KEY,
+          username VARCHAR(255) NOT NULL UNIQUE,
+          password VARCHAR(255) NOT NULL,
+          security_question_1 TEXT NOT NULL DEFAULT '',
+          security_answer_1 TEXT NOT NULL DEFAULT '',
+          security_question_2 TEXT NOT NULL DEFAULT '',
+          security_answer_2 TEXT NOT NULL DEFAULT '',
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )`,
+        `CREATE TABLE IF NOT EXISTS cells (
+          id SERIAL PRIMARY KEY,
+          cell_number VARCHAR(50) NOT NULL,
+          cell_name VARCHAR(255),
+          capacity INTEGER DEFAULT 1,
+          status VARCHAR(50) DEFAULT 'active',
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )`
+      ];
+
+      // Execute table creation statements
+      for (const statement of tableStatements) {
+        try {
+          await client.query(statement);
+          // Extract table name for logging
+          const tableMatch = statement.match(/CREATE TABLE.*?(\w+)/i);
+          if (tableMatch && tableMatch[1] !== 'EXTENSION') {
+            console.log(`   ✓ Table: ${tableMatch[1]}`);
+          }
+        } catch (error) {
+          const errorMsg = error.message.toLowerCase();
+          if (!errorMsg.includes('already exists')) {
+            console.error(`   ⚠️  Error creating table:`, error.message.substring(0, 100));
           }
         }
-        
-        currentStmt += (currentStmt ? ';' : '') + stmt;
-        
-        // Only add statement if we're not inside a dollar-quoted string
-        if (!inDollarQuote) {
-          const trimmed = currentStmt.trim();
-          if (trimmed && !trimmed.startsWith('--')) {
-            statements.push(trimmed);
-          }
-          currentStmt = '';
+      }
+
+      // Create function
+      try {
+        await client.query(`
+          CREATE OR REPLACE FUNCTION update_updated_at_column()
+          RETURNS TRIGGER AS $$
+          BEGIN
+              NEW.updated_at = CURRENT_TIMESTAMP;
+              RETURN NEW;
+          END;
+          $$ language 'plpgsql'
+        `);
+        console.log(`   ✓ Function: update_updated_at_column`);
+      } catch (error) {
+        if (!error.message.toLowerCase().includes('already exists')) {
+          console.warn(`   ⚠️  Function creation warning:`, error.message.substring(0, 100));
         }
       }
-      
-      // Add any remaining statement
-      if (currentStmt.trim()) {
-        statements.push(currentStmt.trim());
-      }
-      
-      // Execute each statement
-      for (const statement of statements) {
-        if (statement.trim() && statement.length > 5) { // Ignore very short statements
-          try {
-            await client.query(statement);
-          } catch (error) {
-            // Ignore "already exists" errors - these are OK
-            const errorMsg = error.message.toLowerCase();
-            if (errorMsg.includes('already exists') || 
-                errorMsg.includes('duplicate') ||
-                (errorMsg.includes('relation') && errorMsg.includes('already exists'))) {
-              // This is OK - object already exists
-              continue;
-            }
-            // Log other errors but don't fail
-            console.warn('⚠️  Schema statement warning:', error.message.substring(0, 100));
+
+      // Create triggers
+      const triggerStatements = [
+        `CREATE TRIGGER update_pdls_updated_at BEFORE UPDATE ON pdls FOR EACH ROW EXECUTE FUNCTION update_updated_at_column()`,
+        `CREATE TRIGGER update_visitors_updated_at BEFORE UPDATE ON visitors FOR EACH ROW EXECUTE FUNCTION update_updated_at_column()`,
+        `CREATE TRIGGER update_denied_visitors_updated_at BEFORE UPDATE ON denied_visitors FOR EACH ROW EXECUTE FUNCTION update_updated_at_column()`,
+        `CREATE TRIGGER update_scanned_visitors_updated_at BEFORE UPDATE ON scanned_visitors FOR EACH ROW EXECUTE FUNCTION update_updated_at_column()`,
+        `CREATE TRIGGER update_cells_updated_at BEFORE UPDATE ON cells FOR EACH ROW EXECUTE FUNCTION update_updated_at_column()`
+      ];
+
+      for (const statement of triggerStatements) {
+        try {
+          await client.query(statement);
+        } catch (error) {
+          // Triggers might already exist, that's OK
+          if (!error.message.toLowerCase().includes('already exists')) {
+            console.warn(`   ⚠️  Trigger creation warning:`, error.message.substring(0, 100));
           }
         }
       }
