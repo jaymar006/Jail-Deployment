@@ -10,14 +10,29 @@ const createTransporter = () => {
   // You can configure this based on your email provider
   // Common options: Gmail, Outlook, SendGrid, AWS SES, etc.
   
-  // Example for Gmail (you'll need to use an App Password)
+  // Get SMTP configuration from environment
+  const host = process.env.SMTP_HOST || 'smtp.gmail.com';
+  const port = parseInt(process.env.SMTP_PORT) || 587;
+  const secure = port === 465; // Port 465 uses SSL/TLS
+  
+  // For Render and cloud platforms, port 587 might be blocked
+  // Try port 465 (SSL) or use a service like SendGrid/Mailgun
+  
   return nodemailer.createTransport({
-    host: process.env.SMTP_HOST || 'smtp.gmail.com',
-    port: parseInt(process.env.SMTP_PORT) || 587,
-    secure: false, // true for 465, false for other ports
+    host: host,
+    port: port,
+    secure: secure, // true for 465, false for other ports
     auth: {
       user: process.env.SMTP_USER, // Your email address
       pass: process.env.SMTP_PASSWORD, // Your email password or app password
+    },
+    // Add connection timeout settings for cloud platforms
+    connectionTimeout: 10000, // 10 seconds
+    greetingTimeout: 10000, // 10 seconds
+    socketTimeout: 10000, // 10 seconds
+    // For cloud platforms, sometimes need to ignore TLS errors
+    tls: {
+      rejectUnauthorized: process.env.SMTP_REJECT_UNAUTHORIZED !== 'false',
     },
   });
 
@@ -108,11 +123,28 @@ const sendPasswordResetLink = async (toEmail, username, resetToken) => {
       `,
     };
 
+    // Verify connection before sending
+    await transporter.verify();
+    console.log('✅ SMTP connection verified');
+    
     const info = await transporter.sendMail(mailOptions);
-    console.log('Password reset email sent:', info.messageId);
+    console.log('✅ Password reset email sent:', info.messageId);
     return { success: true, messageId: info.messageId };
   } catch (error) {
-    console.error('Error sending password reset email:', error);
+    console.error('❌ Error sending password reset email:', error.message);
+    console.error('   Error code:', error.code);
+    console.error('   SMTP Host:', process.env.SMTP_HOST || 'smtp.gmail.com');
+    console.error('   SMTP Port:', process.env.SMTP_PORT || '587');
+    
+    // Provide helpful error messages
+    if (error.code === 'ETIMEDOUT' || error.code === 'ECONNREFUSED') {
+      console.error('   💡 Connection timeout/refused. This often happens on cloud platforms like Render.');
+      console.error('   💡 Solutions:');
+      console.error('      1. Try port 465 (SSL) instead of 587');
+      console.error('      2. Use SendGrid, Mailgun, or AWS SES (better for cloud platforms)');
+      console.error('      3. Check if your cloud provider blocks SMTP ports');
+    }
+    
     return { success: false, error: error.message };
   }
 };
