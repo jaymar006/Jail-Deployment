@@ -93,10 +93,11 @@ CREATE TABLE IF NOT EXISTS users (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   username TEXT NOT NULL UNIQUE,
   password TEXT NOT NULL,
-  security_question_1 TEXT NOT NULL DEFAULT '',
-  security_answer_1 TEXT NOT NULL DEFAULT '',
-  security_question_2 TEXT NOT NULL DEFAULT '',
-  security_answer_2 TEXT NOT NULL DEFAULT '',
+  email TEXT NOT NULL UNIQUE,
+  security_question_1 TEXT DEFAULT '',
+  security_answer_1 TEXT DEFAULT '',
+  security_question_2 TEXT DEFAULT '',
+  security_answer_2 TEXT DEFAULT '',
   created_at TEXT DEFAULT (datetime('now'))
 );
 
@@ -155,11 +156,13 @@ sqliteDb.serialize(() => {
       ensureColumn('visitors', 'verified_conjugal', 'INTEGER', 'DEFAULT 0');
       // Scanned visitors: purpose TEXT
       ensureColumn('scanned_visitors', 'purpose', 'TEXT');
-      // Users: security questions/answers
-      ensureColumn('users', 'security_question_1', 'TEXT', "NOT NULL DEFAULT ''");
-      ensureColumn('users', 'security_answer_1', 'TEXT', "NOT NULL DEFAULT ''");
-      ensureColumn('users', 'security_question_2', 'TEXT', "NOT NULL DEFAULT ''");
-      ensureColumn('users', 'security_answer_2', 'TEXT', "NOT NULL DEFAULT ''");
+      // Users: email
+      ensureColumn('users', 'email', 'TEXT', '');
+      // Users: security questions/answers (kept for backward compatibility)
+      ensureColumn('users', 'security_question_1', 'TEXT', "DEFAULT ''");
+      ensureColumn('users', 'security_answer_1', 'TEXT', "DEFAULT ''");
+      ensureColumn('users', 'security_question_2', 'TEXT', "DEFAULT ''");
+      ensureColumn('users', 'security_answer_2', 'TEXT', "DEFAULT ''");
       
       // Migration: Rename dorm columns to cell
       const migrateDormToCell = () => {

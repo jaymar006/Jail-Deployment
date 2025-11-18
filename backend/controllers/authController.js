@@ -63,7 +63,7 @@ exports.login = async (req, res) => {
 };
 
 exports.signUp = async (req, res) => {
-  const { username, password, securityQuestion1, securityAnswer1, securityQuestion2, securityAnswer2, registrationCode } = req.body;
+  const { username, password, email, confirmEmail, registrationCode } = req.body;
 
   try {
     // Validate registration code
@@ -90,16 +90,33 @@ exports.signUp = async (req, res) => {
       return res.status(400).json({ message: 'Username can only contain letters, numbers, and underscores' });
     }
 
+    // Validate email
+    if (!email) {
+      return res.status(400).json({ message: 'Email is required' });
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ message: 'Invalid email format' });
+    }
+
+    if (email !== confirmEmail) {
+      return res.status(400).json({ message: 'Emails do not match' });
+    }
+
     const existingUser = await userModel.findUserByUsername(username);
     if (existingUser) {
       return res.status(400).json({ message: 'Username already exists' });
     }
 
+    const existingEmail = await userModel.findUserByEmail(email);
+    if (existingEmail) {
+      return res.status(400).json({ message: 'Email already registered' });
+    }
+
     const hashedPassword = await bcrypt.hash(password, 10);
-    const hashedAnswer1 = await bcrypt.hash(securityAnswer1.toLowerCase(), 10);
-    const hashedAnswer2 = await bcrypt.hash(securityAnswer2.toLowerCase(), 10);
     
-    await userModel.createUser(username, hashedPassword, securityQuestion1, hashedAnswer1, securityQuestion2, hashedAnswer2);
+    await userModel.createUser(username, hashedPassword, email.toLowerCase());
     
     // Mark registration code as used
     await registrationCodeModel.markCodeAsUsed(registrationCode);
@@ -136,8 +153,8 @@ exports.getUsernameFromDb = async (req, res) => {
   }
 };
 
-exports.resetPasswordSecurity = async (req, res) => {
-  const { username, securityQuestion, securityAnswer, newPassword } = req.body;
+exports.resetPasswordEmail = async (req, res) => {
+  const { username, email, newPassword } = req.body;
 
   try {
     // Validate password strength
@@ -155,10 +172,10 @@ exports.resetPasswordSecurity = async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    // Verify the security answer
-    const isAnswerCorrect = await userModel.verifySecurityAnswer(username, securityQuestion, securityAnswer);
-    if (!isAnswerCorrect) {
-      return res.status(400).json({ message: 'Invalid security question or answer' });
+    // Verify the email matches
+    const isEmailValid = await userModel.verifyEmail(username, email);
+    if (!isEmailValid) {
+      return res.status(400).json({ message: 'Email does not match the account' });
     }
 
     // Hash the new password and update

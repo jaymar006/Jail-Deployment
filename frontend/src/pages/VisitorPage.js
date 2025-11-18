@@ -285,6 +285,14 @@ const VisitorPage = () => {
     });
     setEditingVisitorId(visitor.id);
     setShowEditModal(true);
+    setShowAddModal(false); // Ensure add modal is closed
+  };
+
+  const openAddModal = () => {
+    resetForm();
+    setEditingVisitorId(null);
+    setShowAddModal(true);
+    setShowEditModal(false); // Ensure edit modal is closed
   };
 
   // Handler for toggling selection mode
@@ -402,7 +410,7 @@ const VisitorPage = () => {
         {pdlFetchError && <p style={{ color: 'red' }}>{pdlFetchError}</p>}
         {fetchError && <p style={{ color: 'red' }}>{fetchError}</p>}
 
-        <button className="common-button add" onClick={() => setShowAddModal(true)}>
+        <button className="common-button add" onClick={openAddModal}>
           <svg className="button-icon" viewBox="0 0 24 24">
             <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
           </svg>
@@ -498,7 +506,7 @@ const VisitorPage = () => {
         )}
 
         {showAddModal && (
-          <Modal onClose={() => setShowAddModal(false)} wide={true}>
+          <Modal onClose={() => { setShowAddModal(false); resetForm(); setEditingVisitorId(null); }} wide={true}>
             <div style={{ maxHeight: '90vh', overflowY: 'auto' }}>
               <h3 style={{ textAlign: 'center', marginBottom: '24px', fontSize: '24px', fontWeight: '600', color: '#111827' }}>Add Visitor</h3>
               <form onSubmit={handleAddVisitor}>
@@ -753,7 +761,7 @@ const VisitorPage = () => {
                   </button>
                   <button 
                     type="button" 
-                    onClick={() => setShowAddModal(false)}
+                    onClick={() => { setShowAddModal(false); resetForm(); setEditingVisitorId(null); }}
                     style={{
                       background: '#e5e7eb',
                       color: '#374151',
@@ -775,7 +783,7 @@ const VisitorPage = () => {
         )}
 
         {showEditModal && (
-          <Modal onClose={() => setShowEditModal(false)} wide={true}>
+          <Modal onClose={() => { setShowEditModal(false); resetForm(); setEditingVisitorId(null); }} wide={true}>
             <div style={{ maxHeight: '90vh', overflowY: 'auto' }}>
               <h3 style={{ textAlign: 'center', marginBottom: '24px', fontSize: '24px', fontWeight: '600', color: '#111827' }}>Edit Visitor</h3>
               <form onSubmit={handleEditVisitor}>
@@ -1030,7 +1038,7 @@ const VisitorPage = () => {
                   </button>
                   <button 
                     type="button" 
-                    onClick={() => setShowEditModal(false)}
+                    onClick={() => { setShowEditModal(false); resetForm(); setEditingVisitorId(null); }}
                     style={{
                       background: '#e5e7eb',
                       color: '#374151',

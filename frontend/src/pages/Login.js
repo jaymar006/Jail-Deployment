@@ -9,26 +9,15 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [registrationCode, setRegistrationCode] = useState('');
+  const [email, setEmail] = useState('');
+  const [confirmEmail, setConfirmEmail] = useState('');
   const [error, setError] = useState('');
-  const [forgotPasswordEmail, setForgotPasswordEmail] = useState('');
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [passwordErrors, setPasswordErrors] = useState([]);
-  const securityQuestions = [
-    "What is your mother's maiden name?",
-    'What was the name of your first pet?',
-    'What was the name of your elementary school?',
-    'What city were you born in?',
-    'What is your favorite teacher\'s name?'
-  ];
-  const [securityQuestion1, setSecurityQuestion1] = useState(securityQuestions[0]);
-  const [securityAnswer1, setSecurityAnswer1] = useState('');
-  const [securityQuestion2, setSecurityQuestion2] = useState(securityQuestions[1]);
-  const [securityAnswer2, setSecurityAnswer2] = useState('');
-  // Forgot password via security questions
+  // Forgot password via email
   const [fpUsername, setFpUsername] = useState('');
-  const [fpQuestion, setFpQuestion] = useState(securityQuestions[0]);
-  const [fpAnswer, setFpAnswer] = useState('');
+  const [fpEmail, setFpEmail] = useState('');
   const [fpNewPassword, setFpNewPassword] = useState('');
   const [fpConfirmNewPassword, setFpConfirmNewPassword] = useState('');
   const [showLoginPassword, setShowLoginPassword] = useState(false);
@@ -37,6 +26,7 @@ const Login = () => {
   const [showFpNewPassword, setShowFpNewPassword] = useState(false);
   const [showFpConfirmNewPassword, setShowFpConfirmNewPassword] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
   const navigate = useNavigate();
   const { login } = useContext(AuthContext);
 
@@ -60,18 +50,14 @@ const Login = () => {
     setPassword('');
     setConfirmPassword('');
     setRegistrationCode('');
+    setEmail('');
+    setConfirmEmail('');
     setError('');
     setPasswordErrors([]);
-    setForgotPasswordEmail('');
     setShowForgotPassword(false);
     setIsForgotPassword(false);
-    setSecurityQuestion1(securityQuestions[0]);
-    setSecurityAnswer1('');
-    setSecurityQuestion2(securityQuestions[1]);
-    setSecurityAnswer2('');
     setFpUsername('');
-    setFpQuestion(securityQuestions[0]);
-    setFpAnswer('');
+    setFpEmail('');
     setFpNewPassword('');
     setFpConfirmNewPassword('');
   };
@@ -107,6 +93,7 @@ const Login = () => {
   const handleLoginSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setIsLoggingIn(true);
 
     const apiUrl = process.env.REACT_APP_API_URL || window.location.origin;
     try {
@@ -134,10 +121,12 @@ const Login = () => {
         if (response.status === 423) {
           showToast(errorMessage, 'error');
         }
+        setIsLoggingIn(false);
       }
     } catch (err) {
       showToast('Login failed: ' + err.message, 'error');
       setError('Login failed: ' + err.message);
+      setIsLoggingIn(false);
     }
   };
 
@@ -147,6 +136,16 @@ const Login = () => {
 
     if (!registrationCode) {
       showToast('Registration code is required.', 'error');
+      return;
+    }
+
+    if (!email) {
+      showToast('Email is required.', 'error');
+      return;
+    }
+
+    if (email !== confirmEmail) {
+      showToast('Emails do not match. Please try again.', 'error');
       return;
     }
 
@@ -169,11 +168,9 @@ const Login = () => {
         body: JSON.stringify({
           username,
           password,
+          email,
+          confirmEmail,
           registrationCode,
-          securityQuestion1,
-          securityAnswer1,
-          securityQuestion2,
-          securityAnswer2,
         }),
       });
 
@@ -206,8 +203,8 @@ const Login = () => {
       showToast('Please enter your username', 'error');
       return;
     }
-    if (!fpAnswer) {
-      showToast('Please answer the security question', 'error');
+    if (!fpEmail) {
+      showToast('Please enter your email', 'error');
       return;
     }
     if (!fpNewPassword || !fpConfirmNewPassword) {
@@ -227,13 +224,12 @@ const Login = () => {
 
     const apiUrl = process.env.REACT_APP_API_URL || window.location.origin;
     try {
-      const response = await fetch(`${apiUrl}/auth/reset-password-security`, {
+      const response = await fetch(`${apiUrl}/auth/reset-password-email`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           username: fpUsername,
-          securityQuestion: fpQuestion,
-          securityAnswer: fpAnswer,
+          email: fpEmail,
           newPassword: fpNewPassword,
         }),
       });
@@ -242,7 +238,7 @@ const Login = () => {
         showToast('Password reset successful! You can now log in with your new password.', 'success');
         setShowForgotPassword(false);
         setFpUsername('');
-        setFpAnswer('');
+        setFpEmail('');
         setFpNewPassword('');
         setFpConfirmNewPassword('');
         setTimeout(() => {
@@ -288,20 +284,12 @@ const Login = () => {
             </div>
             <div className="form-row">
               <label>
-                Security Question:
-                <select value={fpQuestion} onChange={(e) => setFpQuestion(e.target.value)}>
-                  {securityQuestions.map((q) => (
-                    <option key={q} value={q}>{q}</option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Answer:
+                Email:
                 <input
-                  type="text"
-                  value={fpAnswer}
-                  onChange={(e) => setFpAnswer(e.target.value)}
-                  placeholder="Enter your answer"
+                  type="email"
+                  value={fpEmail}
+                  onChange={(e) => setFpEmail(e.target.value)}
+                  placeholder="Enter your email"
                   required
                 />
               </label>
@@ -409,7 +397,35 @@ const Login = () => {
             </div>
             {error && <div className="login-error">{error}</div>}
             <div className="login-buttons">
-              <button type="submit">Login</button>
+              <button type="submit" disabled={isLoggingIn} style={{ position: 'relative', minWidth: '120px' }}>
+                {isLoggingIn ? (
+                  <>
+                    <svg
+                      style={{
+                        display: 'inline-block',
+                        width: '16px',
+                        height: '16px',
+                        marginRight: '8px',
+                        animation: 'spin 1s linear infinite',
+                        verticalAlign: 'middle'
+                      }}
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <circle cx="12" cy="12" r="10" opacity="0.25"/>
+                      <path d="M12 2a10 10 0 0 1 10 10" opacity="0.75"/>
+                    </svg>
+                    Logging in...
+                  </>
+                ) : (
+                  'Login'
+                )}
+              </button>
             </div>
           </form>
           <div className="auth-links">
@@ -527,38 +543,24 @@ const Login = () => {
             </div>
             <div className="form-row">
               <label>
-                Security Question 1:
-                <select value={securityQuestion1} onChange={(e) => setSecurityQuestion1(e.target.value)}>
-                  {securityQuestions.map((q) => (
-                    <option key={q} value={q}>{q}</option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Answer 1:
+                Email:
                 <input
-                  type="text"
-                  value={securityAnswer1}
-                  onChange={(e) => setSecurityAnswer1(e.target.value)}
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Enter your email"
                   required
                 />
               </label>
             </div>
             <div className="form-row">
               <label>
-                Security Question 2:
-                <select value={securityQuestion2} onChange={(e) => setSecurityQuestion2(e.target.value)}>
-                  {securityQuestions.map((q) => (
-                    <option key={q} value={q}>{q}</option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Answer 2:
+                Confirm Email:
                 <input
-                  type="text"
-                  value={securityAnswer2}
-                  onChange={(e) => setSecurityAnswer2(e.target.value)}
+                  type="email"
+                  value={confirmEmail}
+                  onChange={(e) => setConfirmEmail(e.target.value)}
+                  placeholder="Confirm your email"
                   required
                 />
               </label>

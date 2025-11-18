@@ -4,8 +4,10 @@ const db = require('../config/db');
 const isValidRegistrationCode = async (code) => {
   try {
     // First check if registration codes table exists, if not, allow registration (backward compatibility)
+    // PostgreSQL uses BOOLEAN (true/false), SQLite uses INTEGER (0/1)
+    // Use (is_used = FALSE OR is_used = 0) to work with both, handling NULL as well
     const [rows] = await db.query(
-      `SELECT * FROM registration_codes WHERE code = ? AND is_used = 0 AND (expires_at IS NULL OR expires_at > NOW())`,
+      `SELECT * FROM registration_codes WHERE code = ? AND (is_used = FALSE OR is_used = 0 OR is_used IS NULL) AND (expires_at IS NULL OR expires_at > NOW())`,
       [code]
     );
     return rows.length > 0;
@@ -21,11 +23,24 @@ const isValidRegistrationCode = async (code) => {
 // Mark a registration code as used
 const markCodeAsUsed = async (code) => {
   try {
-    const [result] = await db.query(
-      `UPDATE registration_codes SET is_used = 1, used_at = NOW() WHERE code = ?`,
-      [code]
-    );
-    return result.affectedRows > 0;
+    // Check if using PostgreSQL (has DATABASE_URL) or SQLite
+    const usePostgres = !!process.env.DATABASE_URL;
+    
+    if (usePostgres) {
+      // PostgreSQL: use TRUE for BOOLEAN
+      const [result] = await db.query(
+        `UPDATE registration_codes SET is_used = TRUE, used_at = NOW() WHERE code = ?`,
+        [code]
+      );
+      return result.affectedRows > 0;
+    } else {
+      // SQLite: use 1 for INTEGER
+      const [result] = await db.query(
+        `UPDATE registration_codes SET is_used = 1, used_at = datetime('now') WHERE code = ?`,
+        [code]
+      );
+      return result.affectedRows > 0;
+    }
   } catch (err) {
     // If table doesn't exist, just return true
     if (err.code === 'ER_NO_SUCH_TABLE' || err.code === '42P01') {

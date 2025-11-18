@@ -136,10 +136,11 @@ CREATE TABLE IF NOT EXISTS users (
   id SERIAL PRIMARY KEY,
   username VARCHAR(255) NOT NULL UNIQUE,
   password VARCHAR(255) NOT NULL,
-  security_question_1 TEXT NOT NULL DEFAULT '',
-  security_answer_1 TEXT NOT NULL DEFAULT '',
-  security_question_2 TEXT NOT NULL DEFAULT '',
-  security_answer_2 TEXT NOT NULL DEFAULT '',
+  email VARCHAR(255) NOT NULL UNIQUE,
+  security_question_1 TEXT DEFAULT '',
+  security_answer_1 TEXT DEFAULT '',
+  security_question_2 TEXT DEFAULT '',
+  security_answer_2 TEXT DEFAULT '',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -278,10 +279,11 @@ const initializeSchema = async () => {
           id SERIAL PRIMARY KEY,
           username VARCHAR(255) NOT NULL UNIQUE,
           password VARCHAR(255) NOT NULL,
-          security_question_1 TEXT NOT NULL DEFAULT '',
-          security_answer_1 TEXT NOT NULL DEFAULT '',
-          security_question_2 TEXT NOT NULL DEFAULT '',
-          security_answer_2 TEXT NOT NULL DEFAULT '',
+          email VARCHAR(255) NOT NULL UNIQUE,
+          security_question_1 TEXT DEFAULT '',
+          security_answer_1 TEXT DEFAULT '',
+          security_question_2 TEXT DEFAULT '',
+          security_answer_2 TEXT DEFAULT '',
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )`,
         `CREATE TABLE IF NOT EXISTS cells (
@@ -405,6 +407,7 @@ const ensureColumns = async (client) => {
   const checks = [
     { table: 'visitors', column: 'verified_conjugal', type: 'INTEGER', default: 'DEFAULT 0' },
     { table: 'scanned_visitors', column: 'purpose', type: 'TEXT' },
+    { table: 'users', column: 'email', type: 'VARCHAR(255)', default: '' },
     { table: 'users', column: 'security_question_1', type: 'TEXT', default: "DEFAULT ''" },
     { table: 'users', column: 'security_answer_1', type: 'TEXT', default: "DEFAULT ''" },
     { table: 'users', column: 'security_question_2', type: 'TEXT', default: "DEFAULT ''" },

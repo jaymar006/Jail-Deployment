@@ -107,13 +107,27 @@
   letter-spacing: 0.5px;
 }
 
-.login-form button:hover {
+.login-form button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.login-form button:hover:not(:disabled) {
   background: #374151;
   transform: translateY(-2px);
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
 }
 
-.login-form button:active {
+.login-form button:active:not(:disabled) {
   transform: translateY(0);
 }
 
