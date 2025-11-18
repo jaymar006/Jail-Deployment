@@ -1,6 +1,7 @@
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
+const db = require('../config/db');
 const userModel = require('../models/userModel');
 const registrationCodeModel = require('../models/registrationCodeModel');
 const accountLockoutModel = require('../models/accountLockoutModel');
@@ -228,6 +229,53 @@ exports.changePassword = async (req, res) => {
       res.status(400).json({ message: result.error || 'Failed to change password' });
     }
   } catch (err) {
+    res.status(500).json({ message: 'Server error', error: err.message });
+  }
+};
+
+// Get all registration codes (admin function)
+exports.getRegistrationCodes = async (req, res) => {
+  try {
+    const codes = await registrationCodeModel.getAllRegistrationCodes();
+    res.json(codes);
+  } catch (err) {
+    res.status(500).json({ message: 'Server error', error: err.message });
+  }
+};
+
+// Create a new registration code (admin function)
+exports.createRegistrationCode = async (req, res) => {
+  const { code, daysValid } = req.body;
+
+  try {
+    let registrationCode = code;
+    const days = daysValid ? parseInt(daysValid) : 90;
+
+    // Generate random code if not provided
+    if (!registrationCode) {
+      registrationCode = crypto.randomBytes(4).toString('hex').toUpperCase();
+    }
+
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + days);
+
+    await db.query(
+      `INSERT INTO registration_codes (code, expires_at) VALUES (?, ?)`,
+      [registrationCode, expiresAt]
+    );
+
+    res.json({ 
+      message: 'Registration code created successfully',
+      code: registrationCode,
+      expiresAt: expiresAt.toISOString(),
+      daysValid: days
+    });
+  } catch (err) {
+    if (err.code === 'ER_DUP_ENTRY' || err.message.includes('UNIQUE constraint')) {
+      return res.status(400).json({ message: 'Registration code already exists' });
+    } else if (err.code === 'ER_NO_SUCH_TABLE' || err.code === '42P01') {
+      return res.status(500).json({ message: 'Registration codes table does not exist' });
+    }
     res.status(500).json({ message: 'Server error', error: err.message });
   }
 };

@@ -40,7 +40,7 @@ const Modal = ({ children, onClose }) => {
 };
 
 const Settings = () => {
-  const [modalOpen, setModalOpen] = useState(null); // 'username', 'password', 'cell', 'editCell', 'deleteAllPdls', 'deleteLogs', 'selectLogs' or null
+  const [modalOpen, setModalOpen] = useState(null); // 'username', 'password', 'cell', 'editCell', 'deleteAllPdls', 'deleteLogs', 'selectLogs', 'registrationCodes' or null
   const [newUsername, setNewUsername] = useState('');
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -78,6 +78,12 @@ const Settings = () => {
   // Delete confirmation text
   const [deleteAllPdlsConfirmation, setDeleteAllPdlsConfirmation] = useState('');
   const [deleteAllLogsConfirmation, setDeleteAllLogsConfirmation] = useState('');
+  
+  // Registration codes state
+  const [registrationCodes, setRegistrationCodes] = useState([]);
+  const [loadingCodes, setLoadingCodes] = useState(false);
+  const [newCode, setNewCode] = useState('');
+  const [newCodeDays, setNewCodeDays] = useState('90');
 
   useEffect(() => {
     const fetchUsername = async () => {
@@ -118,6 +124,47 @@ const Settings = () => {
     fetchCells();
   }, []);
 
+  // Fetch registration codes
+  const fetchRegistrationCodes = async () => {
+    setLoadingCodes(true);
+    try {
+      const response = await axios.get('/auth/registration-codes');
+      setRegistrationCodes(response.data);
+    } catch (error) {
+      console.error('Error fetching registration codes:', error);
+      alert('Failed to load registration codes: ' + (error.response?.data?.message || error.message));
+    } finally {
+      setLoadingCodes(false);
+    }
+  };
+
+  // Open registration codes modal
+  const openRegistrationCodesModal = async () => {
+    await fetchRegistrationCodes();
+    setNewCode('');
+    setNewCodeDays('90');
+    setModalOpen('registrationCodes');
+  };
+
+  // Create new registration code
+  const handleCreateRegistrationCode = async (e) => {
+    e.preventDefault();
+    try {
+      const response = await axios.post('/auth/registration-codes', {
+        code: newCode || undefined, // Let backend generate if empty
+        daysValid: parseInt(newCodeDays) || 90
+      });
+      
+      alert(`Registration code created: ${response.data.code}\nExpires: ${new Date(response.data.expiresAt).toLocaleDateString()}`);
+      setNewCode('');
+      setNewCodeDays('90');
+      await fetchRegistrationCodes(); // Refresh list
+    } catch (error) {
+      console.error('Error creating registration code:', error);
+      alert('Failed to create registration code: ' + (error.response?.data?.message || error.message));
+    }
+  };
+
   const openModal = (type) => {
     setModalOpen(type);
   };
@@ -137,6 +184,8 @@ const Settings = () => {
     setEditingCell(null);
     setDeleteAllPdlsConfirmation('');
     setDeleteAllLogsConfirmation('');
+    setNewCode('');
+    setNewCodeDays('90');
   };
 
   const handleUsernameSubmit = async (e) => {
@@ -531,6 +580,25 @@ const Settings = () => {
             <div className="settings-card-content">
               <h3>Delete Logs</h3>
               <p>Remove visitor log records</p>
+            </div>
+            <div className="settings-card-arrow">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M5 12h14M12 5l7 7-7 7"/>
+              </svg>
+            </div>
+          </div>
+
+          <div className="settings-card" onClick={openRegistrationCodesModal}>
+            <div className="settings-card-icon" style={{ background: 'linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)' }}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                <circle cx="12" cy="16" r="1"/>
+              </svg>
+            </div>
+            <div className="settings-card-content">
+              <h3>Registration Codes</h3>
+              <p>Generate and manage registration codes</p>
             </div>
             <div className="settings-card-arrow">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -1834,6 +1902,206 @@ const Settings = () => {
                 </div>
               </>
             )}
+          </Modal>
+        )}
+
+        {/* Registration Codes Modal */}
+        {modalOpen === 'registrationCodes' && (
+          <Modal onClose={closeModal}>
+            <h2 style={{ marginTop: 0, marginBottom: '24px', color: '#111827' }}>Registration Codes</h2>
+            
+            {/* Create New Code Form */}
+            <div style={{
+              padding: '20px',
+              background: '#f9fafb',
+              borderRadius: '8px',
+              marginBottom: '24px',
+              border: '1px solid #e5e7eb'
+            }}>
+              <h3 style={{ marginTop: 0, marginBottom: '16px', fontSize: '16px', color: '#111827' }}>Create New Code</h3>
+              <form onSubmit={handleCreateRegistrationCode} style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'flex-end' }}>
+                <div style={{ flex: '1 1 200px' }}>
+                  <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: '500', color: '#374151' }}>
+                    Code (leave empty to auto-generate)
+                  </label>
+                  <input
+                    type="text"
+                    value={newCode}
+                    onChange={(e) => setNewCode(e.target.value.toUpperCase())}
+                    placeholder="e.g., STAFF2024"
+                    style={{
+                      width: '100%',
+                      padding: '8px 12px',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '6px',
+                      fontSize: '14px'
+                    }}
+                  />
+                </div>
+                <div style={{ flex: '0 1 120px' }}>
+                  <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: '500', color: '#374151' }}>
+                    Valid for (days)
+                  </label>
+                  <input
+                    type="number"
+                    value={newCodeDays}
+                    onChange={(e) => setNewCodeDays(e.target.value)}
+                    min="1"
+                    placeholder="90"
+                    style={{
+                      width: '100%',
+                      padding: '8px 12px',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '6px',
+                      fontSize: '14px'
+                    }}
+                  />
+                </div>
+                <button
+                  type="submit"
+                  style={{
+                    padding: '8px 20px',
+                    background: 'linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap'
+                  }}
+                >
+                  Generate Code
+                </button>
+              </form>
+            </div>
+
+            {/* Codes List */}
+            {loadingCodes ? (
+              <div style={{ textAlign: 'center', padding: '40px' }}>
+                <div style={{ fontSize: '16px', color: '#6b7280' }}>Loading codes...</div>
+              </div>
+            ) : registrationCodes.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '40px' }}>
+                <div style={{ fontSize: '16px', color: '#6b7280' }}>No registration codes found</div>
+                <div style={{ fontSize: '14px', color: '#9ca3af', marginTop: '8px' }}>Create your first code above</div>
+              </div>
+            ) : (
+              <div style={{
+                maxHeight: '400px',
+                overflowY: 'auto',
+                border: '1px solid #e5e7eb',
+                borderRadius: '8px'
+              }}>
+                {registrationCodes.map((codeRow, index) => {
+                  const isUsed = codeRow.is_used === 1 || codeRow.is_used === true;
+                  const expiresAt = codeRow.expires_at ? new Date(codeRow.expires_at) : null;
+                  const usedAt = codeRow.used_at ? new Date(codeRow.used_at) : null;
+                  const now = new Date();
+                  
+                  let status = 'Available';
+                  let statusColor = '#10b981';
+                  if (isUsed) {
+                    status = 'Used';
+                    statusColor = '#6b7280';
+                  } else if (expiresAt && expiresAt < now) {
+                    status = 'Expired';
+                    statusColor = '#ef4444';
+                  }
+
+                  return (
+                    <div
+                      key={codeRow.id || index}
+                      style={{
+                        padding: '16px',
+                        borderBottom: '1px solid #f3f4f6',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        backgroundColor: isUsed ? '#f9fafb' : 'white'
+                      }}
+                    >
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+                          <div style={{
+                            fontWeight: '600',
+                            fontSize: '16px',
+                            color: '#111827',
+                            fontFamily: 'monospace',
+                            letterSpacing: '1px'
+                          }}>
+                            {codeRow.code}
+                          </div>
+                          <span style={{
+                            padding: '4px 10px',
+                            borderRadius: '12px',
+                            fontSize: '12px',
+                            fontWeight: '600',
+                            backgroundColor: statusColor + '20',
+                            color: statusColor
+                          }}>
+                            {status}
+                          </span>
+                        </div>
+                        <div style={{ fontSize: '12px', color: '#6b7280' }}>
+                          Created: {new Date(codeRow.created_at).toLocaleString()}
+                        </div>
+                        {expiresAt && (
+                          <div style={{ fontSize: '12px', color: '#6b7280' }}>
+                            Expires: {expiresAt.toLocaleString()}
+                            {expiresAt < now && <span style={{ color: '#ef4444', marginLeft: '8px' }}>(EXPIRED)</span>}
+                          </div>
+                        )}
+                        {usedAt && (
+                          <div style={{ fontSize: '12px', color: '#6b7280' }}>
+                            Used: {usedAt.toLocaleString()}
+                          </div>
+                        )}
+                      </div>
+                      {!isUsed && expiresAt && expiresAt > now && (
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(codeRow.code);
+                            alert(`Code "${codeRow.code}" copied to clipboard!`);
+                          }}
+                          style={{
+                            padding: '6px 12px',
+                            background: '#f3f4f6',
+                            color: '#374151',
+                            border: '1px solid #d1d5db',
+                            borderRadius: '6px',
+                            fontSize: '12px',
+                            fontWeight: '500',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          Copy
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Close Button */}
+            <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'flex-end' }}>
+              <button
+                onClick={closeModal}
+                style={{
+                  padding: '10px 24px',
+                  background: '#e5e7eb',
+                  color: '#374151',
+                  border: 'none',
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  cursor: 'pointer'
+                }}
+              >
+                Close
+              </button>
+            </div>
           </Modal>
         )}
       </div>
