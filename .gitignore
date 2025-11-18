@@ -148,5 +148,16 @@ docker-compose.override.yml
 *.sqlite-journal
 *.sqlite-wal
 *.sqlite-shm
+*.db
 backend/data/*.sqlite
+backend/data/*.db
 !database_export.sql
+
+# Build outputs (should not be in git)
+frontend/build/
+build/
+dist/
+
+# Package lock files (optional - uncomment if you want to ignore)
+# package-lock.json
+# yarn.lock
