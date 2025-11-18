@@ -128,7 +128,12 @@ const Settings = () => {
   const fetchRegistrationCodes = async () => {
     setLoadingCodes(true);
     try {
-      const response = await axios.get('/auth/registration-codes');
+      const token = localStorage.getItem('token');
+      const response = await axios.get('/auth/registration-codes', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
       setRegistrationCodes(response.data);
     } catch (error) {
       console.error('Error fetching registration codes:', error);
@@ -150,9 +155,14 @@ const Settings = () => {
   const handleCreateRegistrationCode = async (e) => {
     e.preventDefault();
     try {
+      const token = localStorage.getItem('token');
       const response = await axios.post('/auth/registration-codes', {
         code: newCode || undefined, // Let backend generate if empty
         daysValid: parseInt(newCodeDays) || 90
+      }, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
       });
       
       alert(`Registration code created: ${response.data.code}\nExpires: ${new Date(response.data.expiresAt).toLocaleDateString()}`);
