@@ -2,13 +2,18 @@ const nodemailer = require('nodemailer');
 
 // Create reusable transporter object using SMTP transport
 const createTransporter = () => {
+  // Check if SMTP is configured
+  if (!process.env.SMTP_USER || !process.env.SMTP_PASSWORD) {
+    throw new Error('SMTP not configured. Please set SMTP_USER and SMTP_PASSWORD environment variables.');
+  }
+  
   // You can configure this based on your email provider
   // Common options: Gmail, Outlook, SendGrid, AWS SES, etc.
   
   // Example for Gmail (you'll need to use an App Password)
   return nodemailer.createTransport({
     host: process.env.SMTP_HOST || 'smtp.gmail.com',
-    port: process.env.SMTP_PORT || 587,
+    port: parseInt(process.env.SMTP_PORT) || 587,
     secure: false, // true for 465, false for other ports
     auth: {
       user: process.env.SMTP_USER, // Your email address
@@ -41,11 +46,19 @@ const createTransporter = () => {
 // Send password reset link email
 const sendPasswordResetLink = async (toEmail, username, resetToken) => {
   try {
+    // Validate email
+    if (!toEmail || !toEmail.includes('@')) {
+      throw new Error('Invalid email address');
+    }
+    
     const transporter = createTransporter();
     
     // Get the frontend URL from environment or use default
     const frontendUrl = process.env.FRONTEND_URL || process.env.REACT_APP_API_URL || 'http://localhost:3000';
     const resetLink = `${frontendUrl}/reset-password?token=${resetToken}`;
+    
+    console.log(`📧 Preparing to send password reset email to: ${toEmail}`);
+    console.log(`🔗 Reset link: ${resetLink}`);
     
     const mailOptions = {
       from: process.env.SMTP_FROM || process.env.SMTP_USER, // Sender address

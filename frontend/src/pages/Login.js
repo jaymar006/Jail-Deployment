@@ -23,6 +23,7 @@ const Login = () => {
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [isSigningUp, setIsSigningUp] = useState(false);
+  const [isRequestingReset, setIsRequestingReset] = useState(false);
   const navigate = useNavigate();
   const { login } = useContext(AuthContext);
 
@@ -211,9 +212,11 @@ const Login = () => {
   const handleForgotPassword = async (e) => {
     e.preventDefault();
     setError('');
+    setIsRequestingReset(true);
 
-    if (!fpUsernameOrEmail) {
+    if (!fpUsernameOrEmail.trim()) {
       showToast('Please enter your username or email', 'error');
+      setIsRequestingReset(false);
       return;
     }
 
@@ -223,17 +226,19 @@ const Login = () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          usernameOrEmail: fpUsernameOrEmail,
+          usernameOrEmail: fpUsernameOrEmail.trim(),
         }),
       });
 
       if (response.ok) {
         const data = await response.json();
         showToast(data.message || 'If an account exists, a password reset link has been sent to your email.', 'success');
-        setShowForgotPassword(false);
         setFpUsernameOrEmail('');
+        setIsRequestingReset(false);
+        // Wait a bit before going back to login to show the success message
         setTimeout(() => {
           setIsForgotPassword(false);
+          setShowForgotPassword(false);
         }, 2000);
       } else {
         let errorMessage = 'Failed to request password reset. Please try again.';
@@ -245,11 +250,13 @@ const Login = () => {
         }
         showToast(errorMessage, 'error');
         setError(errorMessage);
+        setIsRequestingReset(false);
       }
     } catch (err) {
       const errorMessage = err.message || 'Network error. Please check your connection and try again.';
       showToast('Failed to request password reset: ' + errorMessage, 'error');
       setError('Failed to request password reset: ' + errorMessage);
+      setIsRequestingReset(false);
     }
   };
 
@@ -276,6 +283,7 @@ const Login = () => {
                 placeholder="Enter your username or email"
                 required
                 autoFocus
+                disabled={isRequestingReset}
               />
             </label>
             <p style={{ fontSize: '0.9em', color: '#6b7280', marginTop: '10px', marginBottom: '20px' }}>
@@ -283,7 +291,35 @@ const Login = () => {
             </p>
             {error && <div className="login-error">{error}</div>}
             <div className="login-buttons">
-              <button type="submit">Send Reset Link</button>
+              <button type="submit" disabled={isRequestingReset} style={{ position: 'relative', minWidth: '140px' }}>
+                {isRequestingReset ? (
+                  <>
+                    <svg
+                      style={{
+                        display: 'inline-block',
+                        width: '16px',
+                        height: '16px',
+                        marginRight: '8px',
+                        animation: 'spin 1s linear infinite',
+                        verticalAlign: 'middle'
+                      }}
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <circle cx="12" cy="12" r="10" opacity="0.25"/>
+                      <path d="M12 2a10 10 0 0 1 10 10" opacity="0.75"/>
+                    </svg>
+                    Sending...
+                  </>
+                ) : (
+                  'Send Reset Link'
+                )}
+              </button>
             </div>
           </form>
           <div className="auth-links">

@@ -14,7 +14,10 @@ const createUser = async (username, password, email) => {
 };
 
 const findUserByEmail = async (email) => {
-  const [rows] = await db.query('SELECT * FROM users WHERE email = ?', [email]);
+  // Normalize email to lowercase for case-insensitive lookup
+  // This ensures consistency since emails are stored in lowercase during signup
+  const normalizedEmail = email.toLowerCase().trim();
+  const [rows] = await db.query('SELECT * FROM users WHERE email = ?', [normalizedEmail]);
   return rows[0];
 };
 

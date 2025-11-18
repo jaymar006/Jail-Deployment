@@ -165,9 +165,14 @@ exports.requestPasswordReset = async (req, res) => {
     }
 
     // Find user by username or email
+    // Try username first
     let user = await userModel.findUserByUsername(usernameOrEmail);
+    
+    // If not found, try email (case-insensitive)
     if (!user) {
-      user = await userModel.findUserByEmail(usernameOrEmail);
+      // Normalize email to lowercase for consistent lookup
+      const normalizedEmail = usernameOrEmail.toLowerCase().trim();
+      user = await userModel.findUserByEmail(normalizedEmail);
     }
 
     // Always return success message (don't reveal if user exists)
@@ -183,13 +188,26 @@ exports.requestPasswordReset = async (req, res) => {
 
     // Send password reset email
     try {
-      const emailResult = await emailService.sendPasswordResetLink(user.email, user.username, resetToken);
-      if (!emailResult.success) {
-        console.error('Failed to send password reset email:', emailResult.error);
+      // Check if SMTP is configured
+      if (!process.env.SMTP_USER || !process.env.SMTP_PASSWORD) {
+        console.error('⚠️  SMTP not configured! Cannot send password reset email.');
+        console.error('⚠️  Please set SMTP_USER and SMTP_PASSWORD environment variables.');
+        console.error('⚠️  See backend/EMAIL_SETUP.md for instructions.');
         // Still return success to user (security best practice)
+      } else {
+        const emailResult = await emailService.sendPasswordResetLink(user.email, user.username, resetToken);
+        if (!emailResult.success) {
+          console.error('❌ Failed to send password reset email:', emailResult.error);
+          console.error('   User:', user.username, 'Email:', user.email);
+          // Still return success to user (security best practice)
+        } else {
+          console.log('✅ Password reset email sent successfully to:', user.email);
+        }
       }
     } catch (emailError) {
-      console.error('Error sending password reset email:', emailError);
+      console.error('❌ Error sending password reset email:', emailError);
+      console.error('   Error details:', emailError.message);
+      console.error('   Stack:', emailError.stack);
       // Still return success to user (security best practice)
     }
 
