@@ -8,10 +8,12 @@ const Login = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [registrationCode, setRegistrationCode] = useState('');
   const [error, setError] = useState('');
   const [forgotPasswordEmail, setForgotPasswordEmail] = useState('');
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [isForgotPassword, setIsForgotPassword] = useState(false);
+  const [passwordErrors, setPasswordErrors] = useState([]);
   const securityQuestions = [
     "What is your mother's maiden name?",
     'What was the name of your first pet?',
@@ -57,7 +59,9 @@ const Login = () => {
     setUsername('');
     setPassword('');
     setConfirmPassword('');
+    setRegistrationCode('');
     setError('');
+    setPasswordErrors([]);
     setForgotPasswordEmail('');
     setShowForgotPassword(false);
     setIsForgotPassword(false);
@@ -70,6 +74,34 @@ const Login = () => {
     setFpAnswer('');
     setFpNewPassword('');
     setFpConfirmNewPassword('');
+  };
+
+  const validatePasswordStrength = (pwd) => {
+    const errors = [];
+    if (!pwd) return errors;
+    
+    if (pwd.length < 8) {
+      errors.push('At least 8 characters');
+    }
+    if (!/[A-Z]/.test(pwd)) {
+      errors.push('One uppercase letter');
+    }
+    if (!/[a-z]/.test(pwd)) {
+      errors.push('One lowercase letter');
+    }
+    if (!/[0-9]/.test(pwd)) {
+      errors.push('One number');
+    }
+    if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(pwd)) {
+      errors.push('One special character');
+    }
+    
+    return errors;
+  };
+
+  const handlePasswordChange = (newPassword) => {
+    setPassword(newPassword);
+    setPasswordErrors(validatePasswordStrength(newPassword));
   };
 
   const handleLoginSubmit = async (e) => {
@@ -94,8 +126,14 @@ const Login = () => {
         }, 1500);
       } else {
         const data = await response.json();
-        showToast(data.message || 'Login failed. Please check your credentials.', 'error');
-        setError(data.message || 'Login failed');
+        const errorMessage = data.message || 'Login failed. Please check your credentials.';
+        showToast(errorMessage, 'error');
+        setError(errorMessage);
+        
+        // Check if account is locked (status 423)
+        if (response.status === 423) {
+          showToast(errorMessage, 'error');
+        }
       }
     } catch (err) {
       showToast('Login failed: ' + err.message, 'error');
@@ -107,8 +145,19 @@ const Login = () => {
     e.preventDefault();
     setError('');
 
+    if (!registrationCode) {
+      showToast('Registration code is required.', 'error');
+      return;
+    }
+
     if (password !== confirmPassword) {
       showToast('Passwords do not match. Please try again.', 'error');
+      return;
+    }
+
+    const passwordValidation = validatePasswordStrength(password);
+    if (passwordValidation.length > 0) {
+      showToast('Password does not meet security requirements. Please check the requirements below.', 'error');
       return;
     }
 
@@ -120,6 +169,7 @@ const Login = () => {
         body: JSON.stringify({
           username,
           password,
+          registrationCode,
           securityQuestion1,
           securityAnswer1,
           securityQuestion2,
@@ -133,8 +183,14 @@ const Login = () => {
         resetForm();
       } else {
         const data = await response.json();
-        showToast(data.message || 'Registration failed. Please try again.', 'error');
-        setError(data.message || 'Sign up failed');
+        const errorMessage = data.errors ? 
+          data.message + ': ' + data.errors.join(', ') : 
+          data.message || 'Registration failed. Please try again.';
+        showToast(errorMessage, 'error');
+        setError(errorMessage);
+        if (data.errors) {
+          setPasswordErrors(data.errors);
+        }
       }
     } catch (err) {
       showToast('Registration failed: ' + err.message, 'error');
@@ -160,6 +216,12 @@ const Login = () => {
     }
     if (fpNewPassword !== fpConfirmNewPassword) {
       showToast('New passwords do not match', 'error');
+      return;
+    }
+    
+    const passwordValidation = validatePasswordStrength(fpNewPassword);
+    if (passwordValidation.length > 0) {
+      showToast('Password does not meet security requirements. Please check the requirements.', 'error');
       return;
     }
 
@@ -376,13 +438,26 @@ const Login = () => {
             <div className="login-text">Sign Up</div>
             <div className="form-row">
               <label>
+                Registration Code:
+                <input
+                  type="text"
+                  value={registrationCode}
+                  onChange={(e) => setRegistrationCode(e.target.value)}
+                  placeholder="Enter registration code"
+                  required
+                  autoFocus
+                />
+              </label>
+            </div>
+            <div className="form-row">
+              <label>
                 Username:
                 <input
                   type="text"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
+                  placeholder="At least 3 characters, letters, numbers, and underscores only"
                   required
-                  autoFocus
                 />
               </label>
             </div>
@@ -393,7 +468,8 @@ const Login = () => {
                   <input
                     type={showSignUpPassword ? 'text' : 'password'}
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    onChange={(e) => handlePasswordChange(e.target.value)}
+                    placeholder="Min 8 chars, uppercase, lowercase, number, special char"
                     required
                   />
                   <button
@@ -409,6 +485,21 @@ const Login = () => {
                     )}
                   </button>
                 </div>
+                {password && passwordErrors.length > 0 && (
+                  <div className="password-requirements" style={{ fontSize: '0.85em', color: '#d32f2f', marginTop: '5px' }}>
+                    <div>Password must contain:</div>
+                    <ul style={{ margin: '5px 0', paddingLeft: '20px' }}>
+                      {passwordErrors.map((err, idx) => (
+                        <li key={idx}>{err}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {password && passwordErrors.length === 0 && (
+                  <div style={{ fontSize: '0.85em', color: '#2e7d32', marginTop: '5px' }}>
+                    ✓ Password meets all requirements
+                  </div>
+                )}
               </label>
               <label>
                 Confirm Password:

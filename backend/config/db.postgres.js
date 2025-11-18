@@ -154,6 +154,33 @@ CREATE TABLE IF NOT EXISTS cells (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Create registration_codes table
+CREATE TABLE IF NOT EXISTS registration_codes (
+  id SERIAL PRIMARY KEY,
+  code VARCHAR(255) NOT NULL UNIQUE,
+  is_used BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  expires_at TIMESTAMP,
+  used_at TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_registration_code ON registration_codes(code);
+CREATE INDEX IF NOT EXISTS idx_registration_is_used ON registration_codes(is_used);
+
+-- Create account_lockouts table
+CREATE TABLE IF NOT EXISTS account_lockouts (
+  id SERIAL PRIMARY KEY,
+  username VARCHAR(255) NOT NULL UNIQUE,
+  failed_attempts INTEGER DEFAULT 0,
+  last_attempt TIMESTAMP,
+  locked_until TIMESTAMP,
+  ip_address VARCHAR(45),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_lockout_username ON account_lockouts(username);
+CREATE INDEX IF NOT EXISTS idx_lockout_locked_until ON account_lockouts(locked_until);
+
 -- Create function to update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
@@ -265,7 +292,32 @@ const initializeSchema = async () => {
           status VARCHAR(50) DEFAULT 'active',
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
           updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )`,
+        `CREATE TABLE IF NOT EXISTS registration_codes (
+          id SERIAL PRIMARY KEY,
+          code VARCHAR(255) NOT NULL UNIQUE,
+          is_used BOOLEAN DEFAULT FALSE,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          expires_at TIMESTAMP,
+          used_at TIMESTAMP
+        )`,
+        `CREATE TABLE IF NOT EXISTS account_lockouts (
+          id SERIAL PRIMARY KEY,
+          username VARCHAR(255) NOT NULL UNIQUE,
+          failed_attempts INTEGER DEFAULT 0,
+          last_attempt TIMESTAMP,
+          locked_until TIMESTAMP,
+          ip_address VARCHAR(45),
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )`
+      ];
+
+      // Create indexes for security tables
+      const indexStatements = [
+        `CREATE INDEX IF NOT EXISTS idx_registration_code ON registration_codes(code)`,
+        `CREATE INDEX IF NOT EXISTS idx_registration_is_used ON registration_codes(is_used)`,
+        `CREATE INDEX IF NOT EXISTS idx_lockout_username ON account_lockouts(username)`,
+        `CREATE INDEX IF NOT EXISTS idx_lockout_locked_until ON account_lockouts(locked_until)`
       ];
 
       // Execute table creation statements
@@ -281,6 +333,18 @@ const initializeSchema = async () => {
           const errorMsg = error.message.toLowerCase();
           if (!errorMsg.includes('already exists')) {
             console.error(`   ⚠️  Error creating table:`, error.message.substring(0, 100));
+          }
+        }
+      }
+
+      // Create indexes
+      for (const statement of indexStatements) {
+        try {
+          await client.query(statement);
+        } catch (error) {
+          const errorMsg = error.message.toLowerCase();
+          if (!errorMsg.includes('already exists')) {
+            console.warn(`   ⚠️  Index creation warning:`, error.message.substring(0, 100));
           }
         }
       }

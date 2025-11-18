@@ -109,6 +109,25 @@ CREATE TABLE IF NOT EXISTS cells (
   created_at TEXT DEFAULT (datetime('now')),
   updated_at TEXT DEFAULT (datetime('now'))
 );
+
+CREATE TABLE IF NOT EXISTS registration_codes (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  code TEXT NOT NULL UNIQUE,
+  is_used INTEGER DEFAULT 0,
+  created_at TEXT DEFAULT (datetime('now')),
+  expires_at TEXT,
+  used_at TEXT
+);
+
+CREATE TABLE IF NOT EXISTS account_lockouts (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  username TEXT NOT NULL UNIQUE,
+  failed_attempts INTEGER DEFAULT 0,
+  last_attempt TEXT,
+  locked_until TEXT,
+  ip_address TEXT,
+  created_at TEXT DEFAULT (datetime('now'))
+);
 `;
 
 sqliteDb.serialize(() => {

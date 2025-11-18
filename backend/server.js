@@ -9,6 +9,10 @@ const authRoutes = require('./routes/authRoutes');
 const cellRoutes = require('./routes/cellRoutes');
 
 const app = express();
+
+// Trust proxy for accurate IP addresses in rate limiting (important for deployed apps)
+app.set('trust proxy', 1);
+
 const corsOptions = {
   origin: function (origin, callback) {
     // Allow requests with no origin (mobile apps, Postman, etc.)
