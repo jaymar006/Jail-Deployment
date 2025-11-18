@@ -6,6 +6,7 @@ const userModel = require('../models/userModel');
 const registrationCodeModel = require('../models/registrationCodeModel');
 const accountLockoutModel = require('../models/accountLockoutModel');
 const { validatePasswordStrength } = require('../middleware/passwordValidator');
+const emailService = require('../services/emailService');
 
 let JWT_SECRET = process.env.JWT_SECRET;
 
@@ -185,6 +186,19 @@ exports.resetPasswordEmail = async (req, res) => {
     if (updated) {
       // Reset failed attempts on successful password reset
       await accountLockoutModel.resetFailedAttempts(username);
+      
+      // Send password reset confirmation email
+      try {
+        const emailResult = await emailService.sendPasswordResetEmail(email, username);
+        if (!emailResult.success) {
+          console.error('Failed to send password reset email:', emailResult.error);
+          // Don't fail the request if email fails, just log it
+        }
+      } catch (emailError) {
+        console.error('Error sending password reset email:', emailError);
+        // Don't fail the request if email fails, just log it
+      }
+      
       res.json({ message: 'Password reset successfully' });
     } else {
       res.status(500).json({ message: 'Failed to update password' });

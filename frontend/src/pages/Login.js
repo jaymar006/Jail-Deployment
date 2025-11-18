@@ -112,20 +112,25 @@ const Login = () => {
           navigate('/'); // Redirect to dashboard
         }, 1500);
       } else {
-        const data = await response.json();
-        const errorMessage = data.message || 'Login failed. Please check your credentials.';
+        // Try to parse error response
+        let errorMessage = 'Login failed. Please check your credentials.';
+        try {
+          const data = await response.json();
+          errorMessage = data.message || errorMessage;
+        } catch (parseError) {
+          // If response is not JSON, use status text or default message
+          errorMessage = response.statusText || errorMessage;
+        }
+        
         showToast(errorMessage, 'error');
         setError(errorMessage);
-        
-        // Check if account is locked (status 423)
-        if (response.status === 423) {
-          showToast(errorMessage, 'error');
-        }
         setIsLoggingIn(false);
       }
     } catch (err) {
-      showToast('Login failed: ' + err.message, 'error');
-      setError('Login failed: ' + err.message);
+      // Network error or other fetch errors
+      const errorMessage = err.message || 'Network error. Please check your connection and try again.';
+      showToast(errorMessage, 'error');
+      setError(errorMessage);
       setIsLoggingIn(false);
     }
   };
