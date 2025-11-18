@@ -66,7 +66,18 @@ const sendPasswordResetLink = async (toEmail, username, resetToken) => {
       throw new Error('Invalid email address');
     }
     
-    const transporter = createTransporter();
+    // Check if SMTP is configured before creating transporter
+    if (!process.env.SMTP_USER || !process.env.SMTP_PASSWORD) {
+      throw new Error('SMTP not configured. Please set SMTP_USER and SMTP_PASSWORD environment variables.');
+    }
+    
+    let transporter;
+    try {
+      transporter = createTransporter();
+    } catch (transporterError) {
+      console.error('❌ Failed to create SMTP transporter:', transporterError.message);
+      throw new Error('Failed to initialize email service: ' + transporterError.message);
+    }
     
     // Get the frontend URL from environment or use default
     const frontendUrl = process.env.FRONTEND_URL || process.env.REACT_APP_API_URL || 'http://localhost:3000';
@@ -123,11 +134,24 @@ const sendPasswordResetLink = async (toEmail, username, resetToken) => {
       `,
     };
 
-    // Verify connection before sending
-    await transporter.verify();
-    console.log('✅ SMTP connection verified');
+    // Try to verify connection, but don't fail if it times out
+    // Some cloud platforms block SMTP connections but we still want to attempt sending
+    try {
+      await transporter.verify();
+      console.log('✅ SMTP connection verified');
+    } catch (verifyError) {
+      console.warn('⚠️  SMTP verification failed, but attempting to send anyway:', verifyError.message);
+      // Continue anyway - some providers allow sending even if verify fails
+    }
     
-    const info = await transporter.sendMail(mailOptions);
+    // Attempt to send email with timeout handling
+    const info = await Promise.race([
+      transporter.sendMail(mailOptions),
+      new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Email send timeout after 15 seconds')), 15000)
+      )
+    ]);
+    
     console.log('✅ Password reset email sent:', info.messageId);
     return { success: true, messageId: info.messageId };
   } catch (error) {
@@ -137,7 +161,7 @@ const sendPasswordResetLink = async (toEmail, username, resetToken) => {
     console.error('   SMTP Port:', process.env.SMTP_PORT || '587');
     
     // Provide helpful error messages
-    if (error.code === 'ETIMEDOUT' || error.code === 'ECONNREFUSED') {
+    if (error.code === 'ETIMEDOUT' || error.code === 'ECONNREFUSED' || error.message.includes('timeout')) {
       console.error('   💡 Connection timeout/refused. This often happens on cloud platforms like Render.');
       console.error('   💡 Solutions:');
       console.error('      1. Try port 465 (SSL) instead of 587');
@@ -145,6 +169,7 @@ const sendPasswordResetLink = async (toEmail, username, resetToken) => {
       console.error('      3. Check if your cloud provider blocks SMTP ports');
     }
     
+    // Return error but don't throw - let the controller handle it
     return { success: false, error: error.message };
   }
 };

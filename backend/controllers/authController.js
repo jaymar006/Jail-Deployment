@@ -186,31 +186,35 @@ exports.requestPasswordReset = async (req, res) => {
     // Create reset token
     const resetToken = await passwordResetModel.createResetToken(user.id, user.email);
 
-    // Send password reset email
-    try {
-      // Check if SMTP is configured
-      if (!process.env.SMTP_USER || !process.env.SMTP_PASSWORD) {
-        console.error('⚠️  SMTP not configured! Cannot send password reset email.');
-        console.error('⚠️  Please set SMTP_USER and SMTP_PASSWORD environment variables.');
-        console.error('⚠️  See backend/EMAIL_SETUP.md for instructions.');
-        // Still return success to user (security best practice)
-      } else {
+    // Send password reset email (non-blocking - always return success to user)
+    // This prevents user enumeration attacks and ensures consistent UX
+    (async () => {
+      try {
+        // Check if SMTP is configured
+        if (!process.env.SMTP_USER || !process.env.SMTP_PASSWORD) {
+          console.error('⚠️  SMTP not configured! Cannot send password reset email.');
+          console.error('⚠️  Please set SMTP_USER and SMTP_PASSWORD environment variables.');
+          console.error('⚠️  See backend/EMAIL_SETUP.md for instructions.');
+          return;
+        }
+        
         const emailResult = await emailService.sendPasswordResetLink(user.email, user.username, resetToken);
         if (!emailResult.success) {
           console.error('❌ Failed to send password reset email:', emailResult.error);
           console.error('   User:', user.username, 'Email:', user.email);
-          // Still return success to user (security best practice)
+          console.error('   Reset token created but email not sent. Token:', resetToken.substring(0, 20) + '...');
         } else {
           console.log('✅ Password reset email sent successfully to:', user.email);
         }
+      } catch (emailError) {
+        console.error('❌ Error sending password reset email:', emailError);
+        console.error('   Error details:', emailError.message);
+        console.error('   Stack:', emailError.stack);
+        console.error('   Reset token was created but email failed. Token:', resetToken.substring(0, 20) + '...');
       }
-    } catch (emailError) {
-      console.error('❌ Error sending password reset email:', emailError);
-      console.error('   Error details:', emailError.message);
-      console.error('   Stack:', emailError.stack);
-      // Still return success to user (security best practice)
-    }
+    })(); // Fire and forget - don't wait for email to send
 
+    // Always return success immediately (security best practice)
     res.json({ 
       message: 'If an account exists with that username or email, a password reset link has been sent.' 
     });
