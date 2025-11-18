@@ -3,13 +3,20 @@ const db = require('../config/db');
 // Check if a registration code is valid
 const isValidRegistrationCode = async (code) => {
   try {
-    // First check if registration codes table exists, if not, allow registration (backward compatibility)
-    // PostgreSQL uses BOOLEAN (true/false), SQLite uses INTEGER (0/1)
-    // Use (is_used = FALSE OR is_used = 0) to work with both, handling NULL as well
-    const [rows] = await db.query(
-      `SELECT * FROM registration_codes WHERE code = ? AND (is_used = FALSE OR is_used = 0 OR is_used IS NULL) AND (expires_at IS NULL OR expires_at > NOW())`,
-      [code]
-    );
+    // Check if using PostgreSQL (has DATABASE_URL) or SQLite
+    const usePostgres = !!process.env.DATABASE_URL;
+    
+    let query;
+    if (usePostgres) {
+      // PostgreSQL: use NOT is_used (works with BOOLEAN)
+      // Use ? placeholder - db.postgres.js will convert it to $1
+      query = `SELECT * FROM registration_codes WHERE code = ? AND (NOT is_used OR is_used IS NULL) AND (expires_at IS NULL OR expires_at > NOW())`;
+    } else {
+      // SQLite: use is_used = 0 (works with INTEGER)
+      query = `SELECT * FROM registration_codes WHERE code = ? AND (is_used = 0 OR is_used IS NULL) AND (expires_at IS NULL OR expires_at > datetime('now'))`;
+    }
+    
+    const [rows] = await db.query(query, [code]);
     return rows.length > 0;
   } catch (err) {
     // If table doesn't exist, return true for backward compatibility

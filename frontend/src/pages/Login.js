@@ -16,15 +16,10 @@ const Login = () => {
   const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [passwordErrors, setPasswordErrors] = useState([]);
   // Forgot password via email
-  const [fpUsername, setFpUsername] = useState('');
-  const [fpEmail, setFpEmail] = useState('');
-  const [fpNewPassword, setFpNewPassword] = useState('');
-  const [fpConfirmNewPassword, setFpConfirmNewPassword] = useState('');
+  const [fpUsernameOrEmail, setFpUsernameOrEmail] = useState('');
   const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [showSignUpPassword, setShowSignUpPassword] = useState(false);
   const [showSignUpConfirmPassword, setShowSignUpConfirmPassword] = useState(false);
-  const [showFpNewPassword, setShowFpNewPassword] = useState(false);
-  const [showFpConfirmNewPassword, setShowFpConfirmNewPassword] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const navigate = useNavigate();
@@ -56,10 +51,7 @@ const Login = () => {
     setPasswordErrors([]);
     setShowForgotPassword(false);
     setIsForgotPassword(false);
-    setFpUsername('');
-    setFpEmail('');
-    setFpNewPassword('');
-    setFpConfirmNewPassword('');
+    setFpUsernameOrEmail('');
   };
 
   const validatePasswordStrength = (pwd) => {
@@ -204,59 +196,44 @@ const Login = () => {
     e.preventDefault();
     setError('');
 
-    if (!fpUsername) {
-      showToast('Please enter your username', 'error');
-      return;
-    }
-    if (!fpEmail) {
-      showToast('Please enter your email', 'error');
-      return;
-    }
-    if (!fpNewPassword || !fpConfirmNewPassword) {
-      showToast('Please enter your new password', 'error');
-      return;
-    }
-    if (fpNewPassword !== fpConfirmNewPassword) {
-      showToast('New passwords do not match', 'error');
-      return;
-    }
-    
-    const passwordValidation = validatePasswordStrength(fpNewPassword);
-    if (passwordValidation.length > 0) {
-      showToast('Password does not meet security requirements. Please check the requirements.', 'error');
+    if (!fpUsernameOrEmail) {
+      showToast('Please enter your username or email', 'error');
       return;
     }
 
     const apiUrl = process.env.REACT_APP_API_URL || window.location.origin;
     try {
-      const response = await fetch(`${apiUrl}/auth/reset-password-email`, {
+      const response = await fetch(`${apiUrl}/auth/request-password-reset`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          username: fpUsername,
-          email: fpEmail,
-          newPassword: fpNewPassword,
+          usernameOrEmail: fpUsernameOrEmail,
         }),
       });
 
       if (response.ok) {
-        showToast('Password reset successful! You can now log in with your new password.', 'success');
+        const data = await response.json();
+        showToast(data.message || 'If an account exists, a password reset link has been sent to your email.', 'success');
         setShowForgotPassword(false);
-        setFpUsername('');
-        setFpEmail('');
-        setFpNewPassword('');
-        setFpConfirmNewPassword('');
+        setFpUsernameOrEmail('');
         setTimeout(() => {
           setIsForgotPassword(false);
         }, 2000);
       } else {
-        const data = await response.json();
-        showToast(data.message || 'Failed to reset password. Please check your information.', 'error');
-        setError(data.message || 'Failed to reset password');
+        let errorMessage = 'Failed to request password reset. Please try again.';
+        try {
+          const data = await response.json();
+          errorMessage = data.message || errorMessage;
+        } catch (parseError) {
+          errorMessage = response.statusText || errorMessage;
+        }
+        showToast(errorMessage, 'error');
+        setError(errorMessage);
       }
     } catch (err) {
-      showToast('Failed to reset password: ' + err.message, 'error');
-      setError('Failed to reset password: ' + err.message);
+      const errorMessage = err.message || 'Network error. Please check your connection and try again.';
+      showToast('Failed to request password reset: ' + errorMessage, 'error');
+      setError('Failed to request password reset: ' + errorMessage);
     }
   };
 
@@ -272,86 +249,25 @@ const Login = () => {
       </div>
       {isForgotPassword ? (
         <>
-          <form className="login-form horizontal-form" onSubmit={handleForgotPassword}>
-            <div className="login-text">Reset Password</div>
-            <div className="form-row">
-              <label>
-                Username:
-                <input
-                  type="text"
-                  value={fpUsername}
-                  onChange={(e) => setFpUsername(e.target.value)}
-                  placeholder="Enter your username"
-                  required
-                  autoFocus
-                />
-              </label>
-            </div>
-            <div className="form-row">
-              <label>
-                Email:
-                <input
-                  type="email"
-                  value={fpEmail}
-                  onChange={(e) => setFpEmail(e.target.value)}
-                  placeholder="Enter your email"
-                  required
-                />
-              </label>
-            </div>
-            <div className="form-row">
-              <label>
-                New Password:
-                <div className="input-with-icon">
-                  <input
-                    type={showFpNewPassword ? 'text' : 'password'}
-                    value={fpNewPassword}
-                    onChange={(e) => setFpNewPassword(e.target.value)}
-                    placeholder="Enter new password"
-                    required
-                  />
-                  <button
-                    type="button"
-                    className="toggle-visibility"
-                    aria-label={showFpNewPassword ? 'Hide password' : 'Show password'}
-                    onClick={() => setShowFpNewPassword((v) => !v)}
-                  >
-                    {showFpNewPassword ? (
-                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-5 0-9.27-3.11-11-8 1.02-2.76 2.86-5.06 5.06-6.64"/><path d="M1 1l22 22"/><path d="M10.58 10.58a2 2 0 1 0 2.83 2.83"/><path d="M16.24 7.76A10.94 10.94 0 0 1 23 12a10.94 10.94 0 0 1-2.06 3.34"/></svg>
-                    ) : (
-                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                    )}
-                  </button>
-                </div>
-              </label>
-              <label>
-                Confirm New Password:
-                <div className="input-with-icon">
-                  <input
-                    type={showFpConfirmNewPassword ? 'text' : 'password'}
-                    value={fpConfirmNewPassword}
-                    onChange={(e) => setFpConfirmNewPassword(e.target.value)}
-                    placeholder="Confirm new password"
-                    required
-                  />
-                  <button
-                    type="button"
-                    className="toggle-visibility"
-                    aria-label={showFpConfirmNewPassword ? 'Hide password' : 'Show password'}
-                    onClick={() => setShowFpConfirmNewPassword((v) => !v)}
-                  >
-                    {showFpConfirmNewPassword ? (
-                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-5 0-9.27-3.11-11-8 1.02-2.76 2.86-5.06 5.06-6.64"/><path d="M1 1l22 22"/><path d="M10.58 10.58a2 2 0 1 0 2.83 2.83"/><path d="M16.24 7.76A10.94 10.94 0 0 1 23 12a10.94 10.94 0 0 1-2.06 3.34"/></svg>
-                    ) : (
-                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                    )}
-                  </button>
-                </div>
-              </label>
-            </div>
+          <form className="login-form" onSubmit={handleForgotPassword}>
+            <div className="login-text">Forgot Password</div>
+            <label>
+              Username or Email:
+              <input
+                type="text"
+                value={fpUsernameOrEmail}
+                onChange={(e) => setFpUsernameOrEmail(e.target.value)}
+                placeholder="Enter your username or email"
+                required
+                autoFocus
+              />
+            </label>
+            <p style={{ fontSize: '0.9em', color: '#6b7280', marginTop: '10px', marginBottom: '20px' }}>
+              Enter your username or email address and we'll send you a link to reset your password.
+            </p>
             {error && <div className="login-error">{error}</div>}
             <div className="login-buttons">
-              <button type="submit">Reset Password</button>
+              <button type="submit">Send Reset Link</button>
             </div>
           </form>
           <div className="auth-links">

@@ -7,6 +7,7 @@ const registrationCodeModel = require('../models/registrationCodeModel');
 const accountLockoutModel = require('../models/accountLockoutModel');
 const { validatePasswordStrength } = require('../middleware/passwordValidator');
 const emailService = require('../services/emailService');
+const passwordResetModel = require('../models/passwordResetModel');
 
 let JWT_SECRET = process.env.JWT_SECRET;
 
@@ -154,10 +155,62 @@ exports.getUsernameFromDb = async (req, res) => {
   }
 };
 
-exports.resetPasswordEmail = async (req, res) => {
-  const { username, email, newPassword } = req.body;
+// Request password reset - sends email with reset link
+exports.requestPasswordReset = async (req, res) => {
+  const { usernameOrEmail } = req.body;
 
   try {
+    if (!usernameOrEmail) {
+      return res.status(400).json({ message: 'Username or email is required' });
+    }
+
+    // Find user by username or email
+    let user = await userModel.findUserByUsername(usernameOrEmail);
+    if (!user) {
+      user = await userModel.findUserByEmail(usernameOrEmail);
+    }
+
+    // Always return success message (don't reveal if user exists)
+    // This prevents user enumeration attacks
+    if (!user) {
+      return res.json({ 
+        message: 'If an account exists with that username or email, a password reset link has been sent.' 
+      });
+    }
+
+    // Create reset token
+    const resetToken = await passwordResetModel.createResetToken(user.id, user.email);
+
+    // Send password reset email
+    try {
+      const emailResult = await emailService.sendPasswordResetLink(user.email, user.username, resetToken);
+      if (!emailResult.success) {
+        console.error('Failed to send password reset email:', emailResult.error);
+        // Still return success to user (security best practice)
+      }
+    } catch (emailError) {
+      console.error('Error sending password reset email:', emailError);
+      // Still return success to user (security best practice)
+    }
+
+    res.json({ 
+      message: 'If an account exists with that username or email, a password reset link has been sent.' 
+    });
+  } catch (err) {
+    console.error('Error requesting password reset:', err);
+    res.status(500).json({ message: 'Server error', error: err.message });
+  }
+};
+
+// Reset password with token
+exports.resetPasswordWithToken = async (req, res) => {
+  const { token, newPassword } = req.body;
+
+  try {
+    if (!token || !newPassword) {
+      return res.status(400).json({ message: 'Token and new password are required' });
+    }
+
     // Validate password strength
     const passwordValidation = validatePasswordStrength(newPassword);
     if (!passwordValidation.valid) {
@@ -167,36 +220,35 @@ exports.resetPasswordEmail = async (req, res) => {
       });
     }
 
-    // Verify the user exists
-    const user = await userModel.findUserByUsername(username);
+    // Verify token
+    const tokenData = await passwordResetModel.verifyResetToken(token);
+    if (!tokenData) {
+      return res.status(400).json({ message: 'Invalid or expired reset token' });
+    }
+
+    // Get user
+    const user = await userModel.findUserById(tokenData.user_id);
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    // Verify the email matches
-    const isEmailValid = await userModel.verifyEmail(username, email);
-    if (!isEmailValid) {
-      return res.status(400).json({ message: 'Email does not match the account' });
-    }
-
     // Hash the new password and update
     const hashedNewPassword = await bcrypt.hash(newPassword, 10);
-    const updated = await userModel.updateUserPassword(username, hashedNewPassword);
+    const updated = await userModel.updateUserPassword(user.username, hashedNewPassword);
     
     if (updated) {
+      // Delete the reset token
+      await passwordResetModel.deleteResetToken(token);
+      
       // Reset failed attempts on successful password reset
-      await accountLockoutModel.resetFailedAttempts(username);
+      await accountLockoutModel.resetFailedAttempts(user.username);
       
       // Send password reset confirmation email
       try {
-        const emailResult = await emailService.sendPasswordResetEmail(email, username);
-        if (!emailResult.success) {
-          console.error('Failed to send password reset email:', emailResult.error);
-          // Don't fail the request if email fails, just log it
-        }
+        await emailService.sendPasswordResetConfirmation(user.email, user.username);
       } catch (emailError) {
-        console.error('Error sending password reset email:', emailError);
-        // Don't fail the request if email fails, just log it
+        console.error('Error sending password reset confirmation email:', emailError);
+        // Don't fail the request if email fails
       }
       
       res.json({ message: 'Password reset successfully' });
@@ -204,6 +256,7 @@ exports.resetPasswordEmail = async (req, res) => {
       res.status(500).json({ message: 'Failed to update password' });
     }
   } catch (err) {
+    console.error('Error resetting password:', err);
     res.status(500).json({ message: 'Server error', error: err.message });
   }
 };

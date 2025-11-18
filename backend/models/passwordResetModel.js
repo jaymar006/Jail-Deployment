@@ -1,0 +1,95 @@
+const db = require('../config/db');
+const crypto = require('crypto');
+
+// Create a password reset token
+const createResetToken = async (userId, email) => {
+  // Generate a secure random token
+  const token = crypto.randomBytes(32).toString('hex');
+  const expiresAt = new Date(Date.now() + 3600000); // 1 hour from now
+  
+  try {
+    // Check if using PostgreSQL or SQLite
+    const usePostgres = !!process.env.DATABASE_URL;
+    
+    if (usePostgres) {
+      await db.query(
+        `INSERT INTO password_reset_tokens (user_id, email, token, expires_at) 
+         VALUES ($1, $2, $3, $4) 
+         ON CONFLICT (user_id) DO UPDATE SET token = $3, expires_at = $4, created_at = NOW()`,
+        [userId, email, token, expiresAt]
+      );
+    } else {
+      // SQLite: Delete existing token first, then insert
+      await db.query('DELETE FROM password_reset_tokens WHERE user_id = ?', [userId]);
+      await db.query(
+        `INSERT INTO password_reset_tokens (user_id, email, token, expires_at) VALUES (?, ?, ?, ?)`,
+        [userId, email, token, expiresAt]
+      );
+    }
+    
+    return token;
+  } catch (err) {
+    console.error('Error creating reset token:', err);
+    throw err;
+  }
+};
+
+// Verify and get token info
+const verifyResetToken = async (token) => {
+  try {
+    const usePostgres = !!process.env.DATABASE_URL;
+    let query;
+    
+    if (usePostgres) {
+      query = `SELECT * FROM password_reset_tokens WHERE token = $1 AND expires_at > NOW()`;
+    } else {
+      query = `SELECT * FROM password_reset_tokens WHERE token = ? AND expires_at > datetime('now')`;
+    }
+    
+    const [rows] = await db.query(query, [token]);
+    return rows[0] || null;
+  } catch (err) {
+    console.error('Error verifying reset token:', err);
+    return null;
+  }
+};
+
+// Delete a reset token (after successful password reset)
+const deleteResetToken = async (token) => {
+  try {
+    await db.query('DELETE FROM password_reset_tokens WHERE token = ?', [token]);
+    return true;
+  } catch (err) {
+    console.error('Error deleting reset token:', err);
+    return false;
+  }
+};
+
+// Clean up expired tokens
+const cleanupExpiredTokens = async () => {
+  try {
+    const usePostgres = !!process.env.DATABASE_URL;
+    let query;
+    
+    if (usePostgres) {
+      query = `DELETE FROM password_reset_tokens WHERE expires_at < NOW()`;
+    } else {
+      query = `DELETE FROM password_reset_tokens WHERE expires_at < datetime('now')`;
+    }
+    
+    await db.query(query);
+  } catch (err) {
+    // Table might not exist yet, ignore error
+    if (err.code !== 'ER_NO_SUCH_TABLE' && err.code !== '42P01') {
+      console.error('Error cleaning up expired tokens:', err);
+    }
+  }
+};
+
+module.exports = {
+  createResetToken,
+  verifyResetToken,
+  deleteResetToken,
+  cleanupExpiredTokens,
+};
+
