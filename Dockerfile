@@ -1,7 +1,7 @@
 # ---------------------------
 # FRONTEND BUILD STAGE
 # ---------------------------
-FROM node:18-alpine as frontend-build
+FROM node:18-alpine AS frontend-build
 
 WORKDIR /frontend
 

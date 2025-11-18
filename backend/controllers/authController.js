@@ -190,11 +190,11 @@ exports.requestPasswordReset = async (req, res) => {
     // This prevents user enumeration attacks and ensures consistent UX
     (async () => {
       try {
-        // Check if SMTP is configured
-        if (!process.env.SMTP_USER || !process.env.SMTP_PASSWORD) {
-          console.error('⚠️  SMTP not configured! Cannot send password reset email.');
-          console.error('⚠️  Please set SMTP_USER and SMTP_PASSWORD environment variables.');
-          console.error('⚠️  See backend/EMAIL_SETUP.md for instructions.');
+        // Check if Resend is configured
+        if (!process.env.RESEND_API_KEY) {
+          console.error('⚠️  Resend not configured! Cannot send password reset email.');
+          console.error('⚠️  Please set RESEND_API_KEY environment variable.');
+          console.error('⚠️  Get your API key from: https://resend.com/api-keys');
           return;
         }
         

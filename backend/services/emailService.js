@@ -1,62 +1,18 @@
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 
-// Create reusable transporter object using SMTP transport
-const createTransporter = () => {
-  // Check if SMTP is configured
-  if (!process.env.SMTP_USER || !process.env.SMTP_PASSWORD) {
-    throw new Error('SMTP not configured. Please set SMTP_USER and SMTP_PASSWORD environment variables.');
+// Initialize Resend client
+let resend;
+try {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    console.warn('⚠️  RESEND_API_KEY not found. Email sending will not work.');
+  } else {
+    resend = new Resend(apiKey);
+    console.log('✅ Resend email service initialized');
   }
-  
-  // You can configure this based on your email provider
-  // Common options: Gmail, Outlook, SendGrid, AWS SES, etc.
-  
-  // Get SMTP configuration from environment
-  const host = process.env.SMTP_HOST || 'smtp.gmail.com';
-  const port = parseInt(process.env.SMTP_PORT) || 587;
-  const secure = port === 465; // Port 465 uses SSL/TLS
-  
-  // For Render and cloud platforms, port 587 might be blocked
-  // Try port 465 (SSL) or use a service like SendGrid/Mailgun
-  
-  return nodemailer.createTransport({
-    host: host,
-    port: port,
-    secure: secure, // true for 465, false for other ports
-    auth: {
-      user: process.env.SMTP_USER, // Your email address
-      pass: process.env.SMTP_PASSWORD, // Your email password or app password
-    },
-    // Add connection timeout settings for cloud platforms
-    connectionTimeout: 10000, // 10 seconds
-    greetingTimeout: 10000, // 10 seconds
-    socketTimeout: 10000, // 10 seconds
-    // For cloud platforms, sometimes need to ignore TLS errors
-    tls: {
-      rejectUnauthorized: process.env.SMTP_REJECT_UNAUTHORIZED !== 'false',
-    },
-  });
-
-  // Example for SendGrid:
-  // return nodemailer.createTransport({
-  //   host: 'smtp.sendgrid.net',
-  //   port: 587,
-  //   auth: {
-  //     user: 'apikey',
-  //     pass: process.env.SENDGRID_API_KEY,
-  //   },
-  // });
-
-  // Example for Outlook:
-  // return nodemailer.createTransport({
-  //   host: 'smtp-mail.outlook.com',
-  //   port: 587,
-  //   secure: false,
-  //   auth: {
-  //     user: process.env.SMTP_USER,
-  //     pass: process.env.SMTP_PASSWORD,
-  //   },
-  // });
-};
+} catch (error) {
+  console.error('❌ Failed to initialize Resend:', error.message);
+}
 
 // Send password reset link email
 const sendPasswordResetLink = async (toEmail, username, resetToken) => {
@@ -66,30 +22,26 @@ const sendPasswordResetLink = async (toEmail, username, resetToken) => {
       throw new Error('Invalid email address');
     }
     
-    // Check if SMTP is configured before creating transporter
-    if (!process.env.SMTP_USER || !process.env.SMTP_PASSWORD) {
-      throw new Error('SMTP not configured. Please set SMTP_USER and SMTP_PASSWORD environment variables.');
-    }
-    
-    let transporter;
-    try {
-      transporter = createTransporter();
-    } catch (transporterError) {
-      console.error('❌ Failed to create SMTP transporter:', transporterError.message);
-      throw new Error('Failed to initialize email service: ' + transporterError.message);
+    // Check if Resend is configured
+    if (!resend || !process.env.RESEND_API_KEY) {
+      throw new Error('Resend not configured. Please set RESEND_API_KEY environment variable.');
     }
     
     // Get the frontend URL from environment or use default
     const frontendUrl = process.env.FRONTEND_URL || process.env.REACT_APP_API_URL || 'http://localhost:3000';
     const resetLink = `${frontendUrl}/reset-password?token=${resetToken}`;
     
+    // Get sender email (must be verified domain in Resend)
+    const fromEmail = process.env.RESEND_FROM_EMAIL || process.env.SMTP_FROM || 'noreply@yourdomain.com';
+    
     console.log(`📧 Preparing to send password reset email to: ${toEmail}`);
     console.log(`🔗 Reset link: ${resetLink}`);
     
-    const mailOptions = {
-      from: process.env.SMTP_FROM || process.env.SMTP_USER, // Sender address
-      to: toEmail, // Recipient email
-      subject: 'Password Reset Request - Silang Municipal Jail', // Subject line
+    // Send email using Resend API
+    const { data, error } = await resend.emails.send({
+      from: fromEmail,
+      to: toEmail,
+      subject: 'Password Reset Request - Silang Municipal Jail',
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
           <h2 style="color: #4b5563;">Password Reset Request</h2>
@@ -116,7 +68,6 @@ const sendPasswordResetLink = async (toEmail, username, resetToken) => {
           </p>
         </div>
       `,
-      // Plain text version
       text: `
         Password Reset Request
         
@@ -132,44 +83,27 @@ const sendPasswordResetLink = async (toEmail, username, resetToken) => {
         
         This is an automated message from Silang Municipal Jail Visitation Management System.
       `,
-    };
-
-    // Try to verify connection, but don't fail if it times out
-    // Some cloud platforms block SMTP connections but we still want to attempt sending
-    try {
-      await transporter.verify();
-      console.log('✅ SMTP connection verified');
-    } catch (verifyError) {
-      console.warn('⚠️  SMTP verification failed, but attempting to send anyway:', verifyError.message);
-      // Continue anyway - some providers allow sending even if verify fails
+    });
+    
+    if (error) {
+      console.error('❌ Resend API error:', error);
+      throw new Error(error.message || 'Failed to send email via Resend');
     }
     
-    // Attempt to send email with timeout handling
-    const info = await Promise.race([
-      transporter.sendMail(mailOptions),
-      new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Email send timeout after 15 seconds')), 15000)
-      )
-    ]);
-    
-    console.log('✅ Password reset email sent:', info.messageId);
-    return { success: true, messageId: info.messageId };
+    console.log('✅ Password reset email sent successfully via Resend:', data?.id);
+    return { success: true, messageId: data?.id };
   } catch (error) {
     console.error('❌ Error sending password reset email:', error.message);
-    console.error('   Error code:', error.code);
-    console.error('   SMTP Host:', process.env.SMTP_HOST || 'smtp.gmail.com');
-    console.error('   SMTP Port:', process.env.SMTP_PORT || '587');
     
     // Provide helpful error messages
-    if (error.code === 'ETIMEDOUT' || error.code === 'ECONNREFUSED' || error.message.includes('timeout')) {
-      console.error('   💡 Connection timeout/refused. This often happens on cloud platforms like Render.');
-      console.error('   💡 Solutions:');
-      console.error('      1. Try port 465 (SSL) instead of 587');
-      console.error('      2. Use SendGrid, Mailgun, or AWS SES (better for cloud platforms)');
-      console.error('      3. Check if your cloud provider blocks SMTP ports');
+    if (error.message.includes('not configured') || error.message.includes('RESEND_API_KEY')) {
+      console.error('   💡 Please set RESEND_API_KEY environment variable.');
+      console.error('   💡 Get your API key from: https://resend.com/api-keys');
+    } else if (error.message.includes('domain') || error.message.includes('from')) {
+      console.error('   💡 Make sure RESEND_FROM_EMAIL uses a verified domain in Resend.');
+      console.error('   💡 Verify your domain at: https://resend.com/domains');
     }
     
-    // Return error but don't throw - let the controller handle it
     return { success: false, error: error.message };
   }
 };
@@ -177,14 +111,21 @@ const sendPasswordResetLink = async (toEmail, username, resetToken) => {
 // Send password reset confirmation email
 const sendPasswordResetConfirmation = async (toEmail, username) => {
   try {
-    const transporter = createTransporter();
+    // Check if Resend is configured
+    if (!resend || !process.env.RESEND_API_KEY) {
+      throw new Error('Resend not configured. Please set RESEND_API_KEY environment variable.');
+    }
     
-    const mailOptions = {
-      from: process.env.SMTP_FROM || process.env.SMTP_USER,
+    // Get sender email (must be verified domain in Resend)
+    const fromEmail = process.env.RESEND_FROM_EMAIL || process.env.SMTP_FROM || 'noreply@yourdomain.com';
+    
+    // Send email using Resend API
+    const { data, error } = await resend.emails.send({
+      from: fromEmail,
       to: toEmail,
       subject: 'Password Reset Confirmation - Silang Municipal Jail',
       html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
           <h2 style="color: #4b5563;">Password Reset Confirmation</h2>
           <p>Hello ${username},</p>
           <p>Your password has been successfully reset.</p>
@@ -206,13 +147,17 @@ const sendPasswordResetConfirmation = async (toEmail, username) => {
         
         This is an automated message from Silang Municipal Jail Visitation Management System.
       `,
-    };
-
-    const info = await transporter.sendMail(mailOptions);
-    console.log('Password reset confirmation email sent:', info.messageId);
-    return { success: true, messageId: info.messageId };
+    });
+    
+    if (error) {
+      console.error('❌ Resend API error:', error);
+      throw new Error(error.message || 'Failed to send email via Resend');
+    }
+    
+    console.log('✅ Password reset confirmation email sent via Resend:', data?.id);
+    return { success: true, messageId: data?.id };
   } catch (error) {
-    console.error('Error sending password reset confirmation email:', error);
+    console.error('❌ Error sending password reset confirmation email:', error.message);
     return { success: false, error: error.message };
   }
 };
@@ -221,4 +166,3 @@ module.exports = {
   sendPasswordResetLink,
   sendPasswordResetConfirmation,
 };
-

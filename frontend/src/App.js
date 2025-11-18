@@ -5,6 +5,7 @@ import Datas from './pages/Datas';
 import Logs from './pages/Logs';
 import VisitorPage from './pages/VisitorPage';
 import Login from './pages/Login';
+import ResetPassword from './pages/ResetPassword';
 import Settings from './pages/Settings';
 import { VisitorProvider } from './context/VisitorContext';
 import { AuthProvider } from './context/AuthContext';
@@ -19,6 +20,7 @@ const AppRoutes = () => {
   return (
     <Routes location={location}>
       <Route path="/login" element={<Login />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
       <Route
         path="/*"
         element={
