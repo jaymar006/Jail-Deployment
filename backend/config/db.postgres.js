@@ -324,6 +324,14 @@ const initializeSchema = async () => {
           locked_until TIMESTAMP,
           ip_address VARCHAR(45),
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )`,
+        `CREATE TABLE IF NOT EXISTS password_reset_tokens (
+          id SERIAL PRIMARY KEY,
+          user_id INTEGER NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+          email VARCHAR(255) NOT NULL,
+          token VARCHAR(255) NOT NULL UNIQUE,
+          expires_at TIMESTAMP NOT NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )`
       ];
 
@@ -332,7 +340,9 @@ const initializeSchema = async () => {
         `CREATE INDEX IF NOT EXISTS idx_registration_code ON registration_codes(code)`,
         `CREATE INDEX IF NOT EXISTS idx_registration_is_used ON registration_codes(is_used)`,
         `CREATE INDEX IF NOT EXISTS idx_lockout_username ON account_lockouts(username)`,
-        `CREATE INDEX IF NOT EXISTS idx_lockout_locked_until ON account_lockouts(locked_until)`
+        `CREATE INDEX IF NOT EXISTS idx_lockout_locked_until ON account_lockouts(locked_until)`,
+        `CREATE INDEX IF NOT EXISTS idx_reset_token ON password_reset_tokens(token)`,
+        `CREATE INDEX IF NOT EXISTS idx_reset_token_expires ON password_reset_tokens(expires_at)`
       ];
 
       // Execute table creation statements

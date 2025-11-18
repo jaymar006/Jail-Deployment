@@ -22,6 +22,7 @@ const Login = () => {
   const [showSignUpConfirmPassword, setShowSignUpConfirmPassword] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
   const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [isSigningUp, setIsSigningUp] = useState(false);
   const navigate = useNavigate();
   const { login } = useContext(AuthContext);
 
@@ -130,30 +131,36 @@ const Login = () => {
   const handleSignUpSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setIsSigningUp(true);
 
     if (!registrationCode) {
       showToast('Registration code is required.', 'error');
+      setIsSigningUp(false);
       return;
     }
 
     if (!email) {
       showToast('Email is required.', 'error');
+      setIsSigningUp(false);
       return;
     }
 
     if (email !== confirmEmail) {
       showToast('Emails do not match. Please try again.', 'error');
+      setIsSigningUp(false);
       return;
     }
 
     if (password !== confirmPassword) {
       showToast('Passwords do not match. Please try again.', 'error');
+      setIsSigningUp(false);
       return;
     }
 
     const passwordValidation = validatePasswordStrength(password);
     if (passwordValidation.length > 0) {
       showToast('Password does not meet security requirements. Please check the requirements below.', 'error');
+      setIsSigningUp(false);
       return;
     }
 
@@ -175,20 +182,29 @@ const Login = () => {
         showToast('Account created successfully! You can now log in.', 'success');
         setIsLogin(true);
         resetForm();
+        setIsSigningUp(false);
       } else {
-        const data = await response.json();
-        const errorMessage = data.errors ? 
-          data.message + ': ' + data.errors.join(', ') : 
-          data.message || 'Registration failed. Please try again.';
+        let errorMessage = 'Registration failed. Please try again.';
+        try {
+          const data = await response.json();
+          errorMessage = data.errors ? 
+            data.message + ': ' + data.errors.join(', ') : 
+            data.message || errorMessage;
+          if (data.errors) {
+            setPasswordErrors(data.errors);
+          }
+        } catch (parseError) {
+          errorMessage = response.statusText || errorMessage;
+        }
         showToast(errorMessage, 'error');
         setError(errorMessage);
-        if (data.errors) {
-          setPasswordErrors(data.errors);
-        }
+        setIsSigningUp(false);
       }
     } catch (err) {
-      showToast('Registration failed: ' + err.message, 'error');
-      setError('Sign up failed: ' + err.message);
+      const errorMessage = err.message || 'Network error. Please check your connection and try again.';
+      showToast('Registration failed: ' + errorMessage, 'error');
+      setError('Sign up failed: ' + errorMessage);
+      setIsSigningUp(false);
     }
   };
 
@@ -488,7 +504,35 @@ const Login = () => {
             </div>
             {error && <div className="login-error">{error}</div>}
             <div className="login-buttons">
-              <button type="submit">Sign Up</button>
+              <button type="submit" disabled={isSigningUp} style={{ position: 'relative', minWidth: '120px' }}>
+                {isSigningUp ? (
+                  <>
+                    <svg
+                      style={{
+                        display: 'inline-block',
+                        width: '16px',
+                        height: '16px',
+                        marginRight: '8px',
+                        animation: 'spin 1s linear infinite',
+                        verticalAlign: 'middle'
+                      }}
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <circle cx="12" cy="12" r="10" opacity="0.25"/>
+                      <path d="M12 2a10 10 0 0 1 10 10" opacity="0.75"/>
+                    </svg>
+                    Signing up...
+                  </>
+                ) : (
+                  'Sign Up'
+                )}
+              </button>
             </div>
           </form>
           <div className="auth-links">

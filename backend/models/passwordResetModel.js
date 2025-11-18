@@ -12,11 +12,13 @@ const createResetToken = async (userId, email) => {
     const usePostgres = !!process.env.DATABASE_URL;
     
     if (usePostgres) {
+      // PostgreSQL: Use ? placeholders - db.postgres.js will convert to $1, $2, etc.
+      // Use ON CONFLICT for PostgreSQL
       await db.query(
         `INSERT INTO password_reset_tokens (user_id, email, token, expires_at) 
-         VALUES ($1, $2, $3, $4) 
-         ON CONFLICT (user_id) DO UPDATE SET token = $3, expires_at = $4, created_at = NOW()`,
-        [userId, email, token, expiresAt]
+         VALUES (?, ?, ?, ?) 
+         ON CONFLICT (user_id) DO UPDATE SET token = ?, expires_at = ?, created_at = NOW()`,
+        [userId, email, token, expiresAt, token, expiresAt]
       );
     } else {
       // SQLite: Delete existing token first, then insert
@@ -41,7 +43,8 @@ const verifyResetToken = async (token) => {
     let query;
     
     if (usePostgres) {
-      query = `SELECT * FROM password_reset_tokens WHERE token = $1 AND expires_at > NOW()`;
+      // Use ? placeholder - db.postgres.js will convert to $1
+      query = `SELECT * FROM password_reset_tokens WHERE token = ? AND expires_at > NOW()`;
     } else {
       query = `SELECT * FROM password_reset_tokens WHERE token = ? AND expires_at > datetime('now')`;
     }
