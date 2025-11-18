@@ -95,11 +95,7 @@ const Settings = () => {
           setLoading(false);
           return;
         }
-        const response = await axios.get('/auth/me', {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        });
+        const response = await axios.get('/auth/me');
         console.log('Response status:', response.status);
         console.log('Username data:', response.data);
         setUsername(response.data.username);
@@ -128,12 +124,7 @@ const Settings = () => {
   const fetchRegistrationCodes = async () => {
     setLoadingCodes(true);
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get('/auth/registration-codes', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
+      const response = await axios.get('/auth/registration-codes');
       setRegistrationCodes(response.data);
     } catch (error) {
       console.error('Error fetching registration codes:', error);
@@ -155,14 +146,9 @@ const Settings = () => {
   const handleCreateRegistrationCode = async (e) => {
     e.preventDefault();
     try {
-      const token = localStorage.getItem('token');
       const response = await axios.post('/auth/registration-codes', {
         code: newCode || undefined, // Let backend generate if empty
         daysValid: parseInt(newCodeDays) || 90
-      }, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
       });
       
       alert(`Registration code created: ${response.data.code}\nExpires: ${new Date(response.data.expiresAt).toLocaleDateString()}`);
@@ -207,14 +193,7 @@ const Settings = () => {
         return;
       }
 
-      const response = await axios.put('/auth/username', 
-        { newUsername },
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        }
-      );
+      const response = await axios.put('/auth/username', { newUsername });
 
       if (response.data.message === 'Username updated successfully') {
         setUsername(newUsername);
@@ -247,14 +226,7 @@ const Settings = () => {
         return;
       }
 
-      const response = await axios.put('/auth/password', 
-        { currentPassword, newPassword },
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        }
-      );
+      const response = await axios.put('/auth/password', { currentPassword, newPassword });
 
       if (response.data.message === 'Password changed successfully') {
         alert('Password changed successfully!');
