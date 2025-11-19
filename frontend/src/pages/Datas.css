@@ -278,3 +278,12 @@ tr:hover {
     height: 60px;
   }
 }
+
+/* Ensure checkboxes maintain proper size on mobile */
+.datas-container input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  min-height: 16px !important;
+  cursor: pointer;
+  flex-shrink: 0;
+}

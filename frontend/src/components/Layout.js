@@ -1,6 +1,7 @@
 import React from 'react';
 import { useLocation } from 'react-router-dom';
 import Header from '../pages/Header';
+import './Layout.css';
 
 const Layout = ({ children }) => {
   const location = useLocation();
@@ -17,9 +18,9 @@ const Layout = ({ children }) => {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+    <div className="layout-wrapper">
       <Header activePage={getActivePage()} />
-      <div style={{ flex: 1, position: 'relative' }}>
+      <div className="layout-content">
         {children}
       </div>
     </div>

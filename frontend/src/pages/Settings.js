@@ -763,7 +763,9 @@ const Settings = () => {
                 style={{
                   opacity: 0,
                   width: 0,
-                  height: 0
+                  height: 0,
+                  minHeight: 0,
+                  position: 'absolute'
                 }}
               />
               <span style={{

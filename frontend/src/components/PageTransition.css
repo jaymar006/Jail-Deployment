@@ -2,14 +2,11 @@
   width: 100%;
   min-height: 100%;
   position: relative;
-  /* Prevent layout shifts */
-  contain: layout style paint;
-  /* Smooth rendering */
-  transform: translateZ(0);
-  will-change: opacity, transform;
+  /* Removed contain property as it breaks sticky positioning */
+  /* Removed transform properties as they can create new stacking context */
+  will-change: opacity;
   /* Start visible to prevent initial flash */
   opacity: 1;
-  transform: translateY(0);
 }
 
 .page-transition-entering {
@@ -22,7 +19,6 @@
 
 .page-transition-entered {
   opacity: 1;
-  transform: translateY(0);
   /* Remove animation properties when transition is complete */
   animation: none;
 }
@@ -30,22 +26,18 @@
 @keyframes fadeIn {
   from {
     opacity: 0;
-    transform: translateY(1px);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
   }
 }
 
 @keyframes fadeOut {
   from {
     opacity: 1;
-    transform: translateY(0);
   }
   to {
     opacity: 0.5;
-    transform: translateY(0);
   }
 }
 

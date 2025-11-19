@@ -5,14 +5,14 @@
 
 html {
   scroll-behavior: smooth;
-  /* Prevent layout shifts */
-  overflow-x: hidden;
   /* Better font rendering on mobile */
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
   width: 100%;
   max-width: 100vw;
   box-sizing: border-box;
+  /* Remove overflow properties to allow sticky positioning */
+  overflow: visible;
 }
 
 body {
@@ -23,16 +23,13 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  /* Prevent layout shifts during navigation */
-  overflow-x: hidden;
-  position: relative;
+  /* Remove overflow properties to allow sticky positioning */
+  overflow-x: clip; /* Use clip instead of hidden to prevent scrolling but allow sticky */
+  overflow-y: auto; /* Explicit auto for vertical scrolling */
   min-height: 100vh;
   width: 100%;
   max-width: 100vw;
-  /* Smooth rendering */
-  transform: translateZ(0);
-  backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
+  /* Removed position: relative and transform as they can interfere with sticky */
   /* Better touch scrolling on iOS */
   -webkit-overflow-scrolling: touch;
   /* Responsive base font size */
@@ -45,9 +42,8 @@ body {
   position: relative;
   width: 100%;
   max-width: 100vw;
-  overflow-x: hidden;
-  /* Prevent layout shifts */
-  contain: layout style paint;
+  /* Removed overflow-x: hidden as it can break sticky positioning */
+  /* Removed contain property as it breaks sticky positioning */
   display: flex;
   flex-direction: column;
 }
@@ -74,8 +70,12 @@ code {
     padding: 0;
   }
   
-  /* Better touch targets */
-  button, a, input, select, textarea {
+  /* Better touch targets - exclude checkbox and radio inputs */
+  button, a, select, textarea {
+    min-height: 44px; /* iOS recommended touch target size */
+  }
+
+  input:not([type="checkbox"]):not([type="radio"]) {
     min-height: 44px; /* iOS recommended touch target size */
   }
 

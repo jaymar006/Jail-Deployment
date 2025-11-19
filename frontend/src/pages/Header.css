@@ -10,13 +10,13 @@
   font-size: 1rem;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
   border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  position: -webkit-sticky; /* Safari */
   position: sticky;
   top: 0;
+  width: 100%;
   z-index: 1000;
-  /* Ensure header is not affected by page transitions */
-  transform: translateZ(0);
-  /* Prevent page transition animations from affecting header */
-  isolation: isolate;
+  /* Ensure sticky works */
+  align-self: flex-start;
 }
 
 .header-top {
