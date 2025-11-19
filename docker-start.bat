@@ -54,7 +54,7 @@ if %ERRORLEVEL% EQU 0 (
     echo ✅ Container is running!
     echo.
     echo 🌐 Access your application at:
-    echo    http://localhost:3001
+    echo    https://jail-deployment.onrender.com
     echo.
     echo 📊 View logs with:
     echo    docker-compose logs -f app

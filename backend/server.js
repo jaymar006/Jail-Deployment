@@ -133,7 +133,7 @@ const startServer = async () => {
     // Start the server
     app.listen(PORT, '0.0.0.0', async () => {
       console.log(`✅ Server running on port ${PORT}`);
-      console.log(`🌐 Health check: http://localhost:${PORT}/api/health`);
+      console.log(`🌐 Health check:  https://jail-deployment.onrender.com:${PORT}/api/health`);
       
       // Wait a moment for everything to settle, then create default user
       setTimeout(async () => {

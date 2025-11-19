@@ -108,8 +108,8 @@ npm start
 ```
 
 ### 6. Access the Application
-- **Frontend**: http://localhost:3000
-- **Backend API**: http://localhost:3001
+- **Frontend**: https://jail-deployment.onrender.com
+- **Backend API**: https://jail-deployment.onrender.com
 
 ## 🔐 Default Login
 
