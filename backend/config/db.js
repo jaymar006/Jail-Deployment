@@ -218,6 +218,14 @@ sqliteDb.serialize(() => {
   });
 });
 
+// Convert PostgreSQL NOW() function to SQLite datetime('now')
+function convertPostgresFunctions(sql) {
+  // Convert NOW() to datetime('now') for SQLite
+  // Match NOW() but not inside strings or function calls
+  sql = sql.replace(/\bNOW\s*\(\s*\)/gi, "datetime('now')");
+  return sql;
+}
+
 // Provide a mysql2-like interface for compatibility: db.query(sql, params?)
 // - Promise form: resolves to [rows]
 // - Callback form: db.query(sql, params?, (err, rowsOrResult) => {})
@@ -226,20 +234,23 @@ function query(sql, params, cb) {
   const callback = typeof params === 'function' ? params : cb;
   const effectiveParams = Array.isArray(params) ? params : (cb ? params : []);
 
-  const isSelect = /^\s*select/i.test(sql);
-  const isInsert = /^\s*insert/i.test(sql);
-  const isUpdate = /^\s*update/i.test(sql);
-  const isDelete = /^\s*delete/i.test(sql);
+  // Convert PostgreSQL functions to SQLite equivalents
+  const convertedSql = convertPostgresFunctions(sql);
+
+  const isSelect = /^\s*select/i.test(convertedSql);
+  const isInsert = /^\s*insert/i.test(convertedSql);
+  const isUpdate = /^\s*update/i.test(convertedSql);
+  const isDelete = /^\s*delete/i.test(convertedSql);
 
   const execSelect = () => new Promise((resolve, reject) => {
-    sqliteDb.all(sql, effectiveParams, (err, rows) => {
+    sqliteDb.all(convertedSql, effectiveParams, (err, rows) => {
       if (err) return reject(err);
       resolve([rows]);
     });
   });
 
   const execRun = () => new Promise((resolve, reject) => {
-    sqliteDb.run(sql, effectiveParams, function(err) {
+    sqliteDb.run(convertedSql, effectiveParams, function(err) {
       if (err) return reject(err);
       // Mimic mysql2 result object shape as much as possible
       resolve([{ insertId: this.lastID, affectedRows: this.changes, changes: this.changes }]);

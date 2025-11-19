@@ -173,8 +173,8 @@ const QRCodeScanner = ({ onScan, resetTrigger }) => {
   }, [resetTrigger, startScanner, stopScanner]);
 
   return (
-    <div>
-      <div id={qrCodeRegionId} style={{ width: '320px', height: '240px' }} />
+    <div style={{ width: '100%', maxWidth: '320px', margin: '0 auto' }}>
+      <div id={qrCodeRegionId} style={{ width: '100%', maxWidth: '320px', height: '240px', minHeight: '200px' }} />
       {error && (
         <div style={{ 
           marginTop: '12px', 

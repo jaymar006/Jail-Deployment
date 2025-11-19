@@ -282,6 +282,36 @@
     padding: 8px 6px;
     font-size: 11px;
   }
+
+  /* QR Scanner Mobile Responsive */
+  #html5qr-code-full-region {
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    min-height: 200px !important;
+    max-height: 50vh !important;
+    overflow: hidden !important;
+    position: relative !important;
+    box-sizing: border-box !important;
+  }
+
+  #html5qr-code-full-region video,
+  #html5qr-code-full-region canvas {
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    object-fit: contain !important;
+    display: block !important;
+    margin: 0 auto !important;
+  }
+
+  /* Ensure QR scanner container doesn't overflow */
+  .dashboard-main > div > div[style*="flexDirection: 'column'"] {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    overflow-x: hidden !important;
+  }
 }
 
 @media (max-width: 480px) {
@@ -298,5 +328,11 @@
 
   .schedule-cell-checkbox {
     align-self: flex-start;
+  }
+
+  /* QR Scanner Small Mobile Responsive */
+  #html5qr-code-full-region {
+    min-height: 180px !important;
+    max-height: 40vh !important;
   }
 }

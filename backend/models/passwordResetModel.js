@@ -22,7 +22,7 @@ const createResetToken = async (userId, telegramUsername) => {
       const result = await db.query(
         `INSERT INTO password_reset_tokens (user_id, telegram_username, token, expires_at) 
          VALUES (?, ?, ?, ?) 
-         ON CONFLICT (user_id) DO UPDATE SET token = ?, expires_at = ?, created_at = NOW()`,
+         ON CONFLICT (user_id) DO UPDATE SET token = ?, expires_at = ?, created_at = CURRENT_TIMESTAMP`,
         [userId, telegramUsername, token, expiresAt, token, expiresAt]
       );
       console.log(`✅ Password reset token saved to database successfully`);

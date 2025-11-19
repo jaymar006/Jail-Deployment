@@ -3,10 +3,17 @@ const db = require('../config/db');
 // Check if account is locked
 const isAccountLocked = async (username) => {
   try {
-    const [rows] = await db.query(
-      `SELECT locked_until FROM account_lockouts WHERE username = ? AND locked_until > NOW()`,
-      [username]
-    );
+    // Check if using PostgreSQL or SQLite
+    const usePostgres = !!process.env.DATABASE_URL;
+    let query;
+    
+    if (usePostgres) {
+      query = `SELECT locked_until FROM account_lockouts WHERE username = ? AND locked_until > NOW()`;
+    } else {
+      query = `SELECT locked_until FROM account_lockouts WHERE username = ? AND locked_until > datetime('now')`;
+    }
+    
+    const [rows] = await db.query(query, [username]);
     return rows.length > 0 ? rows[0].locked_until : null;
   } catch (err) {
     // If table doesn't exist, return null (no lockout)
@@ -35,18 +42,27 @@ const recordFailedAttempt = async (username, ipAddress) => {
       lockedUntil = new Date(Date.now() + lockoutDuration);
     }
     
+    // Check if using PostgreSQL or SQLite
+    const usePostgres = !!process.env.DATABASE_URL;
+    
     if (existing.length > 0) {
       // Update existing record
-      await db.query(
-        `UPDATE account_lockouts SET failed_attempts = ?, last_attempt = NOW(), locked_until = ?, ip_address = ? WHERE username = ?`,
-        [failedAttempts, lockedUntil, ipAddress, username]
-      );
+      let query;
+      if (usePostgres) {
+        query = `UPDATE account_lockouts SET failed_attempts = ?, last_attempt = NOW(), locked_until = ?, ip_address = ? WHERE username = ?`;
+      } else {
+        query = `UPDATE account_lockouts SET failed_attempts = ?, last_attempt = datetime('now'), locked_until = ?, ip_address = ? WHERE username = ?`;
+      }
+      await db.query(query, [failedAttempts, lockedUntil, ipAddress, username]);
     } else {
       // Create new record
-      await db.query(
-        `INSERT INTO account_lockouts (username, failed_attempts, last_attempt, locked_until, ip_address) VALUES (?, ?, NOW(), ?, ?)`,
-        [username, failedAttempts, lockedUntil, ipAddress]
-      );
+      let query;
+      if (usePostgres) {
+        query = `INSERT INTO account_lockouts (username, failed_attempts, last_attempt, locked_until, ip_address) VALUES (?, ?, NOW(), ?, ?)`;
+      } else {
+        query = `INSERT INTO account_lockouts (username, failed_attempts, last_attempt, locked_until, ip_address) VALUES (?, ?, datetime('now'), ?, ?)`;
+      }
+      await db.query(query, [username, failedAttempts, lockedUntil, ipAddress]);
     }
     
     return { failedAttempts, lockedUntil };

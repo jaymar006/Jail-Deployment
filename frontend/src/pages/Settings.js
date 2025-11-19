@@ -4,32 +4,77 @@ import axios from '../services/api';
 import './Settings.css';
 
 const Modal = ({ children, onClose }) => {
+  const overlayRef = React.useRef(null);
+  
   // Prevent body scroll when modal is open and ensure overlay covers everything
   React.useEffect(() => {
+    // Save current scroll position
+    const scrollY = window.scrollY;
+    const scrollX = window.scrollX;
+    
+    // Calculate full document height to ensure overlay covers everything
+    const documentHeight = Math.max(
+      document.body.scrollHeight,
+      document.body.offsetHeight,
+      document.documentElement.clientHeight,
+      document.documentElement.scrollHeight,
+      document.documentElement.offsetHeight
+    );
+    
     const originalOverflow = document.body.style.overflow;
     const originalHtmlOverflow = document.documentElement.style.overflow;
     const originalBgColor = document.body.style.backgroundColor;
     const originalHtmlBgColor = document.documentElement.style.backgroundColor;
+    const originalPosition = document.body.style.position;
+    const originalTop = document.body.style.top;
+    const originalLeft = document.body.style.left;
+    const originalWidth = document.body.style.width;
     
     // Prevent scrolling on both body and html
     document.body.style.overflow = 'hidden';
     document.documentElement.style.overflow = 'hidden';
     
+    // Lock body position to prevent scroll (keep current scroll position)
+    document.body.style.position = 'fixed';
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.left = `-${scrollX}px`;
+    document.body.style.width = '100%';
+    
     // Ensure background doesn't show white behind modal
     document.body.style.backgroundColor = '#f9fafb';
     document.documentElement.style.backgroundColor = '#f9fafb';
     
+    // Set overlay height to cover full document
+    if (overlayRef.current) {
+      overlayRef.current.style.height = `${documentHeight}px`;
+      overlayRef.current.style.minHeight = `${documentHeight}px`;
+    }
+    
     return () => {
+      // Restore original styles
       document.body.style.overflow = originalOverflow;
       document.documentElement.style.overflow = originalHtmlOverflow;
       document.body.style.backgroundColor = originalBgColor;
       document.documentElement.style.backgroundColor = originalHtmlBgColor;
+      document.body.style.position = originalPosition;
+      document.body.style.top = originalTop;
+      document.body.style.left = originalLeft;
+      document.body.style.width = originalWidth;
+      
+      // Reset overlay height
+      if (overlayRef.current) {
+        overlayRef.current.style.height = '';
+        overlayRef.current.style.minHeight = '';
+      }
+      
+      // Restore scroll position
+      window.scrollTo(scrollX, scrollY);
     };
   }, []);
 
   // Render modal at document body level to ensure it covers everything
   return ReactDOM.createPortal(
-    <div className="modal-overlay" onClick={onClose}>
+    <div className="modal-overlay" ref={overlayRef} onClick={onClose}>
       <div className="modal-content" onClick={e => e.stopPropagation()}>
         <button className="modal-close" onClick={onClose}>×</button>
         {children}

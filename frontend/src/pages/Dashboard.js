@@ -677,7 +677,7 @@ const Dashboard = () => {
               Schedule
             </button>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'center', flexDirection: 'column', alignItems: 'center', gap: '20px' }}>
+          <div style={{ display: 'flex', justifyContent: 'center', flexDirection: 'column', alignItems: 'center', gap: '20px', width: '100%', maxWidth: '100%', padding: isMobile ? '0 10px' : '0' }}>
             <QRCodeScanner onScan={handleScan} onError={() => showToast('QR Scan error', 'error')} resetTrigger={resetTrigger} />
             
             {qrUploadEnabled && (
@@ -687,7 +687,8 @@ const Dashboard = () => {
                 onDragLeave={handleDragLeave}
                 onClick={() => fileInputRef.current?.click()}
                 style={{
-                  width: '320px',
+                  width: isMobile ? '100%' : '320px',
+                  maxWidth: '320px',
                   minHeight: '120px',
                   border: `2px dashed ${isDragging ? '#10b981' : '#d1d5db'}`,
                   borderRadius: '12px',
