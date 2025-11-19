@@ -136,7 +136,7 @@ This is an automated message from Silang Municipal Jail Visitation Management Sy
           // Provide specific error messages based on Telegram API error codes
           const botUsername = botInfo?.username || 'your bot';
           if (retryErrorCode === 400 && retryErrorDesc?.includes('chat not found')) {
-            throw new Error(`User @${cleanTelegramUsername} must start bot @${botUsername} first. They need to:\n1. Open Telegram\n2. Search for @${botUsername}\n3. Click "Start" button\n4. Then try password reset again`);
+            throw new Error(`User @${cleanTelegramUsername} must interact with bot @${botUsername} first. They need to:\n1. Open Telegram\n2. Search for @${botUsername}\n3. Click "Start" button\n4. Send any message to the bot (e.g., "hello" or "/start")\n5. Then try password reset again`);
           } else if (retryErrorCode === 400 && retryErrorDesc?.includes('user not found')) {
             throw new Error(`Telegram username @${cleanTelegramUsername} not found. Please verify the username is correct and exists on Telegram.`);
           } else if (retryErrorCode === 403) {
@@ -152,7 +152,7 @@ This is an automated message from Silang Municipal Jail Visitation Management Sy
       if (errorCode === 403) {
         throw new Error(`User @${cleanTelegramUsername} has blocked your bot or bot cannot send messages`);
       } else if (errorCode === 400 && errorDescription?.includes('chat not found')) {
-        throw new Error(`User @${cleanTelegramUsername} must start bot @${botUsername} first. They need to:\n1. Open Telegram\n2. Search for @${botUsername}\n3. Click "Start" button\n4. Then try password reset again`);
+        throw new Error(`User @${cleanTelegramUsername} must interact with bot @${botUsername} first. They need to:\n1. Open Telegram\n2. Search for @${botUsername}\n3. Click "Start" button\n4. Send any message to the bot (e.g., "hello" or "/start")\n5. Then try password reset again`);
       } else if (errorCode === 400 && errorDescription?.includes('user not found')) {
         throw new Error(`Telegram username @${cleanTelegramUsername} not found. Please verify the username is correct and exists on Telegram.`);
       }

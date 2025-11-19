@@ -274,7 +274,10 @@ const Login = () => {
                 borderRadius: '8px',
                 padding: '15px',
                 marginBottom: '20px',
-                fontSize: '0.9em'
+                fontSize: '0.9em',
+                width: '100%',
+                maxWidth: '100%',
+                boxSizing: 'border-box'
               }}>
                 <div style={{ fontWeight: '600', color: '#0369a1', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -325,7 +328,7 @@ const Login = () => {
                   </a>
                 </div>
                 <p style={{ margin: '8px 0 0 0', color: '#0c4a6e', fontSize: '0.85em' }}>
-                  Click "Start" button in Telegram, then return here to request your password reset.
+                  <strong>Important:</strong> After clicking "Start", you must also send a message to the bot (e.g., type "hello" or "/start") before requesting password reset.
                 </p>
               </div>
             )}
