@@ -39,13 +39,29 @@ exports.login = async (req, res) => {
 
     if (user && await bcrypt.compare(password, user.password)) {
       // Reset failed attempts on successful login
-      await accountLockoutModel.resetFailedAttempts(username);
+      try {
+        await accountLockoutModel.resetFailedAttempts(username);
+      } catch (lockoutError) {
+        // Log but don't fail login if lockout reset fails
+        console.error('Error resetting failed attempts:', lockoutError.message);
+      }
       
       const token = jwt.sign({ id: user.id, username: user.username }, JWT_SECRET, { expiresIn: '1h' });
       res.json({ message: 'Login successful', token });
     } else {
-      // Record failed attempt
-      const { failedAttempts, lockedUntil } = await accountLockoutModel.recordFailedAttempts(username, ipAddress);
+      // Invalid credentials - record failed attempt
+      let failedAttempts = 0;
+      let lockedUntil = null;
+      
+      try {
+        const result = await accountLockoutModel.recordFailedAttempt(username, ipAddress);
+        failedAttempts = result.failedAttempts || 0;
+        lockedUntil = result.lockedUntil || null;
+      } catch (lockoutError) {
+        // Log but continue with error message even if lockout tracking fails
+        console.error('Error recording failed attempt:', lockoutError.message);
+        // Continue with default values (no lockout tracking)
+      }
       
       if (lockedUntil) {
         const lockoutMinutes = Math.ceil((new Date(lockedUntil) - new Date()) / 60000);
@@ -56,11 +72,13 @@ exports.login = async (req, res) => {
       
       const remainingAttempts = 5 - failedAttempts;
       res.status(401).json({ 
-        message: `Invalid username or password. ${remainingAttempts} attempt(s) remaining before account lockout.` 
+        message: `Invalid username or password. ${remainingAttempts > 0 ? remainingAttempts + ' attempt(s) remaining before account lockout.' : 'Please try again.'}` 
       });
     }
   } catch (err) {
-    res.status(500).json({ message: 'Server error', error: err.message });
+    // Only return server error for unexpected errors, not authentication failures
+    console.error('Login error:', err);
+    res.status(500).json({ message: 'Server error. Please try again later.', error: err.message });
   }
 };
 
