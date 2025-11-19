@@ -1,6 +1,7 @@
 const nodemailer = require('nodemailer');
+const resendTransport = require('./nodemailerResendTransport');
 
-// Initialize Nodemailer with Resend transport
+// Initialize Nodemailer with custom Resend transport
 let transporter;
 try {
   const apiKey = process.env.RESEND_API_KEY;
@@ -8,11 +9,9 @@ try {
     console.warn('⚠️  RESEND_API_KEY not found. Email sending will not work.');
     console.warn('⚠️  Password reset emails will be disabled until RESEND_API_KEY is configured.');
   } else {
-    // Use nodemailer-resend transport
-    const nodemailerResend = require('nodemailer-resend');
-    
+    // Use custom Resend transport
     transporter = nodemailer.createTransport(
-      nodemailerResend({
+      resendTransport({
         apiKey: apiKey,
       })
     );
@@ -22,8 +21,7 @@ try {
 } catch (error) {
   console.error('❌ Failed to initialize Nodemailer with Resend:', error.message);
   console.error('❌ Error details:', error);
-  console.warn('⚠️  Email sending will be disabled. Make sure "nodemailer-resend" package is installed.');
-  console.warn('⚠️  Run: npm install nodemailer-resend');
+  console.warn('⚠️  Email sending will be disabled. Make sure RESEND_API_KEY is configured.');
   transporter = null;
 }
 
