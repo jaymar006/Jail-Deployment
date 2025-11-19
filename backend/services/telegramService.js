@@ -15,18 +15,10 @@ try {
     console.warn('⚠️  Password reset via Telegram will be disabled until TELEGRAM_BOT_TOKEN is configured.');
     console.warn('⚠️  Get your bot token from: https://t.me/BotFather');
   } else {
-    // Enable polling to receive messages and capture chat_ids
-    // This is essential for getting user chat_ids
-    bot = new TelegramBot(botToken, { 
-      polling: {
-        interval: 1000,
-        autoStart: true,
-        params: {
-          timeout: 10
-        }
-      }
-    });
-    console.log('✅ Telegram Bot service initialized with polling enabled');
+    // Initialize bot WITHOUT polling first to avoid conflicts
+    // We'll enable polling only if needed and handle conflicts
+    bot = new TelegramBot(botToken, { polling: false });
+    console.log('✅ Telegram Bot service initialized');
     
     // Verify bot info on startup
     bot.getMe().then((info) => {
@@ -39,64 +31,92 @@ try {
       console.error('⚠️  Could not verify bot info:', err.message);
     });
     
-    // Listen for messages to capture chat_ids
-    bot.on('message', async (msg) => {
+    // Try to start polling, but handle conflicts gracefully
+    // Only start polling if TELEGRAM_ENABLE_POLLING is true (optional)
+    const enablePolling = process.env.TELEGRAM_ENABLE_POLLING === 'true';
+    
+    if (enablePolling) {
       try {
-        const chatId = msg.chat.id;
-        const username = msg.from?.username;
-        
-        if (username) {
-          const cleanUsername = username.toLowerCase().replace('@', '');
-          
-          // Store in memory cache
-          chatIdCache.set(cleanUsername, chatId);
-          
-          // Try to update database
-          try {
-            await db.query(
-              `UPDATE users SET telegram_chat_id = ? WHERE LOWER(REPLACE(telegram_username, '@', '')) = ?`,
-              [chatId, cleanUsername]
-            );
-            console.log(`💾 Stored chat_id ${chatId} for @${username}`);
-          } catch (dbError) {
-            // Database update might fail if column doesn't exist yet - that's OK
-            console.log(`💾 Cached chat_id ${chatId} for @${username} (DB update skipped)`);
+        console.log('🔄 Starting Telegram bot polling...');
+        bot.startPolling({
+          interval: 2000,
+          autoStart: true,
+          params: {
+            timeout: 10
           }
-        }
-      } catch (error) {
-        console.error('Error processing Telegram message:', error.message);
-      }
-    });
-    
-    // Listen for /start command
-    bot.onText(/\/start/, async (msg) => {
-      const chatId = msg.chat.id;
-      const username = msg.from?.username;
-      
-      if (username) {
-        const cleanUsername = username.toLowerCase().replace('@', '');
-        chatIdCache.set(cleanUsername, chatId);
+        });
         
-        try {
-          await db.query(
-            `UPDATE users SET telegram_chat_id = ? WHERE LOWER(REPLACE(telegram_username, '@', '')) = ?`,
-            [chatId, cleanUsername]
+        // Listen for messages to capture chat_ids
+        bot.on('message', async (msg) => {
+          try {
+            const chatId = msg.chat.id;
+            const username = msg.from?.username;
+            
+            if (username) {
+              const cleanUsername = username.toLowerCase().replace('@', '');
+              
+              // Store in memory cache
+              chatIdCache.set(cleanUsername, chatId);
+              
+              // Try to update database
+              try {
+                await db.query(
+                  `UPDATE users SET telegram_chat_id = ? WHERE LOWER(REPLACE(telegram_username, '@', '')) = ?`,
+                  [chatId, cleanUsername]
+                );
+                console.log(`💾 Stored chat_id ${chatId} for @${username}`);
+              } catch (dbError) {
+                // Database update might fail if column doesn't exist yet - that's OK
+                console.log(`💾 Cached chat_id ${chatId} for @${username} (DB update skipped)`);
+              }
+            }
+          } catch (error) {
+            console.error('Error processing Telegram message:', error.message);
+          }
+        });
+        
+        // Listen for /start command
+        bot.onText(/\/start/, async (msg) => {
+          const chatId = msg.chat.id;
+          const username = msg.from?.username;
+          
+          if (username) {
+            const cleanUsername = username.toLowerCase().replace('@', '');
+            chatIdCache.set(cleanUsername, chatId);
+            
+            try {
+              await db.query(
+                `UPDATE users SET telegram_chat_id = ? WHERE LOWER(REPLACE(telegram_username, '@', '')) = ?`,
+                [chatId, cleanUsername]
+              );
+              console.log(`✅ Registered chat_id ${chatId} for @${username} via /start`);
+            } catch (dbError) {
+              console.log(`✅ Cached chat_id ${chatId} for @${username} via /start`);
+            }
+          }
+          
+          // Send welcome message
+          bot.sendMessage(chatId, 
+            `👋 Hello! I'm the password reset bot for Silang Municipal Jail.\n\n` +
+            `When you request a password reset, I'll send you a secure link here.\n\n` +
+            `You're all set! ✅`
           );
-          console.log(`✅ Registered chat_id ${chatId} for @${username} via /start`);
-        } catch (dbError) {
-          console.log(`✅ Cached chat_id ${chatId} for @${username} via /start`);
+        });
+        
+        console.log('👂 Telegram bot polling enabled - listening for messages to capture chat_ids');
+      } catch (pollingError) {
+        if (pollingError.message && pollingError.message.includes('409')) {
+          console.warn('⚠️  Polling conflict detected - another bot instance may be running');
+          console.warn('⚠️  Polling disabled. Chat IDs will be captured when users send messages.');
+          console.warn('💡 To enable polling, set TELEGRAM_ENABLE_POLLING=true and ensure only one instance runs');
+        } else {
+          console.error('❌ Failed to start polling:', pollingError.message);
         }
       }
-      
-      // Send welcome message
-      bot.sendMessage(chatId, 
-        `👋 Hello! I'm the password reset bot for Silang Municipal Jail.\n\n` +
-        `When you request a password reset, I'll send you a secure link here.\n\n` +
-        `You're all set! ✅`
-      );
-    });
-    
-    console.log('👂 Telegram bot is listening for messages to capture chat_ids');
+    } else {
+      console.log('ℹ️  Polling disabled (set TELEGRAM_ENABLE_POLLING=true to enable)');
+      console.log('ℹ️  Chat IDs will be captured via getChat() when users request password reset');
+    }
   }
 } catch (error) {
   console.error('❌ Failed to initialize Telegram Bot:', error.message);
