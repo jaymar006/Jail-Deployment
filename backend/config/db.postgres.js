@@ -137,6 +137,7 @@ CREATE TABLE IF NOT EXISTS users (
   username VARCHAR(255) NOT NULL UNIQUE,
   password VARCHAR(255) NOT NULL,
   telegram_username VARCHAR(255) NOT NULL UNIQUE,
+  telegram_chat_id BIGINT,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -289,6 +290,7 @@ const initializeSchema = async () => {
           username VARCHAR(255) NOT NULL UNIQUE,
           password VARCHAR(255) NOT NULL,
           telegram_username VARCHAR(255) NOT NULL UNIQUE,
+          telegram_chat_id BIGINT,
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )`,
         `CREATE TABLE IF NOT EXISTS cells (
@@ -423,7 +425,7 @@ const ensureColumns = async (client) => {
     { table: 'visitors', column: 'verified_conjugal', type: 'INTEGER', default: 'DEFAULT 0' },
     { table: 'scanned_visitors', column: 'purpose', type: 'TEXT' },
     { table: 'users', column: 'telegram_username', type: 'VARCHAR(255)', default: '' },
-    { table: 'users', column: 'telegram_chat_id', type: 'BIGINT', default: '' },
+    { table: 'users', column: 'telegram_chat_id', type: 'BIGINT', default: null },
   ];
   
   // Columns to remove (for migration)
@@ -605,16 +607,24 @@ const ensureColumns = async (client) => {
       `, [check.table, check.column]);
 
       if (result.rows.length === 0) {
-        await client.query(`
-          ALTER TABLE ${check.table} 
-          ADD COLUMN ${check.column} ${check.type} ${check.default || ''}
-        `);
-        console.log(`Added column ${check.table}.${check.column}`);
+        // Build the ALTER TABLE statement
+        let alterSql = `ALTER TABLE ${check.table} ADD COLUMN ${check.column} ${check.type}`;
+        if (check.default !== null && check.default !== undefined && check.default !== '') {
+          alterSql += ` ${check.default}`;
+        }
+        // If default is null or empty string, column will be nullable (default behavior)
+        
+        await client.query(alterSql);
+        console.log(`✅ Added column ${check.table}.${check.column} (${check.type})`);
+      } else {
+        console.log(`✓ Column ${check.table}.${check.column} already exists`);
       }
     } catch (error) {
       // Column might already exist or table doesn't exist yet
-      if (!error.message.includes('already exists')) {
-        console.error(`Error checking column ${check.table}.${check.column}:`, error.message);
+      if (error.message.includes('already exists') || error.message.includes('duplicate')) {
+        console.log(`✓ Column ${check.table}.${check.column} already exists (caught in error)`);
+      } else {
+        console.error(`❌ Error checking/adding column ${check.table}.${check.column}:`, error.message);
       }
     }
   }
