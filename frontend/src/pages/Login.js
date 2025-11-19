@@ -9,8 +9,7 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [registrationCode, setRegistrationCode] = useState('');
-  const [email, setEmail] = useState('');
-  const [confirmEmail, setConfirmEmail] = useState('');
+  const [telegramUsername, setTelegramUsername] = useState('');
   const [error, setError] = useState('');
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [isForgotPassword, setIsForgotPassword] = useState(false);
@@ -47,8 +46,7 @@ const Login = () => {
     setPassword('');
     setConfirmPassword('');
     setRegistrationCode('');
-    setEmail('');
-    setConfirmEmail('');
+    setTelegramUsername('');
     setError('');
     setPasswordErrors([]);
     setShowForgotPassword(false);
@@ -140,14 +138,8 @@ const Login = () => {
       return;
     }
 
-    if (!email) {
-      showToast('Email is required.', 'error');
-      setIsSigningUp(false);
-      return;
-    }
-
-    if (email !== confirmEmail) {
-      showToast('Emails do not match. Please try again.', 'error');
+    if (!telegramUsername || !telegramUsername.trim()) {
+      showToast('Telegram username is required for account recovery.', 'error');
       setIsSigningUp(false);
       return;
     }
@@ -173,8 +165,7 @@ const Login = () => {
         body: JSON.stringify({
           username,
           password,
-          email,
-          confirmEmail,
+          telegramUsername: telegramUsername.trim(),
           registrationCode,
         }),
       });
@@ -516,26 +507,17 @@ const Login = () => {
             </div>
             <div className="form-row">
               <label>
-                Email:
+                Telegram Username (for account recovery):
                 <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Enter your email"
+                  type="text"
+                  value={telegramUsername}
+                  onChange={(e) => setTelegramUsername(e.target.value)}
+                  placeholder="Enter your Telegram username (e.g., @username)"
                   required
                 />
-              </label>
-            </div>
-            <div className="form-row">
-              <label>
-                Confirm Email:
-                <input
-                  type="email"
-                  value={confirmEmail}
-                  onChange={(e) => setConfirmEmail(e.target.value)}
-                  placeholder="Confirm your email"
-                  required
-                />
+                <p style={{ fontSize: '0.85em', color: '#6b7280', marginTop: '5px', fontStyle: 'italic' }}>
+                  This will be used for password recovery via Telegram
+                </p>
               </label>
             </div>
             {error && <div className="login-error">{error}</div>}

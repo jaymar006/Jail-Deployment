@@ -65,7 +65,7 @@ exports.login = async (req, res) => {
 };
 
 exports.signUp = async (req, res) => {
-  const { username, password, email, confirmEmail, registrationCode } = req.body;
+  const { username, password, telegramUsername, registrationCode } = req.body;
 
   try {
     // Validate registration code
@@ -92,18 +92,21 @@ exports.signUp = async (req, res) => {
       return res.status(400).json({ message: 'Username can only contain letters, numbers, and underscores' });
     }
 
-    // Validate email
-    if (!email) {
-      return res.status(400).json({ message: 'Email is required' });
+    // Validate Telegram username
+    if (!telegramUsername || !telegramUsername.trim()) {
+      return res.status(400).json({ message: 'Telegram username is required for account recovery' });
     }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      return res.status(400).json({ message: 'Invalid email format' });
+    // Clean Telegram username (remove @ if present)
+    const cleanTelegramUsername = telegramUsername.replace('@', '').trim().toLowerCase();
+    
+    // Validate Telegram username format (5-32 characters, alphanumeric and underscores)
+    if (cleanTelegramUsername.length < 5 || cleanTelegramUsername.length > 32) {
+      return res.status(400).json({ message: 'Telegram username must be between 5 and 32 characters' });
     }
 
-    if (email !== confirmEmail) {
-      return res.status(400).json({ message: 'Emails do not match' });
+    if (!/^[a-zA-Z0-9_]+$/.test(cleanTelegramUsername)) {
+      return res.status(400).json({ message: 'Telegram username can only contain letters, numbers, and underscores' });
     }
 
     const existingUser = await userModel.findUserByUsername(username);
@@ -111,14 +114,17 @@ exports.signUp = async (req, res) => {
       return res.status(400).json({ message: 'Username already exists' });
     }
 
-    const existingEmail = await userModel.findUserByEmail(email);
-    if (existingEmail) {
-      return res.status(400).json({ message: 'Email already registered' });
+    const existingTelegramUser = await userModel.findUserByTelegramUsername(cleanTelegramUsername);
+    if (existingTelegramUser) {
+      return res.status(400).json({ message: 'Telegram username already registered' });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
     
-    await userModel.createUser(username, hashedPassword, email.toLowerCase());
+    // Create user with Telegram username and placeholder email (email is still required in DB)
+    // Using placeholder email format: username@telegram.local
+    const placeholderEmail = `${username}@telegram.local`;
+    await userModel.createUser(username, hashedPassword, placeholderEmail, cleanTelegramUsername);
     
     // Mark registration code as used
     await registrationCodeModel.markCodeAsUsed(registrationCode);
