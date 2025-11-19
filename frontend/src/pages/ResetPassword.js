@@ -375,12 +375,14 @@ const ResetPassword = () => {
         <div 
           className={`toast toast-${toast.type}`}
           style={{
-            bottom: isSmallMobile ? '10px' : '20px',
+            top: isMobile ? '20px' : 'auto',
+            bottom: isMobile ? 'auto' : '20px',
             right: isSmallMobile ? '10px' : '20px',
             left: isSmallMobile ? '10px' : 'auto',
             minWidth: isSmallMobile ? 'auto' : '300px',
             maxWidth: isSmallMobile ? 'calc(100% - 20px)' : '400px',
-            padding: isSmallMobile ? '0.875rem' : '1rem'
+            padding: isSmallMobile ? '0.875rem' : '1rem',
+            animation: isMobile ? 'slideInTop 0.3s ease-out' : 'slideInRight 0.3s ease-out'
           }}
         >
           <div className="toast-content">

@@ -40,11 +40,13 @@ const Modal = ({ children, onClose }) => {
 };
 
 const Settings = () => {
-  const [modalOpen, setModalOpen] = useState(null); // 'username', 'password', 'cell', 'editCell', 'deleteAllPdls', 'deleteLogs', 'selectLogs', 'registrationCodes' or null
+  const [modalOpen, setModalOpen] = useState(null); // 'username', 'password', 'telegram', 'cell', 'editCell', 'deleteAllPdls', 'deleteLogs', 'selectLogs', 'registrationCodes' or null
   const [newUsername, setNewUsername] = useState('');
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
+  const [newTelegramUsername, setNewTelegramUsername] = useState('');
   const [username, setUsername] = useState('');
+  const [telegramUsername, setTelegramUsername] = useState('');
   const [loading, setLoading] = useState(true);
   
   // Cell management state
@@ -84,6 +86,7 @@ const Settings = () => {
   const [loadingCodes, setLoadingCodes] = useState(false);
   const [newCode, setNewCode] = useState('');
   const [newCodeDays, setNewCodeDays] = useState('90');
+  const [newCodeLimit, setNewCodeLimit] = useState('1');
 
   useEffect(() => {
     const fetchUsername = async () => {
@@ -99,6 +102,7 @@ const Settings = () => {
         console.log('Response status:', response.status);
         console.log('Username data:', response.data);
         setUsername(response.data.username);
+        setTelegramUsername(response.data.telegramUsername || '');
       } catch (error) {
         console.error('Error fetching username:', error);
         setUsername('');
@@ -139,6 +143,7 @@ const Settings = () => {
     await fetchRegistrationCodes();
     setNewCode('');
     setNewCodeDays('90');
+    setNewCodeLimit('1');
     setModalOpen('registrationCodes');
   };
 
@@ -148,12 +153,14 @@ const Settings = () => {
     try {
       const response = await axios.post('/auth/registration-codes', {
         code: newCode || undefined, // Let backend generate if empty
-        daysValid: parseInt(newCodeDays) || 90
+        daysValid: parseInt(newCodeDays) || 90,
+        useLimit: parseInt(newCodeLimit) || 1
       });
       
-      alert(`Registration code created: ${response.data.code}\nExpires: ${new Date(response.data.expiresAt).toLocaleDateString()}`);
+      alert(`Registration code created: ${response.data.code}\nExpires: ${new Date(response.data.expiresAt).toLocaleDateString()}\nUse Limit: ${response.data.useLimit}`);
       setNewCode('');
       setNewCodeDays('90');
+      setNewCodeLimit('1');
       await fetchRegistrationCodes(); // Refresh list
     } catch (error) {
       console.error('Error creating registration code:', error);
@@ -163,6 +170,9 @@ const Settings = () => {
 
   const openModal = (type) => {
     setModalOpen(type);
+    if (type === 'telegram') {
+      setNewTelegramUsername(telegramUsername);
+    }
   };
 
   const closeModal = () => {
@@ -170,6 +180,7 @@ const Settings = () => {
     setNewUsername('');
     setCurrentPassword('');
     setNewPassword('');
+    setNewTelegramUsername('');
     setCellForm({
       cell_number: '',
       cell_name: '',
@@ -235,6 +246,31 @@ const Settings = () => {
     } catch (error) {
       console.error('Error changing password:', error);
       const errorMessage = error.response?.data?.message || 'Failed to change password';
+      alert(`Error: ${errorMessage}`);
+    }
+  };
+
+  const handleTelegramUsernameSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        alert('You must be logged in to update your Telegram username');
+        return;
+      }
+
+      const response = await axios.put('/auth/telegram-username', { 
+        telegramUsername: newTelegramUsername.trim() || null 
+      });
+
+      if (response.data.message) {
+        setTelegramUsername(response.data.telegramUsername || '');
+        alert(response.data.message);
+        closeModal();
+      }
+    } catch (error) {
+      console.error('Error updating Telegram username:', error);
+      const errorMessage = error.response?.data?.message || 'Failed to update Telegram username';
       alert(`Error: ${errorMessage}`);
     }
   };
@@ -803,6 +839,40 @@ const Settings = () => {
                 minLength="6"
               />
               <button type="submit">Change Password</button>
+            </form>
+          </Modal>
+        )}
+
+        {modalOpen === 'telegram' && (
+          <Modal onClose={closeModal}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px', justifyContent: 'center' }}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#0088cc' }}>
+                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+              </svg>
+              <h3 style={{ margin: 0 }}>Telegram Recovery Account</h3>
+            </div>
+            <form onSubmit={handleTelegramUsernameSubmit} className="settings-form">
+              <label htmlFor="telegramUsername">
+                Telegram Username (for password recovery):
+                {telegramUsername && (
+                  <span style={{ fontSize: '0.85em', color: '#6b7280', marginLeft: '8px' }}>
+                    Current: @{telegramUsername}
+                  </span>
+                )}
+              </label>
+              <input
+                type="text"
+                id="telegramUsername"
+                value={newTelegramUsername}
+                onChange={(e) => setNewTelegramUsername(e.target.value)}
+                placeholder={telegramUsername ? `@${telegramUsername}` : 'Enter Telegram username (optional)'}
+              />
+              <p style={{ fontSize: '0.85em', color: '#6b7280', marginTop: '-10px', marginBottom: '20px' }}>
+                {telegramUsername 
+                  ? 'Leave empty to remove your Telegram username, or enter a new one to update it.'
+                  : 'Add your Telegram username to enable password recovery via Telegram. Leave empty to skip.'}
+              </p>
+              <button type="submit">{telegramUsername ? 'Update Telegram Username' : 'Add Telegram Username'}</button>
             </form>
           </Modal>
         )}
@@ -2027,6 +2097,9 @@ const Settings = () => {
                         </div>
                         <div style={{ fontSize: '12px', color: '#6b7280' }}>
                           Created: {new Date(codeRow.created_at).toLocaleString()}
+                        </div>
+                        <div style={{ fontSize: '12px', color: '#6b7280' }}>
+                          Usage: {codeRow.used_count || 0} / {codeRow.use_limit || 1}
                         </div>
                         {expiresAt && (
                           <div style={{ fontSize: '12px', color: '#6b7280' }}>

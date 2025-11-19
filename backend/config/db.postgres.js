@@ -136,7 +136,7 @@ CREATE TABLE IF NOT EXISTS users (
   id SERIAL PRIMARY KEY,
   username VARCHAR(255) NOT NULL UNIQUE,
   password VARCHAR(255) NOT NULL,
-  telegram_username VARCHAR(255) NOT NULL UNIQUE,
+  telegram_username VARCHAR(255),
   telegram_chat_id BIGINT,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -157,6 +157,8 @@ CREATE TABLE IF NOT EXISTS registration_codes (
   id SERIAL PRIMARY KEY,
   code VARCHAR(255) NOT NULL UNIQUE,
   is_used BOOLEAN DEFAULT FALSE,
+  use_limit INTEGER DEFAULT 1,
+  used_count INTEGER DEFAULT 0,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   expires_at TIMESTAMP,
   used_at TIMESTAMP
@@ -289,7 +291,7 @@ const initializeSchema = async () => {
           id SERIAL PRIMARY KEY,
           username VARCHAR(255) NOT NULL UNIQUE,
           password VARCHAR(255) NOT NULL,
-          telegram_username VARCHAR(255) NOT NULL UNIQUE,
+          telegram_username VARCHAR(255),
           telegram_chat_id BIGINT,
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )`,
@@ -306,6 +308,8 @@ const initializeSchema = async () => {
           id SERIAL PRIMARY KEY,
           code VARCHAR(255) NOT NULL UNIQUE,
           is_used BOOLEAN DEFAULT FALSE,
+          use_limit INTEGER DEFAULT 1,
+          used_count INTEGER DEFAULT 0,
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
           expires_at TIMESTAMP,
           used_at TIMESTAMP
@@ -426,6 +430,8 @@ const ensureColumns = async (client) => {
     { table: 'scanned_visitors', column: 'purpose', type: 'TEXT' },
     { table: 'users', column: 'telegram_username', type: 'VARCHAR(255)', default: '' },
     { table: 'users', column: 'telegram_chat_id', type: 'BIGINT', default: null },
+    { table: 'registration_codes', column: 'use_limit', type: 'INTEGER', default: 'DEFAULT 1' },
+    { table: 'registration_codes', column: 'used_count', type: 'INTEGER', default: 'DEFAULT 0' },
   ];
   
   // Columns to remove (for migration)
@@ -504,89 +510,63 @@ const ensureColumns = async (client) => {
     console.error('Error migrating password_reset_tokens table:', error.message);
   }
   
-  // Ensure telegram_username has NOT NULL constraint and UNIQUE constraint
+  // Ensure telegram_username has UNIQUE constraint (allowing NULL values)
   try {
     // Check if telegram_username column exists
     const telegramCheck = await client.query(`
-      SELECT column_name, is_nullable, column_default
+      SELECT column_name, is_nullable
       FROM information_schema.columns 
       WHERE table_name = $1 AND column_name = $2
     `, ['users', 'telegram_username']);
     
     if (telegramCheck.rows.length > 0) {
+      // Ensure column is nullable (allow NULL)
       const colInfo = telegramCheck.rows[0];
-      
-      // Check if there are any NULL values in telegram_username
-      const nullCheck = await client.query(`
-        SELECT COUNT(*) as null_count 
-        FROM users 
-        WHERE telegram_username IS NULL
-      `);
-      const nullCount = parseInt(nullCheck.rows[0].null_count);
-      
-      if (nullCount > 0) {
-        console.warn(`⚠️  Found ${nullCount} users with NULL telegram_username. Setting placeholder values...`);
-        // Set placeholder telegram usernames for users without one
-        // Format: username_placeholder_<user_id>
-        await client.query(`
-          UPDATE users 
-          SET telegram_username = 'placeholder_' || id::text || '_' || username
-          WHERE telegram_username IS NULL
-        `);
-        console.log(`✅ Updated ${nullCount} users with placeholder telegram_username`);
-      }
-      
-      // Add NOT NULL constraint if it's nullable
-      if (colInfo.is_nullable === 'YES') {
+      if (colInfo.is_nullable === 'NO') {
         try {
           await client.query(`
-            ALTER TABLE users ALTER COLUMN telegram_username SET NOT NULL
+            ALTER TABLE users ALTER COLUMN telegram_username DROP NOT NULL
           `);
-          console.log('✅ Added NOT NULL constraint to users.telegram_username');
-        } catch (notNullError) {
-          if (notNullError.message.includes('contains null values')) {
-            console.warn('⚠️  Cannot add NOT NULL constraint - null values still exist. This should not happen after placeholder update.');
-            // Try to find remaining nulls
-            const remainingNulls = await client.query(`
-              SELECT COUNT(*) as null_count 
-              FROM users 
-              WHERE telegram_username IS NULL
-            `);
-            console.warn(`   Remaining NULL values: ${remainingNulls.rows[0].null_count}`);
-          } else {
-            throw notNullError;
+          console.log('✅ Made telegram_username nullable');
+        } catch (error) {
+          // Column might already be nullable, that's OK
+          if (!error.message.includes('does not exist')) {
+            console.warn('⚠️  Could not make telegram_username nullable:', error.message);
           }
         }
       }
       
-      // Add UNIQUE constraint if it doesn't exist
-      // Note: We can't add UNIQUE if there are duplicates, so check first
-      const duplicateCheck = await client.query(`
-        SELECT telegram_username, COUNT(*) as count
-        FROM users
-        WHERE telegram_username IS NOT NULL
-        GROUP BY telegram_username
-        HAVING COUNT(*) > 1
+      // Add UNIQUE constraint using partial index (only for non-NULL values)
+      // This allows multiple NULL values but ensures uniqueness for non-NULL values
+      const uniqueIndexCheck = await client.query(`
+        SELECT indexname 
+        FROM pg_indexes 
+        WHERE tablename = 'users' 
+        AND indexname = 'users_telegram_username_unique_idx'
       `);
       
-      if (duplicateCheck.rows.length > 0) {
-        console.warn(`⚠️  Found duplicate telegram_username values. Cannot add UNIQUE constraint yet.`);
-        console.warn(`   Duplicates:`, duplicateCheck.rows.map(r => `${r.telegram_username} (${r.count} times)`));
-      } else {
-        const uniqueCheck = await client.query(`
-          SELECT constraint_name 
-          FROM information_schema.table_constraints 
-          WHERE table_name = 'users' 
-          AND constraint_type = 'UNIQUE' 
-          AND constraint_name LIKE '%telegram_username%'
+      if (uniqueIndexCheck.rows.length === 0) {
+        // Check for duplicates before adding constraint
+        const duplicateCheck = await client.query(`
+          SELECT telegram_username, COUNT(*) as count
+          FROM users
+          WHERE telegram_username IS NOT NULL
+          GROUP BY telegram_username
+          HAVING COUNT(*) > 1
         `);
         
-        if (uniqueCheck.rows.length === 0) {
+        if (duplicateCheck.rows.length > 0) {
+          console.warn(`⚠️  Found duplicate telegram_username values. Cannot add UNIQUE constraint yet.`);
+          console.warn(`   Duplicates:`, duplicateCheck.rows.map(r => `${r.telegram_username} (${r.count} times)`));
+        } else {
           try {
+            // Create partial unique index (only for non-NULL values)
             await client.query(`
-              ALTER TABLE users ADD CONSTRAINT users_telegram_username_key UNIQUE (telegram_username)
+              CREATE UNIQUE INDEX users_telegram_username_unique_idx 
+              ON users (telegram_username) 
+              WHERE telegram_username IS NOT NULL
             `);
-            console.log('✅ Added UNIQUE constraint to users.telegram_username');
+            console.log('✅ Added UNIQUE constraint (partial index) to users.telegram_username');
           } catch (uniqueError) {
             console.warn('⚠️  Could not add UNIQUE constraint:', uniqueError.message);
           }

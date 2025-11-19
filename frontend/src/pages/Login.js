@@ -17,6 +17,7 @@ const Login = () => {
   const [fpUsernameOrTelegram, setFpUsernameOrTelegram] = useState('');
   const [showBotInfo, setShowBotInfo] = useState(false);
   const [botInfoTimeout, setBotInfoTimeout] = useState(null);
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [showSignUpPassword, setShowSignUpPassword] = useState(false);
   const [showSignUpConfirmPassword, setShowSignUpConfirmPassword] = useState(false);
@@ -33,6 +34,14 @@ const Login = () => {
     return () => {
       document.body.style.overflow = previousOverflow || '';
     };
+  }, []);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   const showToast = (message, type = 'success') => {
@@ -139,11 +148,7 @@ const Login = () => {
       return;
     }
 
-    if (!telegramUsername || !telegramUsername.trim()) {
-      showToast('Telegram username is required for account recovery.', 'error');
-      setIsSigningUp(false);
-      return;
-    }
+    // Telegram username is optional - can be added later in settings
 
     if (password !== confirmPassword) {
       showToast('Passwords do not match. Please try again.', 'error');
@@ -163,10 +168,10 @@ const Login = () => {
       const response = await fetch(`${apiUrl}/auth/signup`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+          body: JSON.stringify({
           username,
           password,
-          telegramUsername: telegramUsername.trim(),
+          telegramUsername: telegramUsername.trim() || null,
           registrationCode,
         }),
       });
@@ -333,16 +338,16 @@ const Login = () => {
           <div
             style={{
               position: 'absolute',
-              top: window.innerWidth <= 768 ? '28px' : '0',
-              left: window.innerWidth <= 768 ? '50%' : 'calc(100% + 12px)',
-              transform: window.innerWidth <= 768 ? 'translateX(-50%)' : 'none',
+              top: isMobile ? '28px' : '0',
+              left: isMobile ? '50%' : 'calc(100% + 12px)',
+              transform: isMobile ? 'translateX(-50%)' : 'none',
               backgroundColor: '#f0f9ff',
               border: '1px solid #bae6fd',
               borderRadius: '8px',
-              padding: window.innerWidth <= 480 ? '10px' : '12px',
-              fontSize: window.innerWidth <= 480 ? '0.8em' : '0.85em',
-              width: window.innerWidth <= 480 ? '260px' : '280px',
-              maxWidth: window.innerWidth <= 768 ? 'calc(100vw - 20px)' : 'calc(100vw - 40px)',
+              padding: isMobile ? '10px' : '12px',
+              fontSize: isMobile ? '0.8em' : '0.85em',
+              width: isMobile ? 'calc(100vw - 40px)' : '280px',
+              maxWidth: isMobile ? 'calc(100vw - 40px)' : 'calc(100vw - 40px)',
               boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
               zIndex: 1000,
               pointerEvents: 'auto'
@@ -670,16 +675,15 @@ const Login = () => {
             </div>
             <div className="form-row">
               <label>
-                Telegram Username (for account recovery):
+                Telegram Username (Optional - for account recovery):
                 <input
                   type="text"
                   value={telegramUsername}
                   onChange={(e) => setTelegramUsername(e.target.value)}
-                  placeholder="Enter your Telegram username (e.g., @username)"
-                  required
+                  placeholder="Enter Telegram username (optional)"
                 />
                 <p style={{ fontSize: '0.85em', color: '#6b7280', marginTop: '5px', fontStyle: 'italic' }}>
-                  This will be used for password recovery via Telegram
+                  Optional: Add your Telegram username for password recovery. You can add this later in Settings.
                 </p>
               </label>
             </div>
@@ -733,7 +737,14 @@ const Login = () => {
       
       {/* Toast Notification */}
       {toast.show && (
-        <div className={`toast toast-${toast.type}`}>
+        <div 
+          className={`toast toast-${toast.type}`}
+          style={{
+            top: isMobile ? '20px' : 'auto',
+            bottom: isMobile ? 'auto' : '20px',
+            animation: isMobile ? 'slideInTop 0.3s ease-out' : 'slideInRight 0.3s ease-out'
+          }}
+        >
           <div className="toast-content">
             <div className="toast-icon">
               {toast.type === 'success' ? (

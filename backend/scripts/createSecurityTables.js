@@ -47,10 +47,23 @@ const createSecurityTables = async () => {
         );
         
         if (existing.length === 0) {
-          await db.query(
-            'INSERT INTO registration_codes (code, expires_at) VALUES (?, DATE_ADD(NOW(), INTERVAL 1 YEAR))',
-            [defaultCode]
-          );
+          // Calculate expiration date (1 year from now)
+          const expiresAt = new Date();
+          expiresAt.setFullYear(expiresAt.getFullYear() + 1);
+          
+          // Check if using PostgreSQL or SQLite
+          const usePostgres = !!process.env.DATABASE_URL;
+          if (usePostgres) {
+            await db.query(
+              'INSERT INTO registration_codes (code, expires_at, use_limit, used_count) VALUES (?, ?, 1, 0)',
+              [defaultCode, expiresAt]
+            );
+          } else {
+            await db.query(
+              'INSERT INTO registration_codes (code, expires_at, use_limit, used_count) VALUES (?, ?, 1, 0)',
+              [defaultCode, expiresAt]
+            );
+          }
           console.log(`✅ Default registration code created: ${defaultCode}`);
         } else {
           console.log('ℹ️  Default registration code already exists');

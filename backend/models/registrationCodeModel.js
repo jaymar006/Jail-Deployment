@@ -8,12 +8,18 @@ const isValidRegistrationCode = async (code) => {
     
     let query;
     if (usePostgres) {
-      // PostgreSQL: use NOT is_used (works with BOOLEAN)
+      // PostgreSQL: Check if code exists, not expired, and hasn't reached usage limit
       // Use ? placeholder - db.postgres.js will convert it to $1
-      query = `SELECT * FROM registration_codes WHERE code = ? AND (NOT is_used OR is_used IS NULL) AND (expires_at IS NULL OR expires_at > NOW())`;
+      query = `SELECT * FROM registration_codes 
+               WHERE code = ? 
+               AND (expires_at IS NULL OR expires_at > NOW())
+               AND (used_count IS NULL OR used_count < COALESCE(use_limit, 1))`;
     } else {
-      // SQLite: use is_used = 0 (works with INTEGER)
-      query = `SELECT * FROM registration_codes WHERE code = ? AND (is_used = 0 OR is_used IS NULL) AND (expires_at IS NULL OR expires_at > datetime('now'))`;
+      // SQLite: Check if code exists, not expired, and hasn't reached usage limit
+      query = `SELECT * FROM registration_codes 
+               WHERE code = ? 
+               AND (expires_at IS NULL OR expires_at > datetime('now'))
+               AND (used_count IS NULL OR used_count < COALESCE(use_limit, 1))`;
     }
     
     const [rows] = await db.query(query, [code]);
@@ -34,16 +40,33 @@ const markCodeAsUsed = async (code) => {
     const usePostgres = !!process.env.DATABASE_URL;
     
     if (usePostgres) {
-      // PostgreSQL: use TRUE for BOOLEAN
+      // PostgreSQL: Increment used_count and set is_used if limit reached
       const [result] = await db.query(
-        `UPDATE registration_codes SET is_used = TRUE, used_at = NOW() WHERE code = ?`,
+        `UPDATE registration_codes 
+         SET used_count = COALESCE(used_count, 0) + 1,
+             is_used = (COALESCE(used_count, 0) + 1 >= COALESCE(use_limit, 1)),
+             used_at = CASE 
+               WHEN used_at IS NULL THEN NOW() 
+               ELSE used_at 
+             END
+         WHERE code = ?`,
         [code]
       );
       return result.affectedRows > 0;
     } else {
-      // SQLite: use 1 for INTEGER
+      // SQLite: Increment used_count and set is_used if limit reached
       const [result] = await db.query(
-        `UPDATE registration_codes SET is_used = 1, used_at = datetime('now') WHERE code = ?`,
+        `UPDATE registration_codes 
+         SET used_count = COALESCE(used_count, 0) + 1,
+             is_used = CASE 
+               WHEN (COALESCE(used_count, 0) + 1 >= COALESCE(use_limit, 1)) THEN 1 
+               ELSE is_used 
+             END,
+             used_at = CASE 
+               WHEN used_at IS NULL THEN datetime('now') 
+               ELSE used_at 
+             END
+         WHERE code = ?`,
         [code]
       );
       return result.affectedRows > 0;
@@ -58,12 +81,12 @@ const markCodeAsUsed = async (code) => {
 };
 
 // Create a new registration code (admin function)
-const createRegistrationCode = async (code, expiresAt = null) => {
+const createRegistrationCode = async (code, expiresAt = null, useLimit = 1) => {
   try {
     const expiresDate = expiresAt || new Date(Date.now() + 90 * 24 * 60 * 60 * 1000); // Default 90 days
     const [result] = await db.query(
-      `INSERT INTO registration_codes (code, expires_at) VALUES (?, ?)`,
-      [code, expiresDate]
+      `INSERT INTO registration_codes (code, expires_at, use_limit, used_count) VALUES (?, ?, ?, 0)`,
+      [code, expiresDate, useLimit]
     );
     return result.insertId;
   } catch (err) {
@@ -75,7 +98,7 @@ const createRegistrationCode = async (code, expiresAt = null) => {
 const getAllRegistrationCodes = async () => {
   try {
     const [rows] = await db.query(
-      `SELECT code, is_used, created_at, expires_at, used_at FROM registration_codes ORDER BY created_at DESC`
+      `SELECT code, is_used, use_limit, used_count, created_at, expires_at, used_at FROM registration_codes ORDER BY created_at DESC`
     );
     return rows;
   } catch (err) {

@@ -582,16 +582,29 @@
   }
 
   .toast {
-    bottom: 10px;
+    top: 20px;
+    bottom: auto;
     right: 10px;
     left: 10px;
     min-width: auto;
     max-width: 100%;
     padding: 0.875rem;
+    animation: slideInTop 0.3s ease-out;
   }
 
   .toast-message {
     font-size: 0.85rem;
+  }
+}
+
+@keyframes slideInTop {
+  from {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
   }
 }
 
@@ -663,5 +676,18 @@
 
   .auth-links {
     font-size: 0.85rem;
+  }
+
+  .toast {
+    top: 10px;
+    bottom: auto;
+    right: 10px;
+    left: 10px;
+    padding: 0.75rem;
+    animation: slideInTop 0.3s ease-out;
+  }
+
+  .toast-message {
+    font-size: 0.8rem;
   }
 }

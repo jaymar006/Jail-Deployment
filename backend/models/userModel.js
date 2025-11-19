@@ -8,7 +8,7 @@ const findUserByUsername = async (username) => {
 const createUser = async (username, password, telegramUsername) => {
   const [result] = await db.query(
     'INSERT INTO users (username, password, telegram_username) VALUES (?, ?, ?)', 
-    [username, password, telegramUsername]
+    [username, password, telegramUsername || null]
   );
   return result.insertId;
 };
@@ -33,6 +33,11 @@ const updateUserPassword = async (username, newPassword) => {
 
 const updateUsername = async (userId, newUsername) => {
   const [result] = await db.query('UPDATE users SET username = ? WHERE id = ?', [newUsername, userId]);
+  return result.affectedRows > 0;
+};
+
+const updateTelegramUsername = async (userId, telegramUsername) => {
+  const [result] = await db.query('UPDATE users SET telegram_username = ? WHERE id = ?', [telegramUsername || null, userId]);
   return result.affectedRows > 0;
 };
 
@@ -83,6 +88,7 @@ module.exports = {
   findUserById,
   updateUserPassword,
   updateUsername,
+  updateTelegramUsername,
   changePassword,
   verifyEmail,
 };

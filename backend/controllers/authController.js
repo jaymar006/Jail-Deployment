@@ -110,31 +110,31 @@ exports.signUp = async (req, res) => {
       return res.status(400).json({ message: 'Username can only contain letters, numbers, and underscores' });
     }
 
-    // Validate Telegram username
-    if (!telegramUsername || !telegramUsername.trim()) {
-      return res.status(400).json({ message: 'Telegram username is required for account recovery' });
-    }
-
-    // Clean Telegram username (remove @ if present)
-    const cleanTelegramUsername = telegramUsername.replace('@', '').trim().toLowerCase();
-    
-    // Validate Telegram username format (5-32 characters, alphanumeric and underscores)
-    if (cleanTelegramUsername.length < 5 || cleanTelegramUsername.length > 32) {
-      return res.status(400).json({ message: 'Telegram username must be between 5 and 32 characters' });
-    }
-
-    if (!/^[a-zA-Z0-9_]+$/.test(cleanTelegramUsername)) {
-      return res.status(400).json({ message: 'Telegram username can only contain letters, numbers, and underscores' });
-    }
-
     const existingUser = await userModel.findUserByUsername(username);
     if (existingUser) {
       return res.status(400).json({ message: 'Username already exists' });
     }
 
-    const existingTelegramUser = await userModel.findUserByTelegramUsername(cleanTelegramUsername);
-    if (existingTelegramUser) {
-      return res.status(400).json({ message: 'Telegram username already registered' });
+    // Telegram username is optional - validate only if provided
+    let cleanTelegramUsername = null;
+    if (telegramUsername && telegramUsername.trim()) {
+      // Clean Telegram username (remove @ if present)
+      cleanTelegramUsername = telegramUsername.replace('@', '').trim().toLowerCase();
+      
+      // Validate Telegram username format (5-32 characters, alphanumeric and underscores)
+      if (cleanTelegramUsername.length < 5 || cleanTelegramUsername.length > 32) {
+        return res.status(400).json({ message: 'Telegram username must be between 5 and 32 characters' });
+      }
+
+      if (!/^[a-zA-Z0-9_]+$/.test(cleanTelegramUsername)) {
+        return res.status(400).json({ message: 'Telegram username can only contain letters, numbers, and underscores' });
+      }
+
+      // Check if Telegram username is already registered
+      const existingTelegramUser = await userModel.findUserByTelegramUsername(cleanTelegramUsername);
+      if (existingTelegramUser) {
+        return res.status(400).json({ message: 'Telegram username already registered' });
+      }
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -158,7 +158,10 @@ exports.getProfile = async (req, res) => {
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
-    res.json({ username: user.username });
+    res.json({ 
+      username: user.username,
+      telegramUsername: user.telegram_username || null
+    });
   } catch (err) {
     res.status(500).json({ message: 'Server error', error: err.message });
   }
@@ -206,7 +209,7 @@ exports.requestPasswordReset = async (req, res) => {
     // Check if user has Telegram username
     if (!user.telegram_username) {
       return res.status(400).json({ 
-        message: 'No Telegram username found for this account. Please contact an administrator.' 
+        message: 'No Telegram username found for this account. Please add your Telegram username in Settings to enable password recovery.' 
       });
     }
 
@@ -389,6 +392,53 @@ exports.changePassword = async (req, res) => {
   }
 };
 
+exports.updateTelegramUsername = async (req, res) => {
+  const { telegramUsername } = req.body;
+  const userId = req.user.id;
+
+  try {
+    // Telegram username is optional - can be null to remove it
+    let cleanTelegramUsername = null;
+    
+    if (telegramUsername && telegramUsername.trim()) {
+      // Clean Telegram username (remove @ if present)
+      cleanTelegramUsername = telegramUsername.replace('@', '').trim().toLowerCase();
+      
+      // Validate Telegram username format (5-32 characters, alphanumeric and underscores)
+      if (cleanTelegramUsername.length < 5 || cleanTelegramUsername.length > 32) {
+        return res.status(400).json({ message: 'Telegram username must be between 5 and 32 characters' });
+      }
+
+      if (!/^[a-zA-Z0-9_]+$/.test(cleanTelegramUsername)) {
+        return res.status(400).json({ message: 'Telegram username can only contain letters, numbers, and underscores' });
+      }
+
+      // Check if Telegram username is already registered by another user
+      const existingTelegramUser = await userModel.findUserByTelegramUsername(cleanTelegramUsername);
+      if (existingTelegramUser && existingTelegramUser.id !== userId) {
+        return res.status(400).json({ message: 'Telegram username already registered by another account' });
+      }
+    }
+
+    // Update the Telegram username
+    const updated = await userModel.updateTelegramUsername(userId, cleanTelegramUsername);
+    
+    if (updated) {
+      res.json({ 
+        message: cleanTelegramUsername 
+          ? 'Telegram username updated successfully' 
+          : 'Telegram username removed successfully',
+        telegramUsername: cleanTelegramUsername 
+      });
+    } else {
+      res.status(500).json({ message: 'Failed to update Telegram username' });
+    }
+  } catch (err) {
+    console.error('Error updating Telegram username:', err);
+    res.status(500).json({ message: 'Server error', error: err.message });
+  }
+};
+
 // Get all registration codes (admin function)
 exports.getRegistrationCodes = async (req, res) => {
   try {
@@ -401,11 +451,17 @@ exports.getRegistrationCodes = async (req, res) => {
 
 // Create a new registration code (admin function)
 exports.createRegistrationCode = async (req, res) => {
-  const { code, daysValid } = req.body;
+  const { code, daysValid, useLimit } = req.body;
 
   try {
     let registrationCode = code;
     const days = daysValid ? parseInt(daysValid) : 90;
+    const limit = useLimit !== undefined ? parseInt(useLimit) : 1;
+
+    // Validate limit
+    if (limit < 1) {
+      return res.status(400).json({ message: 'Use limit must be at least 1' });
+    }
 
     // Generate random code if not provided
     if (!registrationCode) {
@@ -416,15 +472,16 @@ exports.createRegistrationCode = async (req, res) => {
     expiresAt.setDate(expiresAt.getDate() + days);
 
     await db.query(
-      `INSERT INTO registration_codes (code, expires_at) VALUES (?, ?)`,
-      [registrationCode, expiresAt]
+      `INSERT INTO registration_codes (code, expires_at, use_limit, used_count) VALUES (?, ?, ?, 0)`,
+      [registrationCode, expiresAt, limit]
     );
 
     res.json({ 
       message: 'Registration code created successfully',
       code: registrationCode,
       expiresAt: expiresAt.toISOString(),
-      daysValid: days
+      daysValid: days,
+      useLimit: limit
     });
   } catch (err) {
     if (err.code === 'ER_DUP_ENTRY' || err.message.includes('UNIQUE constraint')) {

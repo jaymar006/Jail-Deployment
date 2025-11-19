@@ -112,6 +112,8 @@ CREATE TABLE IF NOT EXISTS registration_codes (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   code TEXT NOT NULL UNIQUE,
   is_used INTEGER DEFAULT 0,
+  use_limit INTEGER DEFAULT 1,
+  used_count INTEGER DEFAULT 0,
   created_at TEXT DEFAULT (datetime('now')),
   expires_at TEXT,
   used_at TEXT
