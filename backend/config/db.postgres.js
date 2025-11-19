@@ -136,8 +136,7 @@ CREATE TABLE IF NOT EXISTS users (
   id SERIAL PRIMARY KEY,
   username VARCHAR(255) NOT NULL UNIQUE,
   password VARCHAR(255) NOT NULL,
-  email VARCHAR(255) NOT NULL UNIQUE,
-  telegram_username VARCHAR(255),
+  telegram_username VARCHAR(255) NOT NULL UNIQUE,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -180,7 +179,7 @@ CREATE TABLE IF NOT EXISTS account_lockouts (
 CREATE TABLE IF NOT EXISTS password_reset_tokens (
   id SERIAL PRIMARY KEY,
   user_id INTEGER NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
-  email VARCHAR(255) NOT NULL,
+  telegram_username VARCHAR(255) NOT NULL,
   token VARCHAR(255) NOT NULL UNIQUE,
   expires_at TIMESTAMP NOT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -289,8 +288,7 @@ const initializeSchema = async () => {
           id SERIAL PRIMARY KEY,
           username VARCHAR(255) NOT NULL UNIQUE,
           password VARCHAR(255) NOT NULL,
-          email VARCHAR(255) NOT NULL UNIQUE,
-          telegram_username VARCHAR(255),
+          telegram_username VARCHAR(255) NOT NULL UNIQUE,
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )`,
         `CREATE TABLE IF NOT EXISTS cells (
@@ -322,7 +320,7 @@ const initializeSchema = async () => {
         `CREATE TABLE IF NOT EXISTS password_reset_tokens (
           id SERIAL PRIMARY KEY,
           user_id INTEGER NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
-          email VARCHAR(255) NOT NULL,
+          telegram_username VARCHAR(255) NOT NULL,
           token VARCHAR(255) NOT NULL UNIQUE,
           expires_at TIMESTAMP NOT NULL,
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -424,19 +422,19 @@ const ensureColumns = async (client) => {
   const checks = [
     { table: 'visitors', column: 'verified_conjugal', type: 'INTEGER', default: 'DEFAULT 0' },
     { table: 'scanned_visitors', column: 'purpose', type: 'TEXT' },
-    { table: 'users', column: 'email', type: 'VARCHAR(255)', default: '' },
     { table: 'users', column: 'telegram_username', type: 'VARCHAR(255)', default: '' },
   ];
   
-  // Remove security question columns if they exist
+  // Columns to remove (for migration)
   const columnsToRemove = [
+    { table: 'users', column: 'email' },
     { table: 'users', column: 'security_question_1' },
     { table: 'users', column: 'security_answer_1' },
     { table: 'users', column: 'security_question_2' },
     { table: 'users', column: 'security_answer_2' },
   ];
   
-  // Check and remove security question columns
+  // Check and remove old columns
   for (const col of columnsToRemove) {
     try {
       const result = await client.query(`
@@ -446,6 +444,18 @@ const ensureColumns = async (client) => {
       `, [col.table, col.column]);
       
       if (result.rows.length > 0) {
+        // Drop column constraints first if needed
+        try {
+          // Try to drop unique constraint if email column exists
+          if (col.column === 'email') {
+            await client.query(`
+              ALTER TABLE ${col.table} DROP CONSTRAINT IF EXISTS users_email_key
+            `);
+          }
+        } catch (constraintError) {
+          // Constraint might not exist, that's OK
+        }
+        
         await client.query(`ALTER TABLE ${col.table} DROP COLUMN IF EXISTS ${col.column}`);
         console.log(`Removed column ${col.table}.${col.column}`);
       }
@@ -455,6 +465,80 @@ const ensureColumns = async (client) => {
         console.error(`Error removing column ${col.table}.${col.column}:`, error.message);
       }
     }
+  }
+  
+  // Migrate password_reset_tokens table: rename email to telegram_username
+  try {
+    const resetTokensCheck = await client.query(`
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_name = 'password_reset_tokens' AND column_name = 'email'
+    `);
+    
+    if (resetTokensCheck.rows.length > 0) {
+      // Check if telegram_username column already exists
+      const telegramColCheck = await client.query(`
+        SELECT column_name 
+        FROM information_schema.columns 
+        WHERE table_name = 'password_reset_tokens' AND column_name = 'telegram_username'
+      `);
+      
+      if (telegramColCheck.rows.length === 0) {
+        // Rename email column to telegram_username
+        await client.query(`
+          ALTER TABLE password_reset_tokens RENAME COLUMN email TO telegram_username
+        `);
+        console.log('Renamed password_reset_tokens.email to telegram_username');
+      } else {
+        // If telegram_username exists, drop email column
+        await client.query(`
+          ALTER TABLE password_reset_tokens DROP COLUMN IF EXISTS email
+        `);
+        console.log('Removed password_reset_tokens.email column');
+      }
+    }
+  } catch (error) {
+    console.error('Error migrating password_reset_tokens table:', error.message);
+  }
+  
+  // Ensure telegram_username has NOT NULL constraint and UNIQUE constraint
+  try {
+    // Check if telegram_username column exists
+    const telegramCheck = await client.query(`
+      SELECT column_name, is_nullable, column_default
+      FROM information_schema.columns 
+      WHERE table_name = $1 AND column_name = $2
+    `, ['users', 'telegram_username']);
+    
+    if (telegramCheck.rows.length > 0) {
+      const colInfo = telegramCheck.rows[0];
+      
+      // Add NOT NULL constraint if it's nullable
+      if (colInfo.is_nullable === 'YES') {
+        await client.query(`
+          ALTER TABLE users ALTER COLUMN telegram_username SET NOT NULL
+        `);
+        console.log('Added NOT NULL constraint to users.telegram_username');
+      }
+      
+      // Add UNIQUE constraint if it doesn't exist
+      const uniqueCheck = await client.query(`
+        SELECT constraint_name 
+        FROM information_schema.table_constraints 
+        WHERE table_name = 'users' 
+        AND constraint_type = 'UNIQUE' 
+        AND constraint_name LIKE '%telegram_username%'
+      `);
+      
+      if (uniqueCheck.rows.length === 0) {
+        await client.query(`
+          ALTER TABLE users ADD CONSTRAINT users_telegram_username_key UNIQUE (telegram_username)
+        `);
+        console.log('Added UNIQUE constraint to users.telegram_username');
+      }
+    }
+  } catch (error) {
+    console.error('Error ensuring telegram_username constraints:', error.message);
   }
 
   for (const check of checks) {

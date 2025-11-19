@@ -14,9 +14,8 @@ const createResetToken = async (userId, telegramUsername) => {
     if (usePostgres) {
       // PostgreSQL: Use ? placeholders - db.postgres.js will convert to $1, $2, etc.
       // Use ON CONFLICT for PostgreSQL
-      // Note: Using 'email' column to store telegram_username for backward compatibility
       await db.query(
-        `INSERT INTO password_reset_tokens (user_id, email, token, expires_at) 
+        `INSERT INTO password_reset_tokens (user_id, telegram_username, token, expires_at) 
          VALUES (?, ?, ?, ?) 
          ON CONFLICT (user_id) DO UPDATE SET token = ?, expires_at = ?, created_at = NOW()`,
         [userId, telegramUsername, token, expiresAt, token, expiresAt]
@@ -25,7 +24,7 @@ const createResetToken = async (userId, telegramUsername) => {
       // SQLite: Delete existing token first, then insert
       await db.query('DELETE FROM password_reset_tokens WHERE user_id = ?', [userId]);
       await db.query(
-        `INSERT INTO password_reset_tokens (user_id, email, token, expires_at) VALUES (?, ?, ?, ?)`,
+        `INSERT INTO password_reset_tokens (user_id, telegram_username, token, expires_at) VALUES (?, ?, ?, ?)`,
         [userId, telegramUsername, token, expiresAt]
       );
     }

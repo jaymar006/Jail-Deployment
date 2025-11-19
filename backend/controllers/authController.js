@@ -121,10 +121,8 @@ exports.signUp = async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
     
-    // Create user with Telegram username and placeholder email (email is still required in DB)
-    // Using placeholder email format: username@telegram.local
-    const placeholderEmail = `${username}@telegram.local`;
-    await userModel.createUser(username, hashedPassword, placeholderEmail, cleanTelegramUsername);
+    // Create user with Telegram username
+    await userModel.createUser(username, hashedPassword, cleanTelegramUsername);
     
     // Mark registration code as used
     await registrationCodeModel.markCodeAsUsed(registrationCode);
