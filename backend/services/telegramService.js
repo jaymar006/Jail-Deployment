@@ -63,6 +63,7 @@ This is an automated message from Silang Municipal Jail Visitation Management Sy
 
     // Try to send message to username
     // Note: Telegram API requires chat_id, which can be username with @ prefix or numeric ID
+    // Important: User must have started the bot first!
     try {
       const sentMessage = await bot.sendMessage(`@${cleanTelegramUsername}`, message, {
         parse_mode: 'HTML',
@@ -72,8 +73,22 @@ This is an automated message from Silang Municipal Jail Visitation Management Sy
       console.log('✅ Password reset message sent successfully via Telegram:', sentMessage.message_id);
       return { success: true, messageId: sentMessage.message_id };
     } catch (telegramError) {
+      // Log full error details for debugging
+      console.error('❌ Telegram API Error Details:');
+      console.error('   Error Code:', telegramError.response?.body?.error_code);
+      console.error('   Error Description:', telegramError.response?.body?.description);
+      console.error('   Full Error:', JSON.stringify(telegramError.response?.body, null, 2));
+      
+      // Common Telegram API errors:
+      // 400: Bad Request (user not found, chat not found, etc.)
+      // 403: Forbidden (bot blocked by user)
+      // 429: Too Many Requests (rate limit)
+      
+      const errorCode = telegramError.response?.body?.error_code;
+      const errorDescription = telegramError.response?.body?.description || telegramError.message;
+      
       // If username doesn't work, try without @
-      if (telegramError.response?.body?.error_code === 400) {
+      if (errorCode === 400) {
         try {
           const sentMessage = await bot.sendMessage(cleanTelegramUsername, message, {
             parse_mode: 'HTML',
@@ -83,23 +98,52 @@ This is an automated message from Silang Municipal Jail Visitation Management Sy
           console.log('✅ Password reset message sent successfully via Telegram:', sentMessage.message_id);
           return { success: true, messageId: sentMessage.message_id };
         } catch (retryError) {
-          throw new Error(`Failed to send Telegram message. Make sure the user @${cleanTelegramUsername} has started your bot. Error: ${retryError.message}`);
+          const retryErrorCode = retryError.response?.body?.error_code;
+          const retryErrorDesc = retryError.response?.body?.description || retryError.message;
+          
+          // Provide specific error messages based on Telegram API error codes
+          if (retryErrorCode === 400 && retryErrorDesc?.includes('chat not found')) {
+            throw new Error(`User @${cleanTelegramUsername} must start your bot first. Tell them to search for your bot on Telegram and click "Start"`);
+          } else if (retryErrorCode === 403) {
+            throw new Error(`User @${cleanTelegramUsername} has blocked your bot or bot cannot send messages`);
+          } else {
+            throw new Error(`Failed to send Telegram message to @${cleanTelegramUsername}. Error: ${retryErrorDesc} (Code: ${retryErrorCode})`);
+          }
         }
       }
+      
+      // Handle other specific error codes
+      if (errorCode === 403) {
+        throw new Error(`User @${cleanTelegramUsername} has blocked your bot or bot cannot send messages`);
+      } else if (errorCode === 400 && errorDescription?.includes('chat not found')) {
+        throw new Error(`User @${cleanTelegramUsername} must start your bot first. Tell them to search for your bot on Telegram and click "Start"`);
+      } else if (errorCode === 400 && errorDescription?.includes('user not found')) {
+        throw new Error(`Telegram username @${cleanTelegramUsername} not found. Make sure the username is correct`);
+      }
+      
       throw telegramError;
     }
   } catch (error) {
     console.error('❌ Error sending password reset message via Telegram:', error.message);
+    console.error('   Full error stack:', error.stack);
     
     // Provide helpful error messages
     if (error.message.includes('not configured') || error.message.includes('TELEGRAM_BOT_TOKEN')) {
       console.error('   💡 Please set TELEGRAM_BOT_TOKEN environment variable.');
       console.error('   💡 Get your bot token from: https://t.me/BotFather');
-    } else if (error.message.includes('chat not found') || error.message.includes('user not found')) {
-      console.error(`   💡 User @${telegramUsername} must start your bot first.`);
-      console.error('   💡 Tell users to search for your bot on Telegram and click "Start"');
-    } else if (error.message.includes('bot was blocked')) {
-      console.error(`   💡 User @${telegramUsername} has blocked your bot.`);
+    } else if (error.message.includes('must start your bot')) {
+      console.error(`   💡 SOLUTION: User @${telegramUsername} needs to start your bot first.`);
+      console.error('   💡 Instructions for user:');
+      console.error('      1. Open Telegram');
+      console.error('      2. Search for your bot username');
+      console.error('      3. Click "Start" button');
+      console.error('      4. Try password reset again');
+    } else if (error.message.includes('blocked') || error.message.includes('cannot send messages')) {
+      console.error(`   💡 User @${telegramUsername} has blocked your bot or bot permissions are restricted.`);
+      console.error('   💡 User needs to unblock the bot or check bot settings.');
+    } else if (error.message.includes('not found')) {
+      console.error(`   💡 Telegram username @${telegramUsername} not found.`);
+      console.error('   💡 Verify the username is correct and exists on Telegram.');
     }
     
     return { success: false, error: error.message };
