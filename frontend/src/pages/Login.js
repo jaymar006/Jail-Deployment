@@ -51,7 +51,7 @@ const Login = () => {
     setPasswordErrors([]);
     setShowForgotPassword(false);
     setIsForgotPassword(false);
-    setFpTelegramUsername('');
+    setFpUsernameOrTelegram('');
   };
 
   const validatePasswordStrength = (pwd) => {
