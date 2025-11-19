@@ -137,10 +137,7 @@ CREATE TABLE IF NOT EXISTS users (
   username VARCHAR(255) NOT NULL UNIQUE,
   password VARCHAR(255) NOT NULL,
   email VARCHAR(255) NOT NULL UNIQUE,
-  security_question_1 TEXT DEFAULT '',
-  security_answer_1 TEXT DEFAULT '',
-  security_question_2 TEXT DEFAULT '',
-  security_answer_2 TEXT DEFAULT '',
+  telegram_username VARCHAR(255),
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -293,10 +290,7 @@ const initializeSchema = async () => {
           username VARCHAR(255) NOT NULL UNIQUE,
           password VARCHAR(255) NOT NULL,
           email VARCHAR(255) NOT NULL UNIQUE,
-          security_question_1 TEXT DEFAULT '',
-          security_answer_1 TEXT DEFAULT '',
-          security_question_2 TEXT DEFAULT '',
-          security_answer_2 TEXT DEFAULT '',
+          telegram_username VARCHAR(255),
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )`,
         `CREATE TABLE IF NOT EXISTS cells (
@@ -431,11 +425,37 @@ const ensureColumns = async (client) => {
     { table: 'visitors', column: 'verified_conjugal', type: 'INTEGER', default: 'DEFAULT 0' },
     { table: 'scanned_visitors', column: 'purpose', type: 'TEXT' },
     { table: 'users', column: 'email', type: 'VARCHAR(255)', default: '' },
-    { table: 'users', column: 'security_question_1', type: 'TEXT', default: "DEFAULT ''" },
-    { table: 'users', column: 'security_answer_1', type: 'TEXT', default: "DEFAULT ''" },
-    { table: 'users', column: 'security_question_2', type: 'TEXT', default: "DEFAULT ''" },
-    { table: 'users', column: 'security_answer_2', type: 'TEXT', default: "DEFAULT ''" },
+    { table: 'users', column: 'telegram_username', type: 'VARCHAR(255)', default: '' },
   ];
+  
+  // Remove security question columns if they exist
+  const columnsToRemove = [
+    { table: 'users', column: 'security_question_1' },
+    { table: 'users', column: 'security_answer_1' },
+    { table: 'users', column: 'security_question_2' },
+    { table: 'users', column: 'security_answer_2' },
+  ];
+  
+  // Check and remove security question columns
+  for (const col of columnsToRemove) {
+    try {
+      const result = await client.query(`
+        SELECT column_name 
+        FROM information_schema.columns 
+        WHERE table_name = $1 AND column_name = $2
+      `, [col.table, col.column]);
+      
+      if (result.rows.length > 0) {
+        await client.query(`ALTER TABLE ${col.table} DROP COLUMN IF EXISTS ${col.column}`);
+        console.log(`Removed column ${col.table}.${col.column}`);
+      }
+    } catch (error) {
+      // Column might not exist, that's OK
+      if (!error.message.includes('does not exist')) {
+        console.error(`Error removing column ${col.table}.${col.column}:`, error.message);
+      }
+    }
+  }
 
   for (const check of checks) {
     try {

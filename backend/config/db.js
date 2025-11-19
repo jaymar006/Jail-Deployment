@@ -94,10 +94,7 @@ CREATE TABLE IF NOT EXISTS users (
   username TEXT NOT NULL UNIQUE,
   password TEXT NOT NULL,
   email TEXT NOT NULL UNIQUE,
-  security_question_1 TEXT DEFAULT '',
-  security_answer_1 TEXT DEFAULT '',
-  security_question_2 TEXT DEFAULT '',
-  security_answer_2 TEXT DEFAULT '',
+  telegram_username TEXT,
   created_at TEXT DEFAULT (datetime('now'))
 );
 
@@ -168,11 +165,8 @@ sqliteDb.serialize(() => {
       ensureColumn('scanned_visitors', 'purpose', 'TEXT');
       // Users: email
       ensureColumn('users', 'email', 'TEXT', '');
-      // Users: security questions/answers (kept for backward compatibility)
-      ensureColumn('users', 'security_question_1', 'TEXT', "DEFAULT ''");
-      ensureColumn('users', 'security_answer_1', 'TEXT', "DEFAULT ''");
-      ensureColumn('users', 'security_question_2', 'TEXT', "DEFAULT ''");
-      ensureColumn('users', 'security_answer_2', 'TEXT', "DEFAULT ''");
+      // Users: telegram_username
+      ensureColumn('users', 'telegram_username', 'TEXT', '');
       
       // Migration: Rename dorm columns to cell
       const migrateDormToCell = () => {

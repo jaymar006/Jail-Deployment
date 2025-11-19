@@ -6,7 +6,7 @@ const userModel = require('../models/userModel');
 const registrationCodeModel = require('../models/registrationCodeModel');
 const accountLockoutModel = require('../models/accountLockoutModel');
 const { validatePasswordStrength } = require('../middleware/passwordValidator');
-const emailService = require('../services/emailService');
+const telegramService = require('../services/telegramService');
 const passwordResetModel = require('../models/passwordResetModel');
 
 let JWT_SECRET = process.env.JWT_SECRET;
@@ -155,68 +155,73 @@ exports.getUsernameFromDb = async (req, res) => {
   }
 };
 
-// Request password reset - sends email with reset link
+// Request password reset - sends Telegram message with reset link
 exports.requestPasswordReset = async (req, res) => {
-  const { usernameOrEmail } = req.body;
+  const { usernameOrTelegram } = req.body;
 
   try {
-    if (!usernameOrEmail) {
-      return res.status(400).json({ message: 'Username or email is required' });
+    if (!usernameOrTelegram) {
+      return res.status(400).json({ message: 'Username or Telegram username is required' });
     }
 
-    // Find user by username or email
+    // Find user by username or Telegram username
     // Try username first
-    let user = await userModel.findUserByUsername(usernameOrEmail);
+    let user = await userModel.findUserByUsername(usernameOrTelegram);
     
-    // If not found, try email (case-insensitive)
+    // If not found, try Telegram username
     if (!user) {
-      // Normalize email to lowercase for consistent lookup
-      const normalizedEmail = usernameOrEmail.toLowerCase().trim();
-      user = await userModel.findUserByEmail(normalizedEmail);
+      user = await userModel.findUserByTelegramUsername(usernameOrTelegram);
     }
 
     // Always return success message (don't reveal if user exists)
     // This prevents user enumeration attacks
     if (!user) {
       return res.json({ 
-        message: 'If an account exists with that username or email, a password reset link has been sent.' 
+        message: 'If an account exists with that username or Telegram username, a password reset link has been sent.' 
       });
     }
 
-    // Create reset token
-    const resetToken = await passwordResetModel.createResetToken(user.id, user.email);
+    // Check if user has Telegram username
+    if (!user.telegram_username) {
+      return res.status(400).json({ 
+        message: 'No Telegram username found for this account. Please contact an administrator.' 
+      });
+    }
 
-    // Send password reset email (non-blocking - always return success to user)
+    // Create reset token (using telegram_username instead of email)
+    const resetToken = await passwordResetModel.createResetToken(user.id, user.telegram_username);
+
+    // Send password reset Telegram message (non-blocking - always return success to user)
     // This prevents user enumeration attacks and ensures consistent UX
     (async () => {
       try {
-        // Check if Resend is configured
-        if (!process.env.RESEND_API_KEY) {
-          console.error('⚠️  Resend not configured! Cannot send password reset email.');
-          console.error('⚠️  Please set RESEND_API_KEY environment variable.');
-          console.error('⚠️  Get your API key from: https://resend.com/api-keys');
+        // Check if Telegram Bot is configured
+        if (!process.env.TELEGRAM_BOT_TOKEN) {
+          console.error('⚠️  Telegram Bot not configured! Cannot send password reset message.');
+          console.error('⚠️  Please set TELEGRAM_BOT_TOKEN environment variable.');
+          console.error('⚠️  Get your bot token from: https://t.me/BotFather');
           return;
         }
         
-        const emailResult = await emailService.sendPasswordResetLink(user.email, user.username, resetToken);
-        if (!emailResult.success) {
-          console.error('❌ Failed to send password reset email:', emailResult.error);
-          console.error('   User:', user.username, 'Email:', user.email);
-          console.error('   Reset token created but email not sent. Token:', resetToken.substring(0, 20) + '...');
+        const telegramResult = await telegramService.sendPasswordResetLink(user.telegram_username, user.username, resetToken);
+        if (!telegramResult.success) {
+          console.error('❌ Failed to send password reset Telegram message:', telegramResult.error);
+          console.error('   User:', user.username, 'Telegram:', user.telegram_username);
+          console.error('   Reset token created but Telegram message not sent. Token:', resetToken.substring(0, 20) + '...');
         } else {
-          console.log('✅ Password reset email sent successfully to:', user.email);
+          console.log('✅ Password reset Telegram message sent successfully to:', user.telegram_username);
         }
-      } catch (emailError) {
-        console.error('❌ Error sending password reset email:', emailError);
-        console.error('   Error details:', emailError.message);
-        console.error('   Stack:', emailError.stack);
-        console.error('   Reset token was created but email failed. Token:', resetToken.substring(0, 20) + '...');
+      } catch (telegramError) {
+        console.error('❌ Error sending password reset Telegram message:', telegramError);
+        console.error('   Error details:', telegramError.message);
+        console.error('   Stack:', telegramError.stack);
+        console.error('   Reset token was created but Telegram message failed. Token:', resetToken.substring(0, 20) + '...');
       }
-    })(); // Fire and forget - don't wait for email to send
+    })(); // Fire and forget - don't wait for Telegram message to send
 
     // Always return success immediately (security best practice)
     res.json({ 
-      message: 'If an account exists with that username or email, a password reset link has been sent.' 
+      message: 'If an account exists with that username or Telegram username, a password reset link has been sent to your Telegram.' 
     });
   } catch (err) {
     console.error('Error requesting password reset:', err);
@@ -265,12 +270,14 @@ exports.resetPasswordWithToken = async (req, res) => {
       // Reset failed attempts on successful password reset
       await accountLockoutModel.resetFailedAttempts(user.username);
       
-      // Send password reset confirmation email
-      try {
-        await emailService.sendPasswordResetConfirmation(user.email, user.username);
-      } catch (emailError) {
-        console.error('Error sending password reset confirmation email:', emailError);
-        // Don't fail the request if email fails
+      // Send password reset confirmation Telegram message
+      if (user.telegram_username) {
+        try {
+          await telegramService.sendPasswordResetConfirmation(user.telegram_username, user.username);
+        } catch (telegramError) {
+          console.error('Error sending password reset confirmation Telegram message:', telegramError);
+          // Don't fail the request if Telegram message fails
+        }
       }
       
       res.json({ message: 'Password reset successfully' });

@@ -5,10 +5,10 @@ const findUserByUsername = async (username) => {
   return rows[0];
 };
 
-const createUser = async (username, password, email) => {
+const createUser = async (username, password, email, telegramUsername = null) => {
   const [result] = await db.query(
-    'INSERT INTO users (username, password, email) VALUES (?, ?, ?)', 
-    [username, password, email]
+    'INSERT INTO users (username, password, email, telegram_username) VALUES (?, ?, ?, ?)', 
+    [username, password, email, telegramUsername]
   );
   return result.insertId;
 };
@@ -58,6 +58,14 @@ const changePassword = async (userId, currentPassword, newPassword) => {
 
 const bcrypt = require('bcrypt');
 
+// Find user by Telegram username
+const findUserByTelegramUsername = async (telegramUsername) => {
+  // Remove @ if present and normalize
+  const cleanTelegramUsername = telegramUsername.replace('@', '').trim().toLowerCase();
+  const [rows] = await db.query('SELECT * FROM users WHERE LOWER(telegram_username) = ?', [cleanTelegramUsername]);
+  return rows[0];
+};
+
 // Verify email for password reset
 const verifyEmail = async (username, email) => {
   const user = await findUserByUsername(username);
@@ -70,6 +78,7 @@ const verifyEmail = async (username, email) => {
 module.exports = {
   findUserByUsername,
   findUserByEmail,
+  findUserByTelegramUsername,
   createUser,
   findUserById,
   updateUserPassword,

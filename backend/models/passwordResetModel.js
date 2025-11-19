@@ -2,7 +2,7 @@ const db = require('../config/db');
 const crypto = require('crypto');
 
 // Create a password reset token
-const createResetToken = async (userId, email) => {
+const createResetToken = async (userId, telegramUsername) => {
   // Generate a secure random token
   const token = crypto.randomBytes(32).toString('hex');
   const expiresAt = new Date(Date.now() + 3600000); // 1 hour from now
@@ -14,18 +14,19 @@ const createResetToken = async (userId, email) => {
     if (usePostgres) {
       // PostgreSQL: Use ? placeholders - db.postgres.js will convert to $1, $2, etc.
       // Use ON CONFLICT for PostgreSQL
+      // Note: Using 'email' column to store telegram_username for backward compatibility
       await db.query(
         `INSERT INTO password_reset_tokens (user_id, email, token, expires_at) 
          VALUES (?, ?, ?, ?) 
          ON CONFLICT (user_id) DO UPDATE SET token = ?, expires_at = ?, created_at = NOW()`,
-        [userId, email, token, expiresAt, token, expiresAt]
+        [userId, telegramUsername, token, expiresAt, token, expiresAt]
       );
     } else {
       // SQLite: Delete existing token first, then insert
       await db.query('DELETE FROM password_reset_tokens WHERE user_id = ?', [userId]);
       await db.query(
         `INSERT INTO password_reset_tokens (user_id, email, token, expires_at) VALUES (?, ?, ?, ?)`,
-        [userId, email, token, expiresAt]
+        [userId, telegramUsername, token, expiresAt]
       );
     }
     
