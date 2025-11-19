@@ -58,20 +58,30 @@ try {
               // Store in memory cache
               chatIdCache.set(cleanUsername, chatId);
               
-              // Try to update database
+              // Try to update database - try both lowercase and original casing
               try {
-                await db.query(
+                const [result] = await db.query(
                   `UPDATE users SET telegram_chat_id = ? WHERE LOWER(REPLACE(telegram_username, '@', '')) = ?`,
                   [chatId, cleanUsername]
                 );
-                console.log(`💾 Stored chat_id ${chatId} for @${username}`);
+                if (result.affectedRows > 0) {
+                  console.log(`✅ Stored chat_id ${chatId} for @${username} (matched ${result.affectedRows} user(s))`);
+                } else {
+                  console.log(`⚠️  No user found with Telegram username matching @${username} (chat_id ${chatId} cached in memory)`);
+                  console.log(`   💡 User should update their Telegram username in Settings to match: ${username}`);
+                }
               } catch (dbError) {
                 // Database update might fail if column doesn't exist yet - that's OK
-                console.log(`💾 Cached chat_id ${chatId} for @${username} (DB update skipped)`);
+                console.log(`💾 Cached chat_id ${chatId} for @${username} (DB update skipped: ${dbError.message})`);
               }
+            } else {
+              // User doesn't have a username - we can't match them
+              console.log(`⚠️  Received message from user without Telegram username (chat_id: ${chatId})`);
+              console.log(`   💡 User needs to set a Telegram username in their Telegram settings`);
             }
           } catch (error) {
-            console.error('Error processing Telegram message:', error.message);
+            console.error('❌ Error processing Telegram message:', error.message);
+            console.error('   Stack:', error.stack);
           }
         });
         
@@ -85,22 +95,34 @@ try {
             chatIdCache.set(cleanUsername, chatId);
             
             try {
-              await db.query(
+              const [result] = await db.query(
                 `UPDATE users SET telegram_chat_id = ? WHERE LOWER(REPLACE(telegram_username, '@', '')) = ?`,
                 [chatId, cleanUsername]
               );
-              console.log(`✅ Registered chat_id ${chatId} for @${username} via /start`);
+              if (result.affectedRows > 0) {
+                console.log(`✅ Registered chat_id ${chatId} for @${username} via /start (matched ${result.affectedRows} user(s))`);
+              } else {
+                console.log(`⚠️  No user found with Telegram username matching @${username} (chat_id ${chatId} cached)`);
+                console.log(`   💡 User should update their Telegram username in Settings to match: ${username}`);
+              }
             } catch (dbError) {
-              console.log(`✅ Cached chat_id ${chatId} for @${username} via /start`);
+              console.log(`✅ Cached chat_id ${chatId} for @${username} via /start (DB error: ${dbError.message})`);
             }
+          } else {
+            console.log(`⚠️  /start received from user without Telegram username (chat_id: ${chatId})`);
+            console.log(`   💡 User needs to set a Telegram username in their Telegram settings`);
           }
           
           // Send welcome message
-          bot.sendMessage(chatId, 
-            `👋 Hello! I'm the password reset bot for Silang Municipal Jail.\n\n` +
-            `When you request a password reset, I'll send you a secure link here.\n\n` +
-            `You're all set! ✅`
-          );
+          try {
+            await bot.sendMessage(chatId, 
+              `👋 Hello! I'm the password reset bot for Silang Municipal Jail.\n\n` +
+              `When you request a password reset, I'll send you a secure link here.\n\n` +
+              `You're all set! ✅`
+            );
+          } catch (sendError) {
+            console.error(`❌ Failed to send welcome message to chat_id ${chatId}:`, sendError.message);
+          }
         });
         
         console.log('👂 Telegram bot polling enabled - listening for messages to capture chat_ids');
@@ -116,6 +138,9 @@ try {
     } else {
       console.log('ℹ️  Polling disabled (set TELEGRAM_ENABLE_POLLING=true to enable)');
       console.log('ℹ️  Chat IDs will be captured via getChat() when users request password reset');
+      console.log('⚠️  WARNING: Without polling, chat_ids may not be captured reliably');
+      console.log('⚠️  Users must send a message to the bot AFTER setting their Telegram username in Settings');
+      console.log('💡 RECOMMENDED: Set TELEGRAM_ENABLE_POLLING=true in environment variables');
     }
   }
 } catch (error) {
@@ -192,19 +217,35 @@ This is an automated message from Silang Municipal Jail Visitation Management Sy
     } else {
       // Check database
       try {
-        const [rows] = await db.query(
-          `SELECT telegram_chat_id FROM users WHERE LOWER(REPLACE(telegram_username, '@', '')) = ? AND telegram_chat_id IS NOT NULL`,
+        // First check if user exists with this Telegram username
+        const [userRows] = await db.query(
+          `SELECT id, username, telegram_username, telegram_chat_id FROM users WHERE LOWER(REPLACE(telegram_username, '@', '')) = ?`,
           [cleanUsernameLower]
         );
-        if (rows.length > 0 && rows[0].telegram_chat_id) {
-          chatId = rows[0].telegram_chat_id;
-          // Cache it
-          chatIdCache.set(cleanUsernameLower, chatId);
-          console.log(`💾 Found chat_id ${chatId} for @${cleanTelegramUsername} in database`);
+        
+        if (userRows.length === 0) {
+          console.log(`⚠️  No user found in database with Telegram username: @${cleanTelegramUsername}`);
+          console.log(`   💡 User should verify their Telegram username in Settings matches: ${cleanTelegramUsername}`);
+        } else {
+          const user = userRows[0];
+          console.log(`✅ Found user in database: ${user.username} (ID: ${user.id})`);
+          console.log(`   Stored Telegram username: ${user.telegram_username || 'NULL'}`);
+          console.log(`   Stored chat_id: ${user.telegram_chat_id || 'NULL'}`);
+          
+          if (user.telegram_chat_id) {
+            chatId = user.telegram_chat_id;
+            // Cache it
+            chatIdCache.set(cleanUsernameLower, chatId);
+            console.log(`💾 Found chat_id ${chatId} for @${cleanTelegramUsername} in database`);
+          } else {
+            console.log(`⚠️  User found but no chat_id stored. User needs to send a message to the bot.`);
+            console.log(`   💡 SOLUTION: User should send any message to @${botInfo?.username || 'your bot'} in Telegram`);
+          }
         }
       } catch (dbError) {
         // Column might not exist yet - that's OK, we'll add it via migration
-        console.log(`ℹ️  Could not check database for chat_id (column may not exist yet)`);
+        console.log(`ℹ️  Could not check database for chat_id: ${dbError.message}`);
+        console.log(`   💡 This might be normal if the database schema hasn't been updated yet`);
       }
     }
     
@@ -217,14 +258,22 @@ This is an automated message from Silang Municipal Jail Visitation Management Sy
         console.log(`✅ Got chat ID for @${cleanTelegramUsername}: ${chatId} (Type: ${chatInfo.type})`);
         // Cache it
         chatIdCache.set(cleanUsernameLower, chatId);
-        // Try to save to database
+        // Try to save to database with better logging
         try {
-          await db.query(
+          const [result] = await db.query(
             `UPDATE users SET telegram_chat_id = ? WHERE LOWER(REPLACE(telegram_username, '@', '')) = ?`,
             [chatId, cleanUsernameLower]
           );
+          if (result.affectedRows > 0) {
+            console.log(`💾 Saved chat_id ${chatId} to database for @${cleanTelegramUsername} (matched ${result.affectedRows} user(s))`);
+          } else {
+            console.log(`⚠️  Could not find user in database with Telegram username matching @${cleanTelegramUsername}`);
+            console.log(`   💡 Chat_id ${chatId} cached in memory, but not saved to database`);
+            console.log(`   💡 User should verify their Telegram username in Settings matches: ${cleanTelegramUsername}`);
+          }
         } catch (dbError) {
-          // Column might not exist - that's OK
+          console.log(`⚠️  Database error saving chat_id: ${dbError.message}`);
+          console.log(`   💡 Chat_id ${chatId} cached in memory only`);
         }
       } catch (chatError) {
         const chatErrorCode = chatError.response?.body?.error_code;

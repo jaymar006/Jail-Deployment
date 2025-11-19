@@ -10,16 +10,18 @@ const isValidRegistrationCode = async (code) => {
     if (usePostgres) {
       // PostgreSQL: Check if code exists, not expired, and hasn't reached usage limit
       // Use ? placeholder - db.postgres.js will convert it to $1
+      // If use_limit IS NULL, it's unlimited (always valid)
       query = `SELECT * FROM registration_codes 
                WHERE code = ? 
                AND (expires_at IS NULL OR expires_at > NOW())
-               AND (used_count IS NULL OR used_count < COALESCE(use_limit, 1))`;
+               AND (use_limit IS NULL OR used_count < use_limit)`;
     } else {
       // SQLite: Check if code exists, not expired, and hasn't reached usage limit
+      // If use_limit IS NULL, it's unlimited (always valid)
       query = `SELECT * FROM registration_codes 
                WHERE code = ? 
                AND (expires_at IS NULL OR expires_at > datetime('now'))
-               AND (used_count IS NULL OR used_count < COALESCE(use_limit, 1))`;
+               AND (use_limit IS NULL OR used_count < use_limit)`;
     }
     
     const [rows] = await db.query(query, [code]);
@@ -41,10 +43,15 @@ const markCodeAsUsed = async (code) => {
     
     if (usePostgres) {
       // PostgreSQL: Increment used_count and set is_used if limit reached
+      // If use_limit IS NULL, never set is_used (unlimited)
       const [result] = await db.query(
         `UPDATE registration_codes 
          SET used_count = COALESCE(used_count, 0) + 1,
-             is_used = (COALESCE(used_count, 0) + 1 >= COALESCE(use_limit, 1)),
+             is_used = CASE 
+               WHEN use_limit IS NULL THEN is_used
+               WHEN (COALESCE(used_count, 0) + 1 >= use_limit) THEN TRUE
+               ELSE is_used
+             END,
              used_at = CASE 
                WHEN used_at IS NULL THEN NOW() 
                ELSE used_at 
@@ -55,11 +62,13 @@ const markCodeAsUsed = async (code) => {
       return result.affectedRows > 0;
     } else {
       // SQLite: Increment used_count and set is_used if limit reached
+      // If use_limit IS NULL, never set is_used (unlimited)
       const [result] = await db.query(
         `UPDATE registration_codes 
          SET used_count = COALESCE(used_count, 0) + 1,
              is_used = CASE 
-               WHEN (COALESCE(used_count, 0) + 1 >= COALESCE(use_limit, 1)) THEN 1 
+               WHEN use_limit IS NULL THEN is_used
+               WHEN (COALESCE(used_count, 0) + 1 >= use_limit) THEN 1 
                ELSE is_used 
              END,
              used_at = CASE 

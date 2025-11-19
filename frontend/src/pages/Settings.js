@@ -2092,6 +2092,25 @@ const Settings = () => {
                     }}
                   />
                 </div>
+                <div style={{ flex: '0 1 120px' }}>
+                  <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: '500', color: '#374151' }}>
+                    Usage limit
+                  </label>
+                  <input
+                    type="number"
+                    value={newCodeLimit}
+                    onChange={(e) => setNewCodeLimit(e.target.value)}
+                    min="1"
+                    placeholder="1"
+                    style={{
+                      width: '100%',
+                      padding: '8px 12px',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '6px',
+                      fontSize: '14px'
+                    }}
+                  />
+                </div>
                 <button
                   type="submit"
                   style={{

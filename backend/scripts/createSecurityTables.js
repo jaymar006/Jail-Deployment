@@ -47,26 +47,32 @@ const createSecurityTables = async () => {
         );
         
         if (existing.length === 0) {
-          // Calculate expiration date (1 year from now)
-          const expiresAt = new Date();
-          expiresAt.setFullYear(expiresAt.getFullYear() + 1);
-          
+          // Create unlimited registration code (no expiration, no use limit)
           // Check if using PostgreSQL or SQLite
           const usePostgres = !!process.env.DATABASE_URL;
           if (usePostgres) {
             await db.query(
-              'INSERT INTO registration_codes (code, expires_at, use_limit, used_count) VALUES (?, ?, 1, 0)',
-              [defaultCode, expiresAt]
+              'INSERT INTO registration_codes (code, expires_at, use_limit, used_count) VALUES (?, NULL, NULL, 0)',
+              [defaultCode]
             );
           } else {
             await db.query(
-              'INSERT INTO registration_codes (code, expires_at, use_limit, used_count) VALUES (?, ?, 1, 0)',
-              [defaultCode, expiresAt]
+              'INSERT INTO registration_codes (code, expires_at, use_limit, used_count) VALUES (?, NULL, NULL, 0)',
+              [defaultCode]
             );
           }
-          console.log(`✅ Default registration code created: ${defaultCode}`);
+          console.log(`✅ Default unlimited registration code created: ${defaultCode}`);
         } else {
-          console.log('ℹ️  Default registration code already exists');
+          // Update existing code to be unlimited if it's SCJS2025
+          if (defaultCode === 'SCJS2025') {
+            await db.query(
+              'UPDATE registration_codes SET expires_at = NULL, use_limit = NULL WHERE code = ?',
+              [defaultCode]
+            );
+            console.log(`✅ Updated registration code to unlimited: ${defaultCode}`);
+          } else {
+            console.log('ℹ️  Default registration code already exists');
+          }
         }
       } catch (err) {
         console.log('⚠️  Could not create default registration code:', err.message);

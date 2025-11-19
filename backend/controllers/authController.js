@@ -118,8 +118,8 @@ exports.signUp = async (req, res) => {
     // Telegram username is optional - validate only if provided
     let cleanTelegramUsername = null;
     if (telegramUsername && telegramUsername.trim()) {
-      // Clean Telegram username (remove @ if present)
-      cleanTelegramUsername = telegramUsername.replace('@', '').trim().toLowerCase();
+      // Clean Telegram username (remove @ if present, preserve original casing)
+      cleanTelegramUsername = telegramUsername.replace('@', '').trim();
       
       // Validate Telegram username format (5-32 characters, alphanumeric and underscores)
       if (cleanTelegramUsername.length < 5 || cleanTelegramUsername.length > 32) {
@@ -130,7 +130,7 @@ exports.signUp = async (req, res) => {
         return res.status(400).json({ message: 'Telegram username can only contain letters, numbers, and underscores' });
       }
 
-      // Check if Telegram username is already registered
+      // Check if Telegram username is already registered (case-insensitive comparison)
       const existingTelegramUser = await userModel.findUserByTelegramUsername(cleanTelegramUsername);
       if (existingTelegramUser) {
         return res.status(400).json({ message: 'Telegram username already registered' });
@@ -401,8 +401,8 @@ exports.updateTelegramUsername = async (req, res) => {
     let cleanTelegramUsername = null;
     
     if (telegramUsername && telegramUsername.trim()) {
-      // Clean Telegram username (remove @ if present)
-      cleanTelegramUsername = telegramUsername.replace('@', '').trim().toLowerCase();
+      // Clean Telegram username (remove @ if present, preserve original casing)
+      cleanTelegramUsername = telegramUsername.replace('@', '').trim();
       
       // Validate Telegram username format (5-32 characters, alphanumeric and underscores)
       if (cleanTelegramUsername.length < 5 || cleanTelegramUsername.length > 32) {
@@ -413,7 +413,7 @@ exports.updateTelegramUsername = async (req, res) => {
         return res.status(400).json({ message: 'Telegram username can only contain letters, numbers, and underscores' });
       }
 
-      // Check if Telegram username is already registered by another user
+      // Check if Telegram username is already registered by another user (case-insensitive comparison)
       const existingTelegramUser = await userModel.findUserByTelegramUsername(cleanTelegramUsername);
       if (existingTelegramUser && existingTelegramUser.id !== userId) {
         return res.status(400).json({ message: 'Telegram username already registered by another account' });
