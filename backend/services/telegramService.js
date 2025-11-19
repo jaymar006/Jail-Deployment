@@ -12,6 +12,16 @@ try {
     // Use polling mode (simpler, works on Render without webhook setup)
     bot = new TelegramBot(botToken, { polling: false });
     console.log('✅ Telegram Bot service initialized');
+    
+    // Verify bot info on startup
+    bot.getMe().then((botInfo) => {
+      console.log('🤖 Bot Info:');
+      console.log('   Username:', '@' + botInfo.username);
+      console.log('   Name:', botInfo.first_name);
+      console.log('   ID:', botInfo.id);
+    }).catch((err) => {
+      console.error('⚠️  Could not verify bot info:', err.message);
+    });
   }
 } catch (error) {
   console.error('❌ Failed to initialize Telegram Bot:', error.message);
@@ -43,6 +53,28 @@ const sendPasswordResetLink = async (telegramUsername, username, resetToken) => 
     
     console.log(`📱 Preparing to send password reset message to Telegram user: @${cleanTelegramUsername}`);
     console.log(`🔗 Reset link: ${resetLink}`);
+    
+    // Get bot info for better error messages (declare outside try block for scope)
+    let botInfo;
+    try {
+      botInfo = await bot.getMe();
+      console.log(`🤖 Sending from bot: @${botInfo.username} (${botInfo.first_name})`);
+    } catch (botInfoError) {
+      console.warn('⚠️  Could not get bot info:', botInfoError.message);
+    }
+    
+    // Try to get chat info first (this helps verify the user has started the bot)
+    try {
+      const chatInfo = await bot.getChat(`@${cleanTelegramUsername}`);
+      console.log(`✅ Chat found for @${cleanTelegramUsername}, Chat ID: ${chatInfo.id}`);
+    } catch (chatError) {
+      console.warn(`⚠️  Could not get chat info for @${cleanTelegramUsername}:`, chatError.message);
+      console.warn(`   This usually means the user hasn't started the bot or username is incorrect`);
+      if (botInfo) {
+        console.warn(`   Bot username: @${botInfo.username}`);
+        console.warn(`   User needs to start bot @${botInfo.username} first`);
+      }
+    }
     
     // Get chat ID from username (we need to find the user's chat ID)
     // First, try to send a message to the username
@@ -102,8 +134,11 @@ This is an automated message from Silang Municipal Jail Visitation Management Sy
           const retryErrorDesc = retryError.response?.body?.description || retryError.message;
           
           // Provide specific error messages based on Telegram API error codes
+          const botUsername = botInfo?.username || 'your bot';
           if (retryErrorCode === 400 && retryErrorDesc?.includes('chat not found')) {
-            throw new Error(`User @${cleanTelegramUsername} must start your bot first. Tell them to search for your bot on Telegram and click "Start"`);
+            throw new Error(`User @${cleanTelegramUsername} must start bot @${botUsername} first. They need to:\n1. Open Telegram\n2. Search for @${botUsername}\n3. Click "Start" button\n4. Then try password reset again`);
+          } else if (retryErrorCode === 400 && retryErrorDesc?.includes('user not found')) {
+            throw new Error(`Telegram username @${cleanTelegramUsername} not found. Please verify the username is correct and exists on Telegram.`);
           } else if (retryErrorCode === 403) {
             throw new Error(`User @${cleanTelegramUsername} has blocked your bot or bot cannot send messages`);
           } else {
@@ -113,12 +148,13 @@ This is an automated message from Silang Municipal Jail Visitation Management Sy
       }
       
       // Handle other specific error codes
+      const botUsername = botInfo?.username || 'your bot';
       if (errorCode === 403) {
         throw new Error(`User @${cleanTelegramUsername} has blocked your bot or bot cannot send messages`);
       } else if (errorCode === 400 && errorDescription?.includes('chat not found')) {
-        throw new Error(`User @${cleanTelegramUsername} must start your bot first. Tell them to search for your bot on Telegram and click "Start"`);
+        throw new Error(`User @${cleanTelegramUsername} must start bot @${botUsername} first. They need to:\n1. Open Telegram\n2. Search for @${botUsername}\n3. Click "Start" button\n4. Then try password reset again`);
       } else if (errorCode === 400 && errorDescription?.includes('user not found')) {
-        throw new Error(`Telegram username @${cleanTelegramUsername} not found. Make sure the username is correct`);
+        throw new Error(`Telegram username @${cleanTelegramUsername} not found. Please verify the username is correct and exists on Telegram.`);
       }
       
       throw telegramError;
