@@ -423,6 +423,7 @@ const ensureColumns = async (client) => {
     { table: 'visitors', column: 'verified_conjugal', type: 'INTEGER', default: 'DEFAULT 0' },
     { table: 'scanned_visitors', column: 'purpose', type: 'TEXT' },
     { table: 'users', column: 'telegram_username', type: 'VARCHAR(255)', default: '' },
+    { table: 'users', column: 'telegram_chat_id', type: 'BIGINT', default: '' },
   ];
   
   // Columns to remove (for migration)

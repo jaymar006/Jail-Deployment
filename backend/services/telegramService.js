@@ -1,7 +1,13 @@
 const TelegramBot = require('node-telegram-bot-api');
+const db = require('../config/db');
 
 // Initialize Telegram Bot with error handling
 let bot;
+let botInfo = null;
+
+// Store chat_id mappings in memory (fallback if database update fails)
+const chatIdCache = new Map(); // telegram_username -> chat_id
+
 try {
   const botToken = process.env.TELEGRAM_BOT_TOKEN;
   if (!botToken) {
@@ -9,19 +15,88 @@ try {
     console.warn('⚠️  Password reset via Telegram will be disabled until TELEGRAM_BOT_TOKEN is configured.');
     console.warn('⚠️  Get your bot token from: https://t.me/BotFather');
   } else {
-    // Use polling mode (simpler, works on Render without webhook setup)
-    bot = new TelegramBot(botToken, { polling: false });
-    console.log('✅ Telegram Bot service initialized');
+    // Enable polling to receive messages and capture chat_ids
+    // This is essential for getting user chat_ids
+    bot = new TelegramBot(botToken, { 
+      polling: {
+        interval: 1000,
+        autoStart: true,
+        params: {
+          timeout: 10
+        }
+      }
+    });
+    console.log('✅ Telegram Bot service initialized with polling enabled');
     
     // Verify bot info on startup
-    bot.getMe().then((botInfo) => {
+    bot.getMe().then((info) => {
+      botInfo = info;
       console.log('🤖 Bot Info:');
-      console.log('   Username:', '@' + botInfo.username);
-      console.log('   Name:', botInfo.first_name);
-      console.log('   ID:', botInfo.id);
+      console.log('   Username:', '@' + info.username);
+      console.log('   Name:', info.first_name);
+      console.log('   ID:', info.id);
     }).catch((err) => {
       console.error('⚠️  Could not verify bot info:', err.message);
     });
+    
+    // Listen for messages to capture chat_ids
+    bot.on('message', async (msg) => {
+      try {
+        const chatId = msg.chat.id;
+        const username = msg.from?.username;
+        
+        if (username) {
+          const cleanUsername = username.toLowerCase().replace('@', '');
+          
+          // Store in memory cache
+          chatIdCache.set(cleanUsername, chatId);
+          
+          // Try to update database
+          try {
+            await db.query(
+              `UPDATE users SET telegram_chat_id = ? WHERE LOWER(REPLACE(telegram_username, '@', '')) = ?`,
+              [chatId, cleanUsername]
+            );
+            console.log(`💾 Stored chat_id ${chatId} for @${username}`);
+          } catch (dbError) {
+            // Database update might fail if column doesn't exist yet - that's OK
+            console.log(`💾 Cached chat_id ${chatId} for @${username} (DB update skipped)`);
+          }
+        }
+      } catch (error) {
+        console.error('Error processing Telegram message:', error.message);
+      }
+    });
+    
+    // Listen for /start command
+    bot.onText(/\/start/, async (msg) => {
+      const chatId = msg.chat.id;
+      const username = msg.from?.username;
+      
+      if (username) {
+        const cleanUsername = username.toLowerCase().replace('@', '');
+        chatIdCache.set(cleanUsername, chatId);
+        
+        try {
+          await db.query(
+            `UPDATE users SET telegram_chat_id = ? WHERE LOWER(REPLACE(telegram_username, '@', '')) = ?`,
+            [chatId, cleanUsername]
+          );
+          console.log(`✅ Registered chat_id ${chatId} for @${username} via /start`);
+        } catch (dbError) {
+          console.log(`✅ Cached chat_id ${chatId} for @${username} via /start`);
+        }
+      }
+      
+      // Send welcome message
+      bot.sendMessage(chatId, 
+        `👋 Hello! I'm the password reset bot for Silang Municipal Jail.\n\n` +
+        `When you request a password reset, I'll send you a secure link here.\n\n` +
+        `You're all set! ✅`
+      );
+    });
+    
+    console.log('👂 Telegram bot is listening for messages to capture chat_ids');
   }
 } catch (error) {
   console.error('❌ Failed to initialize Telegram Bot:', error.message);
@@ -54,13 +129,14 @@ const sendPasswordResetLink = async (telegramUsername, username, resetToken) => 
     console.log(`📱 Preparing to send password reset message to Telegram user: @${cleanTelegramUsername}`);
     console.log(`🔗 Reset link: ${resetLink}`);
     
-    // Get bot info for better error messages (declare outside try block for scope)
-    let botInfo;
-    try {
-      botInfo = await bot.getMe();
-      console.log(`🤖 Sending from bot: @${botInfo.username} (${botInfo.first_name})`);
-    } catch (botInfoError) {
-      console.warn('⚠️  Could not get bot info:', botInfoError.message);
+    // Use cached botInfo or get it
+    if (!botInfo) {
+      try {
+        botInfo = await bot.getMe();
+        console.log(`🤖 Sending from bot: @${botInfo.username} (${botInfo.first_name})`);
+      } catch (botInfoError) {
+        console.warn('⚠️  Could not get bot info:', botInfoError.message);
+      }
     }
     
     // IMPORTANT: Telegram bots can only send messages to users who have:
@@ -84,25 +160,60 @@ If you did not request this password reset, please ignore this message or contac
 
 This is an automated message from Silang Municipal Jail Visitation Management System.`;
 
-    // Try to get chat_id first - this is more reliable than using @username
-    // NOTE: getChat with @username might not work for private chats even if user has started bot
-    // It typically only works for groups/channels or if bot has received a message from user
+    // Try to get chat_id from database or cache first
+    // This is the most reliable method - we store chat_ids when users send messages
     let chatId = null;
-    try {
-      console.log(`🔍 Attempting to get chat info for @${cleanTelegramUsername}...`);
-      const chatInfo = await bot.getChat(`@${cleanTelegramUsername}`);
-      chatId = chatInfo.id;
-      console.log(`✅ Got chat ID for @${cleanTelegramUsername}: ${chatId} (Type: ${chatInfo.type})`);
-    } catch (chatError) {
-      const chatErrorCode = chatError.response?.body?.error_code;
-      const chatErrorDesc = chatError.response?.body?.description || chatError.message;
-      
-      console.warn(`⚠️  Could not get chat ID for @${cleanTelegramUsername}`);
-      console.warn(`   Error: ${chatErrorDesc} (Code: ${chatErrorCode})`);
-      console.warn(`   Note: getChat() with @username may not work for private chats`);
-      console.warn(`   This is OK - we'll try sending by username format instead`);
-      
-      // Don't treat this as fatal - continue to try sending by username
+    const cleanUsernameLower = cleanTelegramUsername.toLowerCase();
+    
+    // Check memory cache first
+    if (chatIdCache.has(cleanUsernameLower)) {
+      chatId = chatIdCache.get(cleanUsernameLower);
+      console.log(`💾 Found chat_id ${chatId} for @${cleanTelegramUsername} in cache`);
+    } else {
+      // Check database
+      try {
+        const [rows] = await db.query(
+          `SELECT telegram_chat_id FROM users WHERE LOWER(REPLACE(telegram_username, '@', '')) = ? AND telegram_chat_id IS NOT NULL`,
+          [cleanUsernameLower]
+        );
+        if (rows.length > 0 && rows[0].telegram_chat_id) {
+          chatId = rows[0].telegram_chat_id;
+          // Cache it
+          chatIdCache.set(cleanUsernameLower, chatId);
+          console.log(`💾 Found chat_id ${chatId} for @${cleanTelegramUsername} in database`);
+        }
+      } catch (dbError) {
+        // Column might not exist yet - that's OK, we'll add it via migration
+        console.log(`ℹ️  Could not check database for chat_id (column may not exist yet)`);
+      }
+    }
+    
+    // If we don't have chat_id, try getChat (less reliable)
+    if (!chatId) {
+      try {
+        console.log(`🔍 Attempting to get chat info for @${cleanTelegramUsername}...`);
+        const chatInfo = await bot.getChat(`@${cleanTelegramUsername}`);
+        chatId = chatInfo.id;
+        console.log(`✅ Got chat ID for @${cleanTelegramUsername}: ${chatId} (Type: ${chatInfo.type})`);
+        // Cache it
+        chatIdCache.set(cleanUsernameLower, chatId);
+        // Try to save to database
+        try {
+          await db.query(
+            `UPDATE users SET telegram_chat_id = ? WHERE LOWER(REPLACE(telegram_username, '@', '')) = ?`,
+            [chatId, cleanUsernameLower]
+          );
+        } catch (dbError) {
+          // Column might not exist - that's OK
+        }
+      } catch (chatError) {
+        const chatErrorCode = chatError.response?.body?.error_code;
+        const chatErrorDesc = chatError.response?.body?.description || chatError.message;
+        
+        console.warn(`⚠️  Could not get chat ID for @${cleanTelegramUsername}`);
+        console.warn(`   Error: ${chatErrorDesc} (Code: ${chatErrorCode})`);
+        console.warn(`   User needs to send a message to the bot first`);
+      }
     }
     
     // Try sending message using chat_id first (most reliable)
