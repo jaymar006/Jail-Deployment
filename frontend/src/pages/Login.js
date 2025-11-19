@@ -740,8 +740,13 @@ const Login = () => {
         <div 
           className={`toast toast-${toast.type}`}
           style={{
-            top: isMobile ? '20px' : 'auto',
-            bottom: isMobile ? 'auto' : '20px',
+            top: isMobile ? '20px' : undefined,
+            bottom: isMobile ? undefined : '20px',
+            right: isMobile ? '10px' : '20px',
+            left: isMobile ? '10px' : undefined,
+            minWidth: isMobile ? 'auto' : '300px',
+            maxWidth: isMobile ? 'calc(100% - 20px)' : '400px',
+            padding: isMobile ? '0.875rem' : '1rem',
             animation: isMobile ? 'slideInTop 0.3s ease-out' : 'slideInRight 0.3s ease-out'
           }}
         >

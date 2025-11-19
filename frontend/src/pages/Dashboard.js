@@ -56,6 +56,8 @@ const Dashboard = () => {
   const [selectedDeleteIds, setSelectedDeleteIds] = useState([]);
   const [selectAll, setSelectAll] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '', type: '' });
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+  const [isSmallMobile, setIsSmallMobile] = useState(window.innerWidth <= 480);
   const [availableCells, setAvailableCells] = useState([]);
   const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [scheduleDuration, setScheduleDuration] = useState(() => {
@@ -147,6 +149,15 @@ const Dashboard = () => {
       showToast('Failed to fetch visitors data', 'error');
     }
   }, [showToast]);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 768);
+      setIsSmallMobile(window.innerWidth <= 480);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   useEffect(() => {
     fetchVisitors();
@@ -585,24 +596,27 @@ const Dashboard = () => {
         <div
           style={{
             position: 'fixed',
-            top: '20px',
+            top: isMobile ? '20px' : '20px',
+            bottom: isMobile ? 'auto' : undefined,
             left: '50%',
+            right: isMobile ? undefined : undefined,
             transform: 'translateX(-50%)',
             zIndex: 9999,
             background: toast.type === 'success' 
               ? 'linear-gradient(135deg, #059669 0%, #047857 100%)' 
               : 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)',
             color: 'white',
-            padding: '12px 24px',
+            padding: isSmallMobile ? '10px 16px' : '12px 24px',
             borderRadius: '8px',
             boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
             display: 'flex',
             alignItems: 'center',
             gap: '8px',
-            fontSize: '14px',
+            fontSize: isSmallMobile ? '13px' : '14px',
             fontWeight: '500',
-            animation: 'slideDown 0.3s ease-out',
-            maxWidth: '400px',
+            animation: isMobile ? 'slideInTop 0.3s ease-out' : 'slideDown 0.3s ease-out',
+            maxWidth: isMobile ? 'calc(100% - 40px)' : '400px',
+            width: isMobile ? 'auto' : 'auto',
             textAlign: 'center'
           }}
         >

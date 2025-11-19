@@ -198,6 +198,7 @@
   z-index: 9999;
   overflow-y: auto;
   overflow-x: hidden;
+  -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
 }
 
 .modal-content {
@@ -482,11 +483,18 @@
     font-size: 13px;
   }
   
+  .modal-overlay {
+    align-items: flex-start;
+    padding: 20px 0;
+  }
+
   .modal-content {
     width: 95%;
     max-width: 95%;
     padding: 16px;
     margin: 10px;
+    margin-top: 20px;
+    margin-bottom: 20px;
   }
   
   .cell-management-table {
@@ -559,7 +567,13 @@
     font-size: 10px;
   }
 
+  .modal-overlay {
+    padding: 10px 0;
+  }
+
   .modal-content {
     padding: 12px;
+    margin-top: 10px;
+    margin-bottom: 10px;
   }
 }
