@@ -623,25 +623,6 @@ const Settings = () => {
             </div>
           </div>
 
-          <div className="settings-card" onClick={openRegistrationCodesModal}>
-            <div className="settings-card-icon" style={{ background: 'linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)' }}>
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-                <circle cx="12" cy="16" r="1"/>
-              </svg>
-            </div>
-            <div className="settings-card-content">
-              <h3>Registration Codes</h3>
-              <p>Generate and manage registration codes</p>
-            </div>
-            <div className="settings-card-arrow">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M5 12h14M12 5l7 7-7 7"/>
-              </svg>
-            </div>
-          </div>
-
           <div className="settings-card" onClick={() => openModal('deleteAllPdls')}>
             <div className="settings-card-icon" style={{ background: 'linear-gradient(135deg, #6b7280 0%, #4b5563 100%)' }}>
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -655,6 +636,25 @@ const Settings = () => {
             <div className="settings-card-content">
               <h3>Delete All PDLs</h3>
               <p>Permanently remove all PDL records</p>
+            </div>
+            <div className="settings-card-arrow">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M5 12h14M12 5l7 7-7 7"/>
+              </svg>
+            </div>
+          </div>
+
+          <div className="settings-card" onClick={openRegistrationCodesModal}>
+            <div className="settings-card-icon" style={{ background: 'linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)' }}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                <circle cx="12" cy="16" r="1"/>
+              </svg>
+            </div>
+            <div className="settings-card-content">
+              <h3>Registration Codes</h3>
+              <p>Generate and manage registration codes</p>
             </div>
             <div className="settings-card-arrow">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -2219,7 +2219,7 @@ const Settings = () => {
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                   <span style={{ fontWeight: '600', color: '#374151' }}>Database Type:</span>
-                  <span style={{ color: '#6b7280' }}>{process.env.DATABASE_URL ? 'PostgreSQL' : 'SQLite'}</span>
+                  <span style={{ color: '#6b7280' }}>SQLite and PostgreSQL (Neon)</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                   <span style={{ fontWeight: '600', color: '#374151' }}>Frontend URL:</span>
