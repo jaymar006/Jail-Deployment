@@ -1,17 +1,21 @@
-const { Resend } = require('resend');
-
-// Initialize Resend client
+// Initialize Resend client with error handling
 let resend;
 try {
+  const { Resend } = require('resend');
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
     console.warn('⚠️  RESEND_API_KEY not found. Email sending will not work.');
+    console.warn('⚠️  Password reset emails will be disabled until RESEND_API_KEY is configured.');
   } else {
     resend = new Resend(apiKey);
     console.log('✅ Resend email service initialized');
   }
 } catch (error) {
   console.error('❌ Failed to initialize Resend:', error.message);
+  console.error('❌ Error details:', error);
+  console.warn('⚠️  Email sending will be disabled. Make sure "resend" package is installed.');
+  console.warn('⚠️  Run: npm install resend');
+  resend = null;
 }
 
 // Send password reset link email

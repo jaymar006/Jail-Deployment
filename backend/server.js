@@ -96,19 +96,44 @@ const PORT = process.env.PORT || 10000;
 // Wait for database schema to be ready before starting server
 const startServer = async () => {
   try {
-    // If using PostgreSQL, wait for schema initialization
+    console.log('🚀 Starting server...');
+    console.log(`📦 Node version: ${process.version}`);
+    console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`🔌 Database: ${process.env.DATABASE_URL ? 'PostgreSQL' : 'SQLite'}`);
+    
+    // If using PostgreSQL, wait for schema initialization (with timeout)
     if (process.env.DATABASE_URL) {
-      const db = require('./config/db');
-      if (db.waitForSchema) {
-        console.log('⏳ Waiting for database schema to initialize...');
-        await db.waitForSchema();
-        console.log('✅ Database schema ready');
+      try {
+        const db = require('./config/db');
+        if (db.waitForSchema) {
+          console.log('⏳ Waiting for database schema to initialize...');
+          // Add timeout to prevent hanging
+          const schemaPromise = db.waitForSchema();
+          const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Schema initialization timeout')), 30000)
+          );
+          await Promise.race([schemaPromise, timeoutPromise]);
+          console.log('✅ Database schema ready');
+        }
+      } catch (dbError) {
+        console.error('⚠️  Database initialization warning:', dbError.message);
+        console.warn('⚠️  Server will start anyway - database may not be fully initialized');
       }
     }
     
+    // Test email service initialization (non-blocking)
+    try {
+      require('./services/emailService');
+      console.log('✅ Email service module loaded');
+    } catch (emailError) {
+      console.error('⚠️  Email service warning:', emailError.message);
+      console.warn('⚠️  Email functionality may not work, but server will continue');
+    }
+    
     // Start the server
-    app.listen(PORT, async () => {
-      console.log(`Server running on port ${PORT}`);
+    app.listen(PORT, '0.0.0.0', async () => {
+      console.log(`✅ Server running on port ${PORT}`);
+      console.log(`🌐 Health check: http://localhost:${PORT}/api/health`);
       
       // Wait a moment for everything to settle, then create default user
       setTimeout(async () => {
@@ -120,8 +145,15 @@ const startServer = async () => {
         }
       }, 1000);
     });
+    
+    // Handle server errors
+    app.on('error', (error) => {
+      console.error('❌ Server error:', error);
+    });
+    
   } catch (error) {
     console.error('❌ Failed to start server:', error);
+    console.error('❌ Error stack:', error.stack);
     process.exit(1);
   }
 };
