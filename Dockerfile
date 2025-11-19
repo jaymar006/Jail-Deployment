@@ -14,6 +14,12 @@ COPY frontend/ ./
 # If not set, will fallback to window.location.origin in the frontend code
 ARG REACT_APP_API_URL
 ENV REACT_APP_API_URL=${REACT_APP_API_URL}
+
+# REACT_APP_TELEGRAM_BOT_USERNAME should be passed as build arg
+# This is used to display bot information on the forgot password page
+ARG REACT_APP_TELEGRAM_BOT_USERNAME
+ENV REACT_APP_TELEGRAM_BOT_USERNAME=${REACT_APP_TELEGRAM_BOT_USERNAME}
+
 ENV GENERATE_SOURCEMAP=false
 
 RUN npm run build

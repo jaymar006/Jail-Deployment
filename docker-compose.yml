@@ -54,6 +54,7 @@ services:
       dockerfile: Dockerfile
       args:
         - REACT_APP_API_URL=${REACT_APP_API_URL:-http://localhost:3001}
+        - REACT_APP_TELEGRAM_BOT_USERNAME=${REACT_APP_TELEGRAM_BOT_USERNAME:-BJMPnoreplybot}
     container_name: jail-system-app
     ports:
       - "3001:3001"
