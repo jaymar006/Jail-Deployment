@@ -6,7 +6,7 @@ services:
     dockerContext: .
     plan: free
     # Note: Render will automatically pass environment variables as build args
-    # Make sure REACT_APP_API_URL is set in Render dashboard before deploying
+    # Make sure REACT_APP_API_URL and REACT_APP_TELEGRAM_BOT_USERNAME are set in Render dashboard before deploying
     envVars:
       - key: NODE_ENV
         value: production
@@ -20,5 +20,7 @@ services:
         sync: false  # Set this manually to your Render URL after first deploy
       - key: REACT_APP_API_URL
         sync: false  # Set this manually to your Render URL after first deploy
+      - key: REACT_APP_TELEGRAM_BOT_USERNAME
+        sync: false  # Set this manually in Render dashboard (e.g., BJMPnoreplybot)
     healthCheckPath: /api/health
 
