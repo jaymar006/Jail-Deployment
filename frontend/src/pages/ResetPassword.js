@@ -65,7 +65,7 @@ const ResetPassword = () => {
     if (!/[0-9]/.test(pwd)) {
       errors.push('One number');
     }
-    if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(pwd)) {
+    if (!/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(pwd)) {
       errors.push('One special character');
     }
     

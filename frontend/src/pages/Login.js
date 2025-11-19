@@ -11,7 +11,6 @@ const Login = () => {
   const [registrationCode, setRegistrationCode] = useState('');
   const [telegramUsername, setTelegramUsername] = useState('');
   const [error, setError] = useState('');
-  const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [passwordErrors, setPasswordErrors] = useState([]);
   // Forgot password via Telegram
@@ -51,9 +50,9 @@ const Login = () => {
     setTelegramUsername('');
     setError('');
     setPasswordErrors([]);
-    setShowForgotPassword(false);
     setIsForgotPassword(false);
     setFpUsernameOrTelegram('');
+    setShowBotInfo(false);
   };
 
   const validatePasswordStrength = (pwd) => {
@@ -72,7 +71,7 @@ const Login = () => {
     if (!/[0-9]/.test(pwd)) {
       errors.push('One number');
     }
-    if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(pwd)) {
+    if (!/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(pwd)) {
       errors.push('One special character');
     }
     
@@ -231,7 +230,6 @@ const Login = () => {
         // Wait a bit before going back to login to show the success message
         setTimeout(() => {
           setIsForgotPassword(false);
-          setShowForgotPassword(false);
         }, 2000);
       } else {
         let errorMessage = 'Failed to request password reset. Please try again.';
@@ -274,21 +272,24 @@ const Login = () => {
 
     // Add click outside listener when popup is shown
     useEffect(() => {
-      if (showBotInfo) {
-        const handleClickOutside = (e) => {
-          if (!e.target.closest('.bot-info-container')) {
-            setShowBotInfo(false);
-            if (botInfoTimeout) {
-              clearTimeout(botInfoTimeout);
-            }
+      if (!showBotInfo) return;
+      
+      const handleClickOutside = (e) => {
+        if (!e.target.closest('.bot-info-container')) {
+          setShowBotInfo(false);
+          if (botInfoTimeout) {
+            clearTimeout(botInfoTimeout);
+            setBotInfoTimeout(null);
           }
-        };
-        document.addEventListener('click', handleClickOutside);
-        return () => {
-          document.removeEventListener('click', handleClickOutside);
-        };
-      }
-    }, [showBotInfo, botInfoTimeout]);
+        }
+      };
+      
+      document.addEventListener('click', handleClickOutside);
+      return () => {
+        document.removeEventListener('click', handleClickOutside);
+      };
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [showBotInfo]);
 
     return (
       <div 
