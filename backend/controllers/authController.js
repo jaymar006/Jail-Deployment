@@ -161,25 +161,31 @@ exports.getUsernameFromDb = async (req, res) => {
 
 // Request password reset - sends Telegram message with reset link
 exports.requestPasswordReset = async (req, res) => {
-  const { telegramUsername } = req.body;
+  const { usernameOrTelegram } = req.body;
 
   try {
-    if (!telegramUsername) {
-      return res.status(400).json({ message: 'Telegram username is required' });
+    if (!usernameOrTelegram) {
+      return res.status(400).json({ message: 'Username or Telegram username is required' });
     }
 
-    // Find user by Telegram username only
-    const user = await userModel.findUserByTelegramUsername(telegramUsername);
+    // Find user by username or Telegram username
+    // Try username first
+    let user = await userModel.findUserByUsername(usernameOrTelegram);
+    
+    // If not found, try Telegram username
+    if (!user) {
+      user = await userModel.findUserByTelegramUsername(usernameOrTelegram);
+    }
 
     // Always return success message (don't reveal if user exists)
     // This prevents user enumeration attacks
     if (!user) {
       return res.json({ 
-        message: 'If an account exists with that Telegram username, a password reset link has been sent.' 
+        message: 'If an account exists with that username or Telegram username, a password reset link has been sent.' 
       });
     }
 
-    // Check if user has Telegram username (should always be true now, but keep for safety)
+    // Check if user has Telegram username
     if (!user.telegram_username) {
       return res.status(400).json({ 
         message: 'No Telegram username found for this account. Please contact an administrator.' 
@@ -187,7 +193,19 @@ exports.requestPasswordReset = async (req, res) => {
     }
 
     // Create reset token (using telegram_username instead of email)
-    const resetToken = await passwordResetModel.createResetToken(user.id, user.telegram_username);
+    console.log(`📝 Creating password reset token for user: ${user.username} (ID: ${user.id})`);
+    let resetToken;
+    try {
+      resetToken = await passwordResetModel.createResetToken(user.id, user.telegram_username);
+      console.log(`✅ Password reset token created successfully: ${resetToken.substring(0, 20)}...`);
+    } catch (tokenError) {
+      console.error('❌ Failed to create password reset token:', tokenError);
+      console.error('   This is a critical error - token was not saved to database!');
+      // Still return success to user (security best practice)
+      return res.json({ 
+        message: 'If an account exists with that username or Telegram username, a password reset link has been sent.' 
+      });
+    }
 
     // Send password reset Telegram message (non-blocking - always return success to user)
     // This prevents user enumeration attacks and ensures consistent UX
@@ -228,7 +246,7 @@ exports.requestPasswordReset = async (req, res) => {
 
     // Always return success immediately (security best practice)
     res.json({ 
-      message: 'If an account exists with that Telegram username, a password reset link has been sent to your Telegram.' 
+      message: 'If an account exists with that username or Telegram username, a password reset link has been sent to your Telegram.' 
     });
   } catch (err) {
     console.error('Error requesting password reset:', err);

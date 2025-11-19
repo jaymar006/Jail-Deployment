@@ -15,7 +15,7 @@ const Login = () => {
   const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [passwordErrors, setPasswordErrors] = useState([]);
   // Forgot password via Telegram
-  const [fpTelegramUsername, setFpTelegramUsername] = useState('');
+  const [fpUsernameOrTelegram, setFpUsernameOrTelegram] = useState('');
   const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [showSignUpPassword, setShowSignUpPassword] = useState(false);
   const [showSignUpConfirmPassword, setShowSignUpConfirmPassword] = useState(false);
@@ -205,8 +205,8 @@ const Login = () => {
     setError('');
     setIsRequestingReset(true);
 
-    if (!fpTelegramUsername.trim()) {
-      showToast('Please enter your Telegram username', 'error');
+    if (!fpUsernameOrTelegram.trim()) {
+      showToast('Please enter your username or Telegram username', 'error');
       setIsRequestingReset(false);
       return;
     }
@@ -217,14 +217,14 @@ const Login = () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          telegramUsername: fpTelegramUsername.trim(),
+          usernameOrTelegram: fpUsernameOrTelegram.trim(),
         }),
       });
 
       if (response.ok) {
         const data = await response.json();
         showToast(data.message || 'If an account exists, a password reset link has been sent to your Telegram.', 'success');
-        setFpTelegramUsername('');
+        setFpUsernameOrTelegram('');
         setIsRequestingReset(false);
         // Wait a bit before going back to login to show the success message
         setTimeout(() => {
@@ -331,19 +331,19 @@ const Login = () => {
             )}
             
             <label>
-              Telegram Username:
+              Username or Telegram Username:
               <input
                 type="text"
-                value={fpTelegramUsername}
-                onChange={(e) => setFpTelegramUsername(e.target.value)}
-                placeholder="Enter your Telegram username (e.g., @username)"
+                value={fpUsernameOrTelegram}
+                onChange={(e) => setFpUsernameOrTelegram(e.target.value)}
+                placeholder="Enter your username or Telegram username (e.g., @username)"
                 required
                 autoFocus
                 disabled={isRequestingReset}
               />
             </label>
             <p style={{ fontSize: '0.9em', color: '#6b7280', marginTop: '10px', marginBottom: '20px' }}>
-              Enter your Telegram username and we'll send you a link to reset your password via Telegram.
+              Enter your username or Telegram username and we'll send you a link to reset your password via Telegram.
             </p>
             {error && <div className="login-error">{error}</div>}
             <div className="login-buttons">

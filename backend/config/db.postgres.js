@@ -513,32 +513,86 @@ const ensureColumns = async (client) => {
     if (telegramCheck.rows.length > 0) {
       const colInfo = telegramCheck.rows[0];
       
+      // Check if there are any NULL values in telegram_username
+      const nullCheck = await client.query(`
+        SELECT COUNT(*) as null_count 
+        FROM users 
+        WHERE telegram_username IS NULL
+      `);
+      const nullCount = parseInt(nullCheck.rows[0].null_count);
+      
+      if (nullCount > 0) {
+        console.warn(`⚠️  Found ${nullCount} users with NULL telegram_username. Setting placeholder values...`);
+        // Set placeholder telegram usernames for users without one
+        // Format: username_placeholder_<user_id>
+        await client.query(`
+          UPDATE users 
+          SET telegram_username = 'placeholder_' || id::text || '_' || username
+          WHERE telegram_username IS NULL
+        `);
+        console.log(`✅ Updated ${nullCount} users with placeholder telegram_username`);
+      }
+      
       // Add NOT NULL constraint if it's nullable
       if (colInfo.is_nullable === 'YES') {
-        await client.query(`
-          ALTER TABLE users ALTER COLUMN telegram_username SET NOT NULL
-        `);
-        console.log('Added NOT NULL constraint to users.telegram_username');
+        try {
+          await client.query(`
+            ALTER TABLE users ALTER COLUMN telegram_username SET NOT NULL
+          `);
+          console.log('✅ Added NOT NULL constraint to users.telegram_username');
+        } catch (notNullError) {
+          if (notNullError.message.includes('contains null values')) {
+            console.warn('⚠️  Cannot add NOT NULL constraint - null values still exist. This should not happen after placeholder update.');
+            // Try to find remaining nulls
+            const remainingNulls = await client.query(`
+              SELECT COUNT(*) as null_count 
+              FROM users 
+              WHERE telegram_username IS NULL
+            `);
+            console.warn(`   Remaining NULL values: ${remainingNulls.rows[0].null_count}`);
+          } else {
+            throw notNullError;
+          }
+        }
       }
       
       // Add UNIQUE constraint if it doesn't exist
-      const uniqueCheck = await client.query(`
-        SELECT constraint_name 
-        FROM information_schema.table_constraints 
-        WHERE table_name = 'users' 
-        AND constraint_type = 'UNIQUE' 
-        AND constraint_name LIKE '%telegram_username%'
+      // Note: We can't add UNIQUE if there are duplicates, so check first
+      const duplicateCheck = await client.query(`
+        SELECT telegram_username, COUNT(*) as count
+        FROM users
+        WHERE telegram_username IS NOT NULL
+        GROUP BY telegram_username
+        HAVING COUNT(*) > 1
       `);
       
-      if (uniqueCheck.rows.length === 0) {
-        await client.query(`
-          ALTER TABLE users ADD CONSTRAINT users_telegram_username_key UNIQUE (telegram_username)
+      if (duplicateCheck.rows.length > 0) {
+        console.warn(`⚠️  Found duplicate telegram_username values. Cannot add UNIQUE constraint yet.`);
+        console.warn(`   Duplicates:`, duplicateCheck.rows.map(r => `${r.telegram_username} (${r.count} times)`));
+      } else {
+        const uniqueCheck = await client.query(`
+          SELECT constraint_name 
+          FROM information_schema.table_constraints 
+          WHERE table_name = 'users' 
+          AND constraint_type = 'UNIQUE' 
+          AND constraint_name LIKE '%telegram_username%'
         `);
-        console.log('Added UNIQUE constraint to users.telegram_username');
+        
+        if (uniqueCheck.rows.length === 0) {
+          try {
+            await client.query(`
+              ALTER TABLE users ADD CONSTRAINT users_telegram_username_key UNIQUE (telegram_username)
+            `);
+            console.log('✅ Added UNIQUE constraint to users.telegram_username');
+          } catch (uniqueError) {
+            console.warn('⚠️  Could not add UNIQUE constraint:', uniqueError.message);
+          }
+        }
       }
     }
   } catch (error) {
-    console.error('Error ensuring telegram_username constraints:', error.message);
+    console.error('❌ Error ensuring telegram_username constraints:', error.message);
+    console.error('   Error details:', error);
   }
 
   for (const check of checks) {
