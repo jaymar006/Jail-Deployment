@@ -40,7 +40,7 @@ const Modal = ({ children, onClose }) => {
 };
 
 const Settings = () => {
-  const [modalOpen, setModalOpen] = useState(null); // 'username', 'password', 'telegram', 'cell', 'editCell', 'deleteAllPdls', 'deleteLogs', 'selectLogs', 'registrationCodes' or null
+  const [modalOpen, setModalOpen] = useState(null); // 'username', 'password', 'telegram', 'cell', 'editCell', 'deleteAllPdls', 'deleteLogs', 'selectLogs', 'registrationCodes', 'systemInfo' or null
   const [newUsername, setNewUsername] = useState('');
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -602,8 +602,8 @@ const Settings = () => {
             </div>
           </div>
 
-          <div className="settings-card settings-card-warning" onClick={() => openModal('deleteLogs')}>
-            <div className="settings-card-icon" style={{ background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)' }}>
+          <div className="settings-card" onClick={() => openModal('deleteLogs')}>
+            <div className="settings-card-icon" style={{ background: 'linear-gradient(135deg, #6b7280 0%, #4b5563 100%)' }}>
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M3 6h18"/>
                 <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
@@ -642,8 +642,8 @@ const Settings = () => {
             </div>
           </div>
 
-          <div className="settings-card settings-card-danger" onClick={() => openModal('deleteAllPdls')}>
-            <div className="settings-card-icon" style={{ background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)' }}>
+          <div className="settings-card" onClick={() => openModal('deleteAllPdls')}>
+            <div className="settings-card-icon" style={{ background: 'linear-gradient(135deg, #6b7280 0%, #4b5563 100%)' }}>
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M3 6h18"/>
                 <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
@@ -655,6 +655,25 @@ const Settings = () => {
             <div className="settings-card-content">
               <h3>Delete All PDLs</h3>
               <p>Permanently remove all PDL records</p>
+            </div>
+            <div className="settings-card-arrow">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M5 12h14M12 5l7 7-7 7"/>
+              </svg>
+            </div>
+          </div>
+
+          <div className="settings-card" onClick={() => openModal('systemInfo')}>
+            <div className="settings-card-icon" style={{ background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)' }}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="12" y1="16" x2="12" y2="12"/>
+                <line x1="12" y1="8" x2="12.01" y2="8"/>
+              </svg>
+            </div>
+            <div className="settings-card-content">
+              <h3>System Information</h3>
+              <p>View app version and system details</p>
             </div>
             <div className="settings-card-arrow">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -2157,6 +2176,80 @@ const Settings = () => {
             )}
 
             {/* Close Button */}
+            <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'flex-end' }}>
+              <button
+                onClick={closeModal}
+                style={{
+                  padding: '10px 24px',
+                  background: '#e5e7eb',
+                  color: '#374151',
+                  border: 'none',
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  cursor: 'pointer'
+                }}
+              >
+                Close
+              </button>
+            </div>
+          </Modal>
+        )}
+
+        {/* System Information Modal */}
+        {modalOpen === 'systemInfo' && (
+          <Modal onClose={closeModal}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px', justifyContent: 'center' }}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#f59e0b' }}>
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="12" y1="16" x2="12" y2="12"/>
+                <line x1="12" y1="8" x2="12.01" y2="8"/>
+              </svg>
+              <h3 style={{ margin: 0 }}>System Information</h3>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ padding: '16px', background: '#f9fafb', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                  <span style={{ fontWeight: '600', color: '#374151' }}>Application Name:</span>
+                  <span style={{ color: '#6b7280' }}>Jail Visitation Management System</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                  <span style={{ fontWeight: '600', color: '#374151' }}>Environment:</span>
+                  <span style={{ color: '#6b7280' }}>{process.env.NODE_ENV === 'production' ? 'Production' : 'Development'}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                  <span style={{ fontWeight: '600', color: '#374151' }}>Database Type:</span>
+                  <span style={{ color: '#6b7280' }}>{process.env.DATABASE_URL ? 'PostgreSQL' : 'SQLite'}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                  <span style={{ fontWeight: '600', color: '#374151' }}>Frontend URL:</span>
+                  <span style={{ color: '#6b7280', fontSize: '0.85em', wordBreak: 'break-all' }}>{process.env.REACT_APP_API_URL || window.location.origin}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontWeight: '600', color: '#374151' }}>Current User:</span>
+                  <span style={{ color: '#6b7280' }}>{username || 'Not logged in'}</span>
+                </div>
+              </div>
+              <div style={{ padding: '16px', background: '#f9fafb', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                  <span style={{ fontWeight: '600', color: '#374151' }}>Browser:</span>
+                  <span style={{ color: '#6b7280', fontSize: '0.85em' }}>{navigator.userAgent.split(' ').slice(-2).join(' ')}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                  <span style={{ fontWeight: '600', color: '#374151' }}>Screen Resolution:</span>
+                  <span style={{ color: '#6b7280' }}>{window.screen.width} × {window.screen.height}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontWeight: '600', color: '#374151' }}>Viewport Size:</span>
+                  <span style={{ color: '#6b7280' }}>{window.innerWidth} × {window.innerHeight}</span>
+                </div>
+              </div>
+              <div style={{ padding: '12px', background: '#eff6ff', borderRadius: '8px', border: '1px solid #bfdbfe' }}>
+                <p style={{ margin: 0, fontSize: '0.85em', color: '#1e40af', textAlign: 'center' }}>
+                  <strong>Version:</strong> 1.0.0 | Last Updated: {new Date().toLocaleDateString()}
+                </p>
+              </div>
+            </div>
             <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'flex-end' }}>
               <button
                 onClick={closeModal}
