@@ -38,7 +38,25 @@ const sendPasswordResetLink = async (toEmail, username, resetToken) => {
     // Get sender email - uses Resend's test domain by default (no domain verification needed)
     // Note: onboarding@resend.dev can only send to your Resend account email address
     // For production, set RESEND_FROM_EMAIL to use a verified domain
-    const fromEmail = process.env.RESEND_FROM_EMAIL || process.env.SMTP_FROM || 'onboarding@resend.dev';
+    let fromEmail = process.env.RESEND_FROM_EMAIL || process.env.SMTP_FROM || 'onboarding@resend.dev';
+    
+    // Validate email format - must contain @ symbol
+    if (!fromEmail.includes('@')) {
+      console.warn(`⚠️  Invalid RESEND_FROM_EMAIL format: "${fromEmail}" - missing @ symbol`);
+      console.warn(`⚠️  Falling back to test domain: onboarding@resend.dev`);
+      fromEmail = 'onboarding@resend.dev';
+    }
+    
+    // Additional validation: ensure it's a proper email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(fromEmail) && !fromEmail.includes('<')) {
+      // Allow format like "Name <email@example.com>" but if it's just a domain, fix it
+      if (fromEmail.includes('.') && !fromEmail.includes('@')) {
+        console.warn(`⚠️  Invalid RESEND_FROM_EMAIL format: "${fromEmail}" - appears to be missing @ symbol`);
+        console.warn(`⚠️  Falling back to test domain: onboarding@resend.dev`);
+        fromEmail = 'onboarding@resend.dev';
+      }
+    }
     
     console.log(`📧 Preparing to send password reset email to: ${toEmail}`);
     console.log(`🔗 Reset link: ${resetLink}`);
@@ -136,7 +154,14 @@ const sendPasswordResetConfirmation = async (toEmail, username) => {
     
     // Get sender email - uses Resend's test domain by default (no domain verification needed)
     // Note: onboarding@resend.dev can only send to your Resend account email address
-    const fromEmail = process.env.RESEND_FROM_EMAIL || process.env.SMTP_FROM || 'onboarding@resend.dev';
+    let fromEmail = process.env.RESEND_FROM_EMAIL || process.env.SMTP_FROM || 'onboarding@resend.dev';
+    
+    // Validate email format - must contain @ symbol
+    if (!fromEmail.includes('@')) {
+      console.warn(`⚠️  Invalid RESEND_FROM_EMAIL format: "${fromEmail}" - missing @ symbol`);
+      console.warn(`⚠️  Falling back to test domain: onboarding@resend.dev`);
+      fromEmail = 'onboarding@resend.dev';
+    }
     
     // Send email using Resend API
     const { data, error } = await resend.emails.send({
