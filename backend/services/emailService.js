@@ -1,28 +1,22 @@
-const nodemailer = require('nodemailer');
-const resendTransport = require('./nodemailerResendTransport');
+const { Resend } = require('resend');
 
-// Initialize Nodemailer with custom Resend transport
-let transporter;
+// Initialize Resend client with error handling
+let resend;
 try {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
     console.warn('⚠️  RESEND_API_KEY not found. Email sending will not work.');
     console.warn('⚠️  Password reset emails will be disabled until RESEND_API_KEY is configured.');
   } else {
-    // Use custom Resend transport
-    transporter = nodemailer.createTransport(
-      resendTransport({
-        apiKey: apiKey,
-      })
-    );
-    
-    console.log('✅ Nodemailer with Resend transport initialized');
+    resend = new Resend(apiKey);
+    console.log('✅ Resend email service initialized');
   }
 } catch (error) {
-  console.error('❌ Failed to initialize Nodemailer with Resend:', error.message);
+  console.error('❌ Failed to initialize Resend:', error.message);
   console.error('❌ Error details:', error);
-  console.warn('⚠️  Email sending will be disabled. Make sure RESEND_API_KEY is configured.');
-  transporter = null;
+  console.warn('⚠️  Email sending will be disabled. Make sure "resend" package is installed.');
+  console.warn('⚠️  Run: npm install resend');
+  resend = null;
 }
 
 // Send password reset link email
@@ -33,8 +27,8 @@ const sendPasswordResetLink = async (toEmail, username, resetToken) => {
       throw new Error('Invalid email address');
     }
     
-    // Check if transporter is configured
-    if (!transporter || !process.env.RESEND_API_KEY) {
+    // Check if Resend is configured
+    if (!resend || !process.env.RESEND_API_KEY) {
       throw new Error('Resend not configured. Please set RESEND_API_KEY environment variable.');
     }
     
@@ -78,8 +72,8 @@ const sendPasswordResetLink = async (toEmail, username, resetToken) => {
       }
     }
     
-    // Send email using Nodemailer with Resend transport
-    const info = await transporter.sendMail({
+    // Send email using Resend API
+    const { data, error } = await resend.emails.send({
       from: fromEmail,
       to: toEmail,
       subject: 'Password Reset Request - Silang Municipal Jail',
@@ -126,40 +120,46 @@ const sendPasswordResetLink = async (toEmail, username, resetToken) => {
       `,
     });
     
-    console.log('✅ Password reset email sent successfully via Nodemailer/Resend:', info.messageId);
-    return { success: true, messageId: info.messageId };
+    if (error) {
+      console.error('❌ Resend API error:', error);
+      
+      // Check for the specific "testing emails" error
+      if (error.message && error.message.includes('You can only send testing emails')) {
+        const accountEmailMatch = error.message.match(/\(([^)]+)\)/);
+        const accountEmail = accountEmailMatch ? accountEmailMatch[1] : 'your Resend account email';
+        
+        console.error('');
+        console.error('⚠️  RESEND TEST DOMAIN LIMITATION DETECTED');
+        console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.error(`📧 You're using Resend's test domain (onboarding@resend.dev)`);
+        console.error(`📧 This can ONLY send emails to: ${accountEmail}`);
+        console.error(`📧 You tried to send to: ${toEmail}`);
+        console.error('');
+        console.error('🔧 SOLUTIONS:');
+        console.error('');
+        console.error('Option 1: Verify a Domain (Recommended for Production)');
+        console.error('   1. Get a free domain from: https://www.freenom.com');
+        console.error('   2. In Resend Dashboard → Domains → Add Domain');
+        console.error('   3. Add the DNS records Resend provides');
+        console.error('   4. Wait for verification (usually 5-30 minutes)');
+        console.error('   5. Set RESEND_FROM_EMAIL=noreply@yourdomain.tk in Render');
+        console.error('');
+        console.error('Option 2: Use Account Email for Testing');
+        console.error(`   - For testing, use ${accountEmail} as the recipient email`);
+        console.error(`   - Or temporarily change user emails to ${accountEmail} for testing`);
+        console.error('');
+        console.error('📚 See docs/RESEND_NO_DOMAIN.md for more details');
+        console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.error('');
+      }
+      
+      throw new Error(error.message || 'Failed to send email via Resend');
+    }
+    
+    console.log('✅ Password reset email sent successfully via Resend:', data?.id);
+    return { success: true, messageId: data?.id };
   } catch (error) {
     console.error('❌ Error sending password reset email:', error.message);
-    
-    // Check for the specific "testing emails" error
-    if (error.message && error.message.includes('You can only send testing emails')) {
-      const accountEmailMatch = error.message.match(/\(([^)]+)\)/);
-      const accountEmail = accountEmailMatch ? accountEmailMatch[1] : 'your Resend account email';
-      
-      console.error('');
-      console.error('⚠️  RESEND TEST DOMAIN LIMITATION DETECTED');
-      console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      console.error(`📧 You're using Resend's test domain (onboarding@resend.dev)`);
-      console.error(`📧 This can ONLY send emails to: ${accountEmail}`);
-      console.error(`📧 You tried to send to: ${toEmail}`);
-      console.error('');
-      console.error('🔧 SOLUTIONS:');
-      console.error('');
-      console.error('Option 1: Verify a Domain (Recommended for Production)');
-      console.error('   1. Get a free domain from: https://www.freenom.com');
-      console.error('   2. In Resend Dashboard → Domains → Add Domain');
-      console.error('   3. Add the DNS records Resend provides');
-      console.error('   4. Wait for verification (usually 5-30 minutes)');
-      console.error('   5. Set RESEND_FROM_EMAIL=noreply@yourdomain.tk in Render');
-      console.error('');
-      console.error('Option 2: Use Account Email for Testing');
-      console.error(`   - For testing, use ${accountEmail} as the recipient email`);
-      console.error(`   - Or temporarily change user emails to ${accountEmail} for testing`);
-      console.error('');
-      console.error('📚 See docs/RESEND_NO_DOMAIN.md for more details');
-      console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      console.error('');
-    }
     
     // Provide helpful error messages
     if (error.message.includes('not configured') || error.message.includes('RESEND_API_KEY')) {
@@ -176,8 +176,8 @@ const sendPasswordResetLink = async (toEmail, username, resetToken) => {
 // Send password reset confirmation email
 const sendPasswordResetConfirmation = async (toEmail, username) => {
   try {
-    // Check if transporter is configured
-    if (!transporter || !process.env.RESEND_API_KEY) {
+    // Check if Resend is configured
+    if (!resend || !process.env.RESEND_API_KEY) {
       throw new Error('Resend not configured. Please set RESEND_API_KEY environment variable.');
     }
     
@@ -192,8 +192,8 @@ const sendPasswordResetConfirmation = async (toEmail, username) => {
       fromEmail = 'onboarding@resend.dev';
     }
     
-    // Send email using Nodemailer with Resend transport
-    const info = await transporter.sendMail({
+    // Send email using Resend API
+    const { data, error } = await resend.emails.send({
       from: fromEmail,
       to: toEmail,
       subject: 'Password Reset Confirmation - Silang Municipal Jail',
@@ -222,13 +222,15 @@ const sendPasswordResetConfirmation = async (toEmail, username) => {
       `,
     });
     
-    console.log('✅ Password reset confirmation email sent via Nodemailer/Resend:', info.messageId);
-    return { success: true, messageId: info.messageId };
+    if (error) {
+      console.error('❌ Resend API error:', error);
+      throw new Error(error.message || 'Failed to send email via Resend');
+    }
+    
+    console.log('✅ Password reset confirmation email sent via Resend:', data?.id);
+    return { success: true, messageId: data?.id };
   } catch (error) {
     console.error('❌ Error sending password reset confirmation email:', error.message);
-    if (error.response) {
-      console.error('   💡 Resend API error:', error.response.body);
-    }
     return { success: false, error: error.message };
   }
 };
