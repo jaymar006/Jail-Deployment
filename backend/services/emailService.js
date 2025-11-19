@@ -31,11 +31,23 @@ const sendPasswordResetLink = async (toEmail, username, resetToken) => {
     const frontendUrl = process.env.FRONTEND_URL || process.env.REACT_APP_API_URL || 'http://localhost:3000';
     const resetLink = `${frontendUrl}/reset-password?token=${resetToken}`;
     
-    // Get sender email (must be verified domain in Resend)
-    const fromEmail = process.env.RESEND_FROM_EMAIL || process.env.SMTP_FROM || 'noreply@yourdomain.com';
+    // Get sender email - uses Resend's test domain by default (no domain verification needed)
+    // Note: onboarding@resend.dev can only send to your Resend account email address
+    // For production, set RESEND_FROM_EMAIL to use a verified domain
+    const fromEmail = process.env.RESEND_FROM_EMAIL || process.env.SMTP_FROM || 'onboarding@resend.dev';
     
     console.log(`📧 Preparing to send password reset email to: ${toEmail}`);
     console.log(`🔗 Reset link: ${resetLink}`);
+    console.log(`📤 From email: ${fromEmail}`);
+    
+    // Warn if using test domain and sending to different email
+    if (fromEmail === 'onboarding@resend.dev') {
+      const resendAccountEmail = process.env.RESEND_ACCOUNT_EMAIL;
+      if (resendAccountEmail && toEmail.toLowerCase() !== resendAccountEmail.toLowerCase()) {
+        console.warn(`⚠️  Using test domain - emails can only be sent to your Resend account email (${resendAccountEmail})`);
+        console.warn(`⚠️  This email will be sent to: ${toEmail} but may fail if it doesn't match your account email`);
+      }
+    }
     
     // Send email using Resend API
     const { data, error } = await resend.emails.send({
@@ -99,9 +111,11 @@ const sendPasswordResetLink = async (toEmail, username, resetToken) => {
     if (error.message.includes('not configured') || error.message.includes('RESEND_API_KEY')) {
       console.error('   💡 Please set RESEND_API_KEY environment variable.');
       console.error('   💡 Get your API key from: https://resend.com/api-keys');
-    } else if (error.message.includes('domain') || error.message.includes('from')) {
-      console.error('   💡 Make sure RESEND_FROM_EMAIL uses a verified domain in Resend.');
+    } else if (error.message.includes('domain') || error.message.includes('from') || error.message.includes('testing emails')) {
+      console.error('   💡 Using test domain (onboarding@resend.dev) - can only send to your Resend account email.');
+      console.error('   💡 Set RESEND_FROM_EMAIL to use a verified domain for production.');
       console.error('   💡 Verify your domain at: https://resend.com/domains');
+      console.error('   💡 Or set RESEND_ACCOUNT_EMAIL to match the recipient email for testing.');
     }
     
     return { success: false, error: error.message };
@@ -116,8 +130,9 @@ const sendPasswordResetConfirmation = async (toEmail, username) => {
       throw new Error('Resend not configured. Please set RESEND_API_KEY environment variable.');
     }
     
-    // Get sender email (must be verified domain in Resend)
-    const fromEmail = process.env.RESEND_FROM_EMAIL || process.env.SMTP_FROM || 'noreply@yourdomain.com';
+    // Get sender email - uses Resend's test domain by default (no domain verification needed)
+    // Note: onboarding@resend.dev can only send to your Resend account email address
+    const fromEmail = process.env.RESEND_FROM_EMAIL || process.env.SMTP_FROM || 'onboarding@resend.dev';
     
     // Send email using Resend API
     const { data, error } = await resend.emails.send({
