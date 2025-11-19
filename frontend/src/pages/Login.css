@@ -601,8 +601,9 @@
   }
 
   .login-title {
-    font-size: 1.2rem;
+    font-size: 1rem;
     margin-bottom: 1rem;
+    line-height: 1.3;
   }
 
   .login-form,
@@ -612,8 +613,13 @@
   }
 
   .login-logos img {
-    width: 60px;
-    height: 60px;
+    width: 50px;
+    height: 50px;
+  }
+
+  .login-logos {
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
   }
 
   .login-text {
@@ -626,11 +632,36 @@
   .forgot-password-form select {
     font-size: 16px; /* Prevent iOS zoom */
     padding: 0.875rem;
+    min-height: 44px; /* Touch-friendly */
   }
 
   .login-form button,
   .forgot-password-form button {
     padding: 1rem 1.2rem;
     font-size: 1rem;
+    min-height: 48px; /* Touch-friendly */
+  }
+
+  .password-requirements {
+    font-size: 0.75em !important;
+  }
+
+  .password-requirements ul {
+    padding-left: 18px !important;
+    line-height: 1.6 !important;
+  }
+
+  .input-with-icon {
+    gap: 0.25rem;
+  }
+
+  .input-with-icon .toggle-visibility {
+    padding: 0.5rem;
+    min-width: 44px; /* Touch-friendly */
+    min-height: 44px;
+  }
+
+  .auth-links {
+    font-size: 0.85rem;
   }
 }

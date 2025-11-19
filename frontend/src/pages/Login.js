@@ -16,6 +16,8 @@ const Login = () => {
   const [passwordErrors, setPasswordErrors] = useState([]);
   // Forgot password via Telegram
   const [fpUsernameOrTelegram, setFpUsernameOrTelegram] = useState('');
+  const [showBotInfo, setShowBotInfo] = useState(false);
+  const [botInfoTimeout, setBotInfoTimeout] = useState(null);
   const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [showSignUpPassword, setShowSignUpPassword] = useState(false);
   const [showSignUpConfirmPassword, setShowSignUpConfirmPassword] = useState(false);
@@ -251,6 +253,162 @@ const Login = () => {
     }
   };
 
+  // Bot Info Icon Component
+  const BotInfoIcon = () => {
+    const handleMouseEnter = () => {
+      // Clear any existing timeout
+      if (botInfoTimeout) {
+        clearTimeout(botInfoTimeout);
+      }
+      // Show popup immediately
+      setShowBotInfo(true);
+    };
+
+    const handleMouseLeave = () => {
+      // Hide after 5 seconds
+      const timeout = setTimeout(() => {
+        setShowBotInfo(false);
+      }, 5000);
+      setBotInfoTimeout(timeout);
+    };
+
+    // Add click outside listener when popup is shown
+    useEffect(() => {
+      if (showBotInfo) {
+        const handleClickOutside = (e) => {
+          if (!e.target.closest('.bot-info-container')) {
+            setShowBotInfo(false);
+            if (botInfoTimeout) {
+              clearTimeout(botInfoTimeout);
+            }
+          }
+        };
+        document.addEventListener('click', handleClickOutside);
+        return () => {
+          document.removeEventListener('click', handleClickOutside);
+        };
+      }
+    }, [showBotInfo, botInfoTimeout]);
+
+    return (
+      <div 
+        className="bot-info-container"
+        style={{ position: 'relative', display: 'inline-block', marginLeft: '8px' }}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+      >
+        <div
+          style={{
+            width: '22px',
+            height: '22px',
+            borderRadius: '50%',
+            backgroundColor: '#6b7280',
+            color: 'white',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease',
+            flexShrink: 0,
+            userSelect: 'none'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = '#4b5563';
+            e.currentTarget.style.transform = 'scale(1.15)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = '#6b7280';
+            e.currentTarget.style.transform = 'scale(1)';
+          }}
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="16" x2="12" y2="12"></line>
+            <line x1="12" y1="8" x2="12.01" y2="8"></line>
+          </svg>
+        </div>
+        
+        {showBotInfo && (
+          <div
+            style={{
+              position: 'absolute',
+              top: window.innerWidth <= 768 ? '28px' : '0',
+              left: window.innerWidth <= 768 ? '50%' : 'calc(100% + 12px)',
+              transform: window.innerWidth <= 768 ? 'translateX(-50%)' : 'none',
+              backgroundColor: '#f0f9ff',
+              border: '1px solid #bae6fd',
+              borderRadius: '8px',
+              padding: window.innerWidth <= 480 ? '10px' : '12px',
+              fontSize: window.innerWidth <= 480 ? '0.8em' : '0.85em',
+              width: window.innerWidth <= 480 ? '260px' : '280px',
+              maxWidth: window.innerWidth <= 768 ? 'calc(100vw - 20px)' : 'calc(100vw - 40px)',
+              boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+              zIndex: 1000,
+              pointerEvents: 'auto'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ fontWeight: '600', color: '#0369a1', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.9em' }}>
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="16" x2="12" y2="12"></line>
+                <line x1="12" y1="8" x2="12.01" y2="8"></line>
+              </svg>
+              Start Bot First
+            </div>
+            <p style={{ margin: '6px 0', color: '#0c4a6e', fontSize: '0.85em', lineHeight: '1.4' }}>
+              Start our Telegram bot before requesting password reset:
+            </p>
+            <div style={{ 
+              backgroundColor: 'white', 
+              padding: '8px', 
+              borderRadius: '6px', 
+              margin: '8px 0',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '10px',
+              flexWrap: 'wrap'
+            }}>
+              <span style={{ fontWeight: '600', color: '#0369a1', fontSize: '0.9em' }}>
+                @{process.env.REACT_APP_TELEGRAM_BOT_USERNAME || 'BJMPnoreplybot'}
+              </span>
+              <a
+                href={`https://t.me/${process.env.REACT_APP_TELEGRAM_BOT_USERNAME || 'BJMPnoreplybot'}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  backgroundColor: '#0088cc',
+                  color: 'white',
+                  padding: '4px 10px',
+                  borderRadius: '4px',
+                  textDecoration: 'none',
+                  fontSize: '0.8em',
+                  fontWeight: '500',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  whiteSpace: 'nowrap'
+                }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                }}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+                </svg>
+                Open
+              </a>
+            </div>
+            <p style={{ margin: '6px 0 0 0', color: '#0c4a6e', fontSize: '0.75em', lineHeight: '1.3' }}>
+              <strong>Note:</strong> After "Start", send a message (e.g., "hello") to the bot.
+            </p>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="login-container">
       <div className="login-header">
@@ -264,74 +422,10 @@ const Login = () => {
       {isForgotPassword ? (
         <>
           <form className="login-form" onSubmit={handleForgotPassword}>
-            <div className="login-text">Forgot Password</div>
-            
-            {/* Bot Information Box */}
-            {process.env.REACT_APP_TELEGRAM_BOT_USERNAME && (
-              <div style={{
-                backgroundColor: '#f0f9ff',
-                border: '1px solid #bae6fd',
-                borderRadius: '8px',
-                padding: '15px',
-                marginBottom: '20px',
-                fontSize: '0.9em',
-                width: '100%',
-                maxWidth: '100%',
-                boxSizing: 'border-box'
-              }}>
-                <div style={{ fontWeight: '600', color: '#0369a1', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
-                  </svg>
-                  Important: Start Our Bot First
-                </div>
-                <p style={{ margin: '8px 0', color: '#0c4a6e' }}>
-                  Before requesting a password reset, you must start our Telegram bot:
-                </p>
-                <div style={{ 
-                  backgroundColor: 'white', 
-                  padding: '10px', 
-                  borderRadius: '6px', 
-                  margin: '10px 0',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: '10px'
-                }}>
-                  <span style={{ fontWeight: '600', color: '#0369a1' }}>
-                    @{process.env.REACT_APP_TELEGRAM_BOT_USERNAME}
-                  </span>
-                  <a
-                    href={`https://t.me/${process.env.REACT_APP_TELEGRAM_BOT_USERNAME}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{
-                      backgroundColor: '#0088cc',
-                      color: 'white',
-                      padding: '6px 12px',
-                      borderRadius: '6px',
-                      textDecoration: 'none',
-                      fontSize: '0.85em',
-                      fontWeight: '500',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '6px'
-                    }}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                    }}
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
-                    </svg>
-                    Open in Telegram
-                  </a>
-                </div>
-                <p style={{ margin: '8px 0 0 0', color: '#0c4a6e', fontSize: '0.85em' }}>
-                  <strong>Important:</strong> After clicking "Start", you must also send a message to the bot (e.g., type "hello" or "/start") before requesting password reset.
-                </p>
-              </div>
-            )}
+            <div className="login-text" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+              Forgot Password
+              <BotInfoIcon />
+            </div>
             
             <label>
               Username or Telegram Username:

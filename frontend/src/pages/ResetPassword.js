@@ -15,6 +15,8 @@ const ResetPassword = () => {
   const [error, setError] = useState('');
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
   const [isResetting, setIsResetting] = useState(false);
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+  const [isSmallMobile, setIsSmallMobile] = useState(window.innerWidth <= 480);
 
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
@@ -22,6 +24,16 @@ const ResetPassword = () => {
     return () => {
       document.body.style.overflow = previousOverflow || '';
     };
+  }, []);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 768);
+      setIsSmallMobile(window.innerWidth <= 480);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   useEffect(() => {
@@ -136,18 +148,34 @@ const ResetPassword = () => {
   };
 
   return (
-    <div className="login-container">
+    <div className="login-container" style={{ 
+      padding: isMobile ? '1rem' : '2rem',
+      minHeight: '100vh',
+      height: 'auto'
+    }}>
       <div className="login-header">
         <div className="login-logos">
           <img src="/logo1.png" alt="Logo 1" />
           <img src="/logo2.png" alt="Logo 2" />
           <img src="/logo3.png" alt="Logo 3" />
         </div>
-        <h1 className="login-title">SILANG MUNICIPAL JAIL VISITATION MANAGEMENT SYSTEM</h1>
+        <h1 className="login-title" style={{
+          fontSize: isSmallMobile ? '1rem' : isMobile ? '1.2rem' : '1.8rem',
+          lineHeight: '1.3',
+          padding: isMobile ? '0 0.5rem' : '0'
+        }}>
+          SILANG MUNICIPAL JAIL VISITATION MANAGEMENT SYSTEM
+        </h1>
       </div>
       
-      <form className="login-form" onSubmit={handleSubmit}>
-        <div className="login-text">Reset Password</div>
+      <form className="login-form" onSubmit={handleSubmit} style={{
+        width: isMobile ? '100%' : '320px',
+        maxWidth: isMobile ? '100%' : '320px',
+        padding: isSmallMobile ? '1rem' : '1.5rem'
+      }}>
+        <div className="login-text" style={{
+          fontSize: isSmallMobile ? '1rem' : '1.3rem'
+        }}>Reset Password</div>
         
         {!token ? (
           <div className="login-error" style={{ marginBottom: '20px' }}>
@@ -155,7 +183,14 @@ const ResetPassword = () => {
           </div>
         ) : (
           <>
-            <p style={{ fontSize: '0.9em', color: '#6b7280', marginBottom: '20px', textAlign: 'center' }}>
+            <p style={{ 
+              fontSize: isSmallMobile ? '0.8em' : '0.9em', 
+              color: '#6b7280', 
+              marginBottom: '20px', 
+              textAlign: 'center',
+              lineHeight: '1.5',
+              padding: isSmallMobile ? '0 0.5rem' : '0'
+            }}>
               Enter your new password below. Make sure it meets all security requirements.
             </p>
             
@@ -166,10 +201,15 @@ const ResetPassword = () => {
                   type={showPassword ? 'text' : 'password'}
                   value={newPassword}
                   onChange={(e) => handlePasswordChange(e.target.value)}
-                  placeholder="Min 8 chars, uppercase, lowercase, number, special char"
+                  placeholder={isSmallMobile ? "Min 8 chars, A-Z, a-z, 0-9, !@#" : "Min 8 chars, uppercase, lowercase, number, special char"}
                   required
-                  autoFocus
+                  autoFocus={!isSmallMobile}
                   disabled={isResetting}
+                  style={{
+                    fontSize: isSmallMobile ? '16px' : '0.95rem',
+                    padding: isSmallMobile ? '0.875rem' : '0.75rem',
+                    minHeight: isSmallMobile ? '44px' : 'auto'
+                  }}
                 />
                 <button
                   type="button"
@@ -185,17 +225,31 @@ const ResetPassword = () => {
                 </button>
               </div>
               {newPassword && passwordErrors.length > 0 && (
-                <div className="password-requirements" style={{ fontSize: '0.85em', color: '#d32f2f', marginTop: '5px' }}>
-                  <div>Password must contain:</div>
-                  <ul style={{ margin: '5px 0', paddingLeft: '20px' }}>
+                <div className="password-requirements" style={{ 
+                  fontSize: isSmallMobile ? '0.75em' : '0.85em', 
+                  color: '#d32f2f', 
+                  marginTop: '8px',
+                  lineHeight: '1.5'
+                }}>
+                  <div style={{ fontWeight: '600', marginBottom: '4px' }}>Password must contain:</div>
+                  <ul style={{ 
+                    margin: '5px 0', 
+                    paddingLeft: isSmallMobile ? '18px' : '20px',
+                    lineHeight: '1.6'
+                  }}>
                     {passwordErrors.map((err, idx) => (
-                      <li key={idx}>{err}</li>
+                      <li key={idx} style={{ marginBottom: '2px' }}>{err}</li>
                     ))}
                   </ul>
                 </div>
               )}
               {newPassword && passwordErrors.length === 0 && (
-                <div style={{ fontSize: '0.85em', color: '#2e7d32', marginTop: '5px' }}>
+                <div style={{ 
+                  fontSize: isSmallMobile ? '0.75em' : '0.85em', 
+                  color: '#2e7d32', 
+                  marginTop: '8px',
+                  fontWeight: '500'
+                }}>
                   ✓ Password meets all requirements
                 </div>
               )}
@@ -211,6 +265,11 @@ const ResetPassword = () => {
                   placeholder="Confirm your new password"
                   required
                   disabled={isResetting}
+                  style={{
+                    fontSize: isSmallMobile ? '16px' : '0.95rem',
+                    padding: isSmallMobile ? '0.875rem' : '0.75rem',
+                    minHeight: isSmallMobile ? '44px' : 'auto'
+                  }}
                 />
                 <button
                   type="button"
@@ -226,12 +285,22 @@ const ResetPassword = () => {
                 </button>
               </div>
               {confirmPassword && newPassword !== confirmPassword && (
-                <div style={{ fontSize: '0.85em', color: '#d32f2f', marginTop: '5px' }}>
+                <div style={{ 
+                  fontSize: isSmallMobile ? '0.75em' : '0.85em', 
+                  color: '#d32f2f', 
+                  marginTop: '8px',
+                  fontWeight: '500'
+                }}>
                   ✗ Passwords do not match
                 </div>
               )}
               {confirmPassword && newPassword === confirmPassword && newPassword && (
-                <div style={{ fontSize: '0.85em', color: '#2e7d32', marginTop: '5px' }}>
+                <div style={{ 
+                  fontSize: isSmallMobile ? '0.75em' : '0.85em', 
+                  color: '#2e7d32', 
+                  marginTop: '8px',
+                  fontWeight: '500'
+                }}>
                   ✓ Passwords match
                 </div>
               )}
@@ -241,8 +310,22 @@ const ResetPassword = () => {
         
         {error && <div className="login-error">{error}</div>}
         
-        <div className="login-buttons">
-          <button type="submit" disabled={isResetting || !token} style={{ position: 'relative', minWidth: '140px' }}>
+        <div className="login-buttons" style={{
+          flexDirection: isMobile ? 'column' : 'row',
+          width: '100%'
+        }}>
+          <button 
+            type="submit" 
+            disabled={isResetting || !token} 
+            style={{ 
+              position: 'relative', 
+              minWidth: isMobile ? '100%' : '140px',
+              width: isMobile ? '100%' : 'auto',
+              minHeight: isSmallMobile ? '48px' : '44px',
+              fontSize: isSmallMobile ? '1rem' : '0.9rem',
+              padding: isSmallMobile ? '1rem 1.2rem' : '0.8rem 1.5rem'
+            }}
+          >
             {isResetting ? (
               <>
                 <svg
@@ -289,7 +372,17 @@ const ResetPassword = () => {
       
       {/* Toast Notification */}
       {toast.show && (
-        <div className={`toast toast-${toast.type}`}>
+        <div 
+          className={`toast toast-${toast.type}`}
+          style={{
+            bottom: isSmallMobile ? '10px' : '20px',
+            right: isSmallMobile ? '10px' : '20px',
+            left: isSmallMobile ? '10px' : 'auto',
+            minWidth: isSmallMobile ? 'auto' : '300px',
+            maxWidth: isSmallMobile ? 'calc(100% - 20px)' : '400px',
+            padding: isSmallMobile ? '0.875rem' : '1rem'
+          }}
+        >
           <div className="toast-content">
             <div className="toast-icon">
               {toast.type === 'success' ? (
