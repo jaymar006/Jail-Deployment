@@ -8,7 +8,11 @@ const ScannedVisitor = {
 
   findOpenScanByVisitorName: async (visitor_name) => {
     const [results] = await db.query(
-      `SELECT * FROM scanned_visitors WHERE visitor_name = ? AND time_out IS NULL ORDER BY scan_date DESC LIMIT 1`,
+      `SELECT * FROM scanned_visitors 
+       WHERE LOWER(visitor_name) = LOWER(?) 
+         AND time_out IS NULL 
+       ORDER BY scan_date DESC 
+       LIMIT 1`,
       [visitor_name]
     );
     return results.length > 0 ? results[0] : null;
@@ -17,7 +21,13 @@ const ScannedVisitor = {
   findOpenScanByVisitorDetails: async (visitor_name, pdl_name, cell) => {
     console.log('findOpenScanByVisitorDetails called with:', visitor_name, pdl_name, cell);
     const [results] = await db.query(
-      `SELECT * FROM scanned_visitors WHERE visitor_name = ? AND pdl_name = ? AND cell = ? AND time_out IS NULL ORDER BY scan_date DESC LIMIT 1`,
+      `SELECT * FROM scanned_visitors 
+       WHERE LOWER(visitor_name) = LOWER(?) 
+         AND LOWER(pdl_name) = LOWER(?) 
+         AND LOWER(cell) = LOWER(?) 
+         AND time_out IS NULL 
+       ORDER BY scan_date DESC 
+       LIMIT 1`,
       [visitor_name, pdl_name, cell]
     );
     console.log('findOpenScanByVisitorDetails results:', results);

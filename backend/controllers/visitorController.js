@@ -1,5 +1,77 @@
 const Visitor = require('../models/visitorModel');
 const ScannedVisitor = require('../models/scannedVisitorModel');
+const Cell = require('../models/cellModel');
+
+const APP_TIMEZONE = process.env.APP_TIMEZONE || 'Asia/Manila';
+
+const formatToAppTimezone = (input) => {
+  if (!input) return null;
+  const date = input instanceof Date ? input : new Date(input);
+  if (Number.isNaN(date.getTime())) return null;
+
+  try {
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: APP_TIMEZONE,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    });
+
+    const parts = formatter.formatToParts(date).reduce((acc, part) => {
+      if (part.type !== 'literal') {
+        acc[part.type] = part.value;
+      }
+      return acc;
+    }, {});
+
+    const { year, month, day, hour, minute, second } = parts;
+    if (!year || !month || !day || !hour || !minute || !second) {
+      return date.toISOString().slice(0, 19).replace('T', ' ');
+    }
+    return `${year}-${month}-${day} ${hour}:${minute}:${second}`;
+  } catch (error) {
+    console.error('Failed to format date to application timezone:', error);
+    return date.toISOString().slice(0, 19).replace('T', ' ');
+  }
+};
+
+const extractCellNumber = (value) => {
+  if (!value) return '';
+  const trimmed = value.trim();
+  if (!trimmed) return '';
+  if (trimmed.includes(' - ')) {
+    const parts = trimmed.split(' - ');
+    return parts[parts.length - 1].trim();
+  }
+  return trimmed;
+};
+
+const resolveCellDisplayValue = async (rawCell) => {
+  if (!rawCell) return '';
+  const trimmed = rawCell.trim();
+  if (!trimmed) return '';
+
+  const candidateNumber = extractCellNumber(trimmed);
+  try {
+    if (candidateNumber) {
+      const cellRecord = await Cell.getByCellNumber(candidateNumber);
+      if (cellRecord) {
+        if (cellRecord.cell_name) {
+          return `${cellRecord.cell_name} - ${cellRecord.cell_number}`;
+        }
+        return cellRecord.cell_number;
+      }
+    }
+  } catch (error) {
+    console.error('Failed to resolve cell display value:', error);
+  }
+
+  return trimmed;
+};
 
 exports.getVisitorsByPdl = async (req, res) => {
   try {
@@ -174,14 +246,28 @@ exports.addScannedVisitor = async (req, res) => {
     }
 
     visitor_name = visitor_name.trim();
-    pdl_name = pdl_name.trim().toLowerCase();
-    cell = cell.trim().toLowerCase();
+    pdl_name = pdl_name.trim();
+    const trimmedCell = cell.trim();
     relationship = relationship ? relationship.trim() : null;
     contact_number = contact_number ? contact_number.trim() : null;
+    const normalizedPurpose = purpose ? purpose.trim() : 'normal';
 
-    console.log('addScannedVisitor input:', { visitor_name, pdl_name, cell, relationship, contact_number, purpose });
+    const formattedCell = await resolveCellDisplayValue(trimmedCell);
+    const cellCandidates = Array.from(new Set([formattedCell, trimmedCell].filter(Boolean)));
 
-    const openScan = await ScannedVisitor.findOpenScanByVisitorDetails(visitor_name, pdl_name, cell);
+    console.log('addScannedVisitor input:', { visitor_name, pdl_name, cell: formattedCell, relationship, contact_number, normalizedPurpose });
+
+    const findOpenScan = async () => {
+      for (const candidate of cellCandidates) {
+        const existing = await ScannedVisitor.findOpenScanByVisitorDetails(visitor_name, pdl_name, candidate);
+        if (existing) {
+          return existing;
+        }
+      }
+      return null;
+    };
+
+    const openScan = await findOpenScan();
 
     if (only_check) {
       if (openScan && !openScan.time_out) {
@@ -193,38 +279,38 @@ exports.addScannedVisitor = async (req, res) => {
     console.log('Found openScan:', openScan);
 
     // Use client-provided device time if valid ISO string; fallback to server time
-    let now;
-    if (device_time) {
-      const parsed = new Date(device_time);
-      now = isNaN(parsed.getTime()) ? new Date() : parsed;
-    } else {
-      now = new Date();
+    let referenceDate = device_time ? new Date(device_time) : new Date();
+    if (Number.isNaN(referenceDate.getTime())) {
+      referenceDate = new Date();
+    }
+    let localizedTimestamp = formatToAppTimezone(referenceDate);
+    if (!localizedTimestamp) {
+      localizedTimestamp = formatToAppTimezone(new Date());
     }
 
     if (openScan) {
       if (!openScan.time_out) {
-        const localTimeOut = now.toISOString();
+        const localTimeOut = localizedTimestamp;
         await ScannedVisitor.updateTimeOut(openScan.id, localTimeOut);
         return res.status(200).json({ message: `Visitor "${visitor_name}" scan timed out`, id: openScan.id, time_out: localTimeOut, action: 'time_out' });
       } else {
         return res.status(200).json({ message: `Visitor "${visitor_name}" has already timed out`, id: openScan.id, time_out: openScan.time_out, action: 'already_timed_out' });
       }
     } else {
-      const localTimeIn = now.toISOString();
       const scannedVisitorData = {
         visitor_name,
         pdl_name,
-        cell,
-        time_in: localTimeIn,
+        cell: formattedCell,
+        time_in: localizedTimestamp,
         time_out: null,
-        scan_date: localTimeIn,
+        scan_date: localizedTimestamp,
         relationship,
         contact_number,
-        purpose: purpose || 'normal'
+        purpose: normalizedPurpose
       };
       const result = await ScannedVisitor.add(scannedVisitorData);
 
-      return res.status(201).json({ message: 'Scanned visitor added', id: result.insertId, time_in: localTimeIn, action: 'time_in' });
+      return res.status(201).json({ message: 'Scanned visitor added', id: result.insertId, time_in: localizedTimestamp, action: 'time_in' });
     }
   } catch (error) {
     console.error('Error in addScannedVisitor:', error);
@@ -241,7 +327,14 @@ exports.updateScannedVisitorTimes = async (req, res) => {
       return res.status(400).json({ error: 'time_in and time_out are required' });
     }
 
-    await ScannedVisitor.updateTimes(id, time_in, time_out);
+    const normalizedTimeIn = formatToAppTimezone(new Date(time_in));
+    const normalizedTimeOut = formatToAppTimezone(new Date(time_out));
+
+    if (!normalizedTimeIn || !normalizedTimeOut) {
+      return res.status(400).json({ error: 'Invalid time format' });
+    }
+
+    await ScannedVisitor.updateTimes(id, normalizedTimeIn, normalizedTimeOut);
 
     res.json({ message: 'Scanned visitor times updated successfully' });
   } catch (error) {
