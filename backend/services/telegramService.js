@@ -65,10 +65,16 @@ try {
                   [chatId, cleanUsername]
                 );
                 if (result.affectedRows > 0) {
-                  console.log(`✅ Stored chat_id ${chatId} for @${username} (matched ${result.affectedRows} user(s))`);
+                  // Only log once per unique chat_id to avoid spam
+                  if (!chatIdCache.has(cleanUsername) || chatIdCache.get(cleanUsername) !== chatId) {
+                    console.log(`✅ Stored chat_id ${chatId} for @${username}`);
+                  }
                 } else {
-                  console.log(`⚠️  No user found with Telegram username matching @${username} (chat_id ${chatId} cached in memory)`);
-                  console.log(`   💡 User should update their Telegram username in Settings to match: ${username}`);
+                  // Only log warning once
+                  if (!chatIdCache.has(cleanUsername)) {
+                    console.log(`⚠️  No user found with Telegram username matching @${username} (chat_id ${chatId} cached)`);
+                    console.log(`   💡 User should update their Telegram username in Settings to match: ${username}`);
+                  }
                 }
               } catch (dbError) {
                 // Database update might fail if column doesn't exist yet - that's OK
@@ -100,10 +106,16 @@ try {
                 [chatId, cleanUsername]
               );
               if (result.affectedRows > 0) {
-                console.log(`✅ Registered chat_id ${chatId} for @${username} via /start (matched ${result.affectedRows} user(s))`);
+                // Only log once per unique chat_id
+                if (!chatIdCache.has(cleanUsername) || chatIdCache.get(cleanUsername) !== chatId) {
+                  console.log(`✅ Registered chat_id ${chatId} for @${username} via /start`);
+                }
               } else {
-                console.log(`⚠️  No user found with Telegram username matching @${username} (chat_id ${chatId} cached)`);
-                console.log(`   💡 User should update their Telegram username in Settings to match: ${username}`);
+                // Only log warning once
+                if (!chatIdCache.has(cleanUsername)) {
+                  console.log(`⚠️  No user found with Telegram username matching @${username} (chat_id ${chatId} cached)`);
+                  console.log(`   💡 User should update their Telegram username in Settings to match: ${username}`);
+                }
               }
             } catch (dbError) {
               console.log(`✅ Cached chat_id ${chatId} for @${username} via /start (DB error: ${dbError.message})`);
@@ -171,14 +183,10 @@ const sendPasswordResetLink = async (telegramUsername, username, resetToken) => 
     const frontendUrl = process.env.FRONTEND_URL || process.env.REACT_APP_API_URL || 'http://localhost:3000';
     const resetLink = `${frontendUrl}/reset-password?token=${resetToken}`;
     
-    console.log(`📱 Preparing to send password reset message to Telegram user: @${cleanTelegramUsername}`);
-    console.log(`🔗 Reset link: ${resetLink}`);
-    
     // Use cached botInfo or get it
     if (!botInfo) {
       try {
         botInfo = await bot.getMe();
-        console.log(`🤖 Sending from bot: @${botInfo.username} (${botInfo.first_name})`);
       } catch (botInfoError) {
         console.warn('⚠️  Could not get bot info:', botInfoError.message);
       }
@@ -213,7 +221,6 @@ This is an automated message from Silang Municipal Jail Visitation Management Sy
     // Check memory cache first
     if (chatIdCache.has(cleanUsernameLower)) {
       chatId = chatIdCache.get(cleanUsernameLower);
-      console.log(`💾 Found chat_id ${chatId} for @${cleanTelegramUsername} in cache`);
     } else {
       // Check database
       try {
@@ -224,13 +231,9 @@ This is an automated message from Silang Municipal Jail Visitation Management Sy
         );
         
         if (userRows.length === 0) {
-          console.log(`⚠️  No user found in database with Telegram username: @${cleanTelegramUsername}`);
-          console.log(`   💡 User should verify their Telegram username in Settings matches: ${cleanTelegramUsername}`);
+          console.log(`⚠️  No user found with Telegram username: @${cleanTelegramUsername}`);
         } else {
           const user = userRows[0];
-          console.log(`✅ Found user in database: ${user.username} (ID: ${user.id})`);
-          console.log(`   Stored Telegram username: ${user.telegram_username || 'NULL'}`);
-          console.log(`   Stored chat_id: ${user.telegram_chat_id || 'NULL'}`);
           
           if (user.telegram_chat_id) {
             chatId = user.telegram_chat_id;
@@ -238,8 +241,7 @@ This is an automated message from Silang Municipal Jail Visitation Management Sy
             chatIdCache.set(cleanUsernameLower, chatId);
             console.log(`💾 Found chat_id ${chatId} for @${cleanTelegramUsername} in database`);
           } else {
-            console.log(`⚠️  User found but no chat_id stored. User needs to send a message to the bot.`);
-            console.log(`   💡 SOLUTION: User should send any message to @${botInfo?.username || 'your bot'} in Telegram`);
+            console.log(`⚠️  User ${user.username} found but no chat_id. User needs to send a message to @${botInfo?.username || 'your bot'}`);
           }
         }
       } catch (dbError) {
@@ -252,49 +254,33 @@ This is an automated message from Silang Municipal Jail Visitation Management Sy
     // If we don't have chat_id, try getChat (less reliable)
     if (!chatId) {
       try {
-        console.log(`🔍 Attempting to get chat info for @${cleanTelegramUsername}...`);
         const chatInfo = await bot.getChat(`@${cleanTelegramUsername}`);
         chatId = chatInfo.id;
-        console.log(`✅ Got chat ID for @${cleanTelegramUsername}: ${chatId} (Type: ${chatInfo.type})`);
         // Cache it
         chatIdCache.set(cleanUsernameLower, chatId);
-        // Try to save to database with better logging
+        // Try to save to database
         try {
-          const [result] = await db.query(
+          await db.query(
             `UPDATE users SET telegram_chat_id = ? WHERE LOWER(REPLACE(telegram_username, '@', '')) = ?`,
             [chatId, cleanUsernameLower]
           );
-          if (result.affectedRows > 0) {
-            console.log(`💾 Saved chat_id ${chatId} to database for @${cleanTelegramUsername} (matched ${result.affectedRows} user(s))`);
-          } else {
-            console.log(`⚠️  Could not find user in database with Telegram username matching @${cleanTelegramUsername}`);
-            console.log(`   💡 Chat_id ${chatId} cached in memory, but not saved to database`);
-            console.log(`   💡 User should verify their Telegram username in Settings matches: ${cleanTelegramUsername}`);
-          }
         } catch (dbError) {
-          console.log(`⚠️  Database error saving chat_id: ${dbError.message}`);
-          console.log(`   💡 Chat_id ${chatId} cached in memory only`);
+          // Column might not exist - that's OK
         }
       } catch (chatError) {
-        const chatErrorCode = chatError.response?.body?.error_code;
-        const chatErrorDesc = chatError.response?.body?.description || chatError.message;
-        
-        console.warn(`⚠️  Could not get chat ID for @${cleanTelegramUsername}`);
-        console.warn(`   Error: ${chatErrorDesc} (Code: ${chatErrorCode})`);
-        console.warn(`   User needs to send a message to the bot first`);
+        // User needs to send a message to the bot first - error will be shown later
       }
     }
     
     // Try sending message using chat_id first (most reliable)
     if (chatId) {
       try {
-        console.log(`📤 Sending message using chat_id: ${chatId}`);
         const sentMessage = await bot.sendMessage(chatId, message, {
           parse_mode: 'HTML',
           disable_web_page_preview: false
         });
         
-        console.log('✅ Password reset message sent successfully via Telegram (using chat_id):', sentMessage.message_id);
+        console.log(`✅ Password reset message sent to @${cleanTelegramUsername} via Telegram`);
         return { success: true, messageId: sentMessage.message_id };
       } catch (chatIdError) {
         console.warn(`⚠️  Failed to send using chat_id ${chatId}:`, chatIdError.message);
@@ -305,13 +291,12 @@ This is an automated message from Silang Municipal Jail Visitation Management Sy
     
     // Fallback: Try sending by username (less reliable but sometimes works)
     try {
-      console.log(`📤 Attempting to send message using @username format: @${cleanTelegramUsername}`);
       const sentMessage = await bot.sendMessage(`@${cleanTelegramUsername}`, message, {
         parse_mode: 'HTML',
         disable_web_page_preview: false
       });
       
-      console.log('✅ Password reset message sent successfully via Telegram (using @username):', sentMessage.message_id);
+      console.log(`✅ Password reset message sent to @${cleanTelegramUsername} via Telegram`);
       return { success: true, messageId: sentMessage.message_id };
     } catch (telegramError) {
       // Log full error details for debugging
@@ -331,13 +316,12 @@ This is an automated message from Silang Municipal Jail Visitation Management Sy
       // Try without @ prefix as last resort
       if (errorCode === 400) {
         try {
-          console.log(`📤 Attempting to send message without @ prefix: ${cleanTelegramUsername}`);
           const sentMessage = await bot.sendMessage(cleanTelegramUsername, message, {
             parse_mode: 'HTML',
             disable_web_page_preview: false
           });
           
-          console.log('✅ Password reset message sent successfully via Telegram (without @):', sentMessage.message_id);
+          console.log(`✅ Password reset message sent to @${cleanTelegramUsername} via Telegram`);
           return { success: true, messageId: sentMessage.message_id };
         } catch (retryError) {
           const retryErrorCode = retryError.response?.body?.error_code;

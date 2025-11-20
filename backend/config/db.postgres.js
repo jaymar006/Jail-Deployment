@@ -52,9 +52,9 @@ const pool = new Pool({
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
 });
 
-// Test connection
+// Test connection (silent - connection is logged elsewhere)
 pool.on('connect', () => {
-  console.log('✅ Connected to PostgreSQL database');
+  // Connection successful - no need to log every connection
 });
 
 pool.on('error', (err) => {
@@ -343,15 +343,10 @@ const initializeSchema = async () => {
         `CREATE INDEX IF NOT EXISTS idx_reset_token_expires ON password_reset_tokens(expires_at)`
       ];
 
-      // Execute table creation statements
+      // Execute table creation statements (silent - tables already exist in production)
       for (const statement of tableStatements) {
         try {
           await client.query(statement);
-          // Extract table name for logging
-          const tableMatch = statement.match(/CREATE TABLE.*?(\w+)/i);
-          if (tableMatch && tableMatch[1] !== 'EXTENSION') {
-            console.log(`   ✓ Table: ${tableMatch[1]}`);
-          }
         } catch (error) {
           const errorMsg = error.message.toLowerCase();
           if (!errorMsg.includes('already exists')) {
@@ -372,7 +367,7 @@ const initializeSchema = async () => {
         }
       }
 
-      // Create function
+      // Create function (silent - function already exists in production)
       try {
         await client.query(`
           CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -383,7 +378,6 @@ const initializeSchema = async () => {
           END;
           $$ language 'plpgsql'
         `);
-        console.log(`   ✓ Function: update_updated_at_column`);
       } catch (error) {
         if (!error.message.toLowerCase().includes('already exists')) {
           console.warn(`   ⚠️  Function creation warning:`, error.message.substring(0, 100));

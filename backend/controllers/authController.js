@@ -214,11 +214,9 @@ exports.requestPasswordReset = async (req, res) => {
     }
 
     // Create reset token (using telegram_username instead of email)
-    console.log(`📝 Creating password reset token for user: ${user.username} (ID: ${user.id})`);
     let resetToken;
     try {
       resetToken = await passwordResetModel.createResetToken(user.id, user.telegram_username);
-      console.log(`✅ Password reset token created successfully: ${resetToken.substring(0, 20)}...`);
     } catch (tokenError) {
       console.error('❌ Failed to create password reset token:', tokenError);
       console.error('   This is a critical error - token was not saved to database!');
@@ -240,7 +238,6 @@ exports.requestPasswordReset = async (req, res) => {
           return;
         }
         
-        console.log(`📱 Attempting to send Telegram message to: @${user.telegram_username}`);
         const telegramResult = await telegramService.sendPasswordResetLink(user.telegram_username, user.username, resetToken);
         if (!telegramResult.success) {
           console.error('❌ Failed to send password reset Telegram message:', telegramResult.error);

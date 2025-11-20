@@ -8,35 +8,25 @@ const createResetToken = async (userId, telegramUsername) => {
   const expiresAt = new Date(Date.now() + 3600000); // 1 hour from now
   
   try {
-    console.log(`🔑 Creating password reset token for user_id: ${userId}, telegram_username: ${telegramUsername}`);
-    console.log(`   Token (first 20 chars): ${token.substring(0, 20)}...`);
-    console.log(`   Expires at: ${expiresAt.toISOString()}`);
-    
     // Check if using PostgreSQL or SQLite
     const usePostgres = !!process.env.DATABASE_URL;
     
     if (usePostgres) {
       // PostgreSQL: Use ? placeholders - db.postgres.js will convert to $1, $2, etc.
       // Use ON CONFLICT for PostgreSQL
-      console.log('   Using PostgreSQL database');
       const result = await db.query(
         `INSERT INTO password_reset_tokens (user_id, telegram_username, token, expires_at) 
          VALUES (?, ?, ?, ?) 
          ON CONFLICT (user_id) DO UPDATE SET token = ?, expires_at = ?, created_at = CURRENT_TIMESTAMP`,
         [userId, telegramUsername, token, expiresAt, token, expiresAt]
       );
-      console.log(`✅ Password reset token saved to database successfully`);
-      console.log(`   Result:`, result);
     } else {
       // SQLite: Delete existing token first, then insert
-      console.log('   Using SQLite database');
       await db.query('DELETE FROM password_reset_tokens WHERE user_id = ?', [userId]);
-      const result = await db.query(
+      await db.query(
         `INSERT INTO password_reset_tokens (user_id, telegram_username, token, expires_at) VALUES (?, ?, ?, ?)`,
         [userId, telegramUsername, token, expiresAt]
       );
-      console.log(`✅ Password reset token saved to database successfully`);
-      console.log(`   Result:`, result);
     }
     
     return token;

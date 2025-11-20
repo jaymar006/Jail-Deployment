@@ -124,10 +124,9 @@ const startServer = async () => {
     // Test email service initialization (non-blocking)
     try {
       require('./services/emailService');
-      console.log('✅ Email service module loaded');
+      // Email service loaded (silent - not using email for password reset)
     } catch (emailError) {
-      console.error('⚠️  Email service warning:', emailError.message);
-      console.warn('⚠️  Email functionality may not work, but server will continue');
+      // Email service not available - that's OK, we use Telegram
     }
     
     // Start the server

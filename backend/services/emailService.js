@@ -9,7 +9,7 @@ try {
     console.warn('⚠️  Password reset emails will be disabled until RESEND_API_KEY is configured.');
   } else {
     resend = new Resend(apiKey);
-    console.log('✅ Resend email service initialized');
+    // Email service initialized (silent - not using email for password reset)
   }
 } catch (error) {
   console.error('❌ Failed to initialize Resend:', error.message);
