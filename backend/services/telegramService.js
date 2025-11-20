@@ -17,7 +17,11 @@ try {
   } else {
     // Initialize bot WITHOUT polling first to avoid conflicts
     // We'll enable polling only if needed and handle conflicts
-    bot = new TelegramBot(botToken, { polling: false });
+    bot = new TelegramBot(botToken, { 
+      polling: false,
+      // Prevent unhandled promise rejections
+      onlyFirstMatch: true
+    });
     console.log('✅ Telegram Bot service initialized');
     
     // Verify bot info on startup
@@ -27,6 +31,7 @@ try {
       console.log('   Username:', '@' + info.username);
       console.log('   Name:', info.first_name);
       console.log('   ID:', info.id);
+      console.log('💡 Note: Polling is disabled by default. Set TELEGRAM_ENABLE_POLLING=true to enable it.');
     }).catch((err) => {
       console.error('⚠️  Could not verify bot info:', err.message);
     });
@@ -38,11 +43,34 @@ try {
     if (enablePolling) {
       try {
         console.log('🔄 Starting Telegram bot polling...');
+        
+        // Stop any existing polling first to avoid conflicts
+        try {
+          await bot.stopPolling();
+        } catch (stopError) {
+          // Ignore error if polling wasn't running
+        }
+        
         bot.startPolling({
           interval: 2000,
           autoStart: true,
           params: {
             timeout: 10
+          }
+        });
+        
+        // Handle polling errors to prevent console spam
+        bot.on('polling_error', (error) => {
+          if (error.code === 'ETELEGRAM' && error.message.includes('409')) {
+            console.warn('⚠️  Polling conflict detected - another bot instance is running');
+            console.warn('⚠️  Stopping polling to prevent spam...');
+            try {
+              bot.stopPolling();
+            } catch (stopError) {
+              // Ignore
+            }
+          } else {
+            console.error('❌ Telegram polling error:', error.message);
           }
         });
         
