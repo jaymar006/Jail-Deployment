@@ -46,7 +46,7 @@ try {
         
         // Stop any existing polling first to avoid conflicts
         try {
-          await bot.stopPolling();
+          bot.stopPolling();
         } catch (stopError) {
           // Ignore error if polling wasn't running
         }
