@@ -52,6 +52,23 @@ const Dashboard = () => {
   const [pendingScanData, setPendingScanData] = useState(null);
   const [verifiedConjugal, setVerifiedConjugal] = useState(false);
   const [scanLocked, setScanLocked] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successModalData, setSuccessModalData] = useState({ type: '', message: '', visitorData: null });
+
+  // Prevent body scroll when success modal is open
+  useEffect(() => {
+    if (showSuccessModal) {
+      const originalOverflow = document.body.style.overflow;
+      const originalHtmlOverflow = document.documentElement.style.overflow;
+      document.body.style.overflow = 'hidden';
+      document.documentElement.style.overflow = 'hidden';
+      
+      return () => {
+        document.body.style.overflow = originalOverflow;
+        document.documentElement.style.overflow = originalHtmlOverflow;
+      };
+    }
+  }, [showSuccessModal]);
   const [lastScanSig, setLastScanSig] = useState(null);
   const [lastScanAt, setLastScanAt] = useState(0);
   const [selectedDeleteIds, setSelectedDeleteIds] = useState([]);
@@ -689,13 +706,20 @@ const Dashboard = () => {
         });
         
         console.log('✅ Time out successful!');
-        showToast('Successful time out!', 'success');
         await fetchVisitors();
-        // Add 2-second cooldown after time-out before allowing next scan
-        setTimeout(() => {
-          setScanLocked(false);
-          console.log('🔓 Scan unlocked after 2-second cooldown (time-out)');
-        }, 2000);
+        
+        // Show success modal instead of immediate unlock
+        setSuccessModalData({
+          type: 'time_out',
+          message: 'Successful time out!',
+          visitorData: {
+            visitor_name: visitorName,
+            pdl_name: pdlName,
+            cell
+          }
+        });
+        setShowSuccessModal(true);
+        // Keep scanner locked until user clicks OK
         return;
       }
 
@@ -748,43 +772,82 @@ const Dashboard = () => {
       
       if (action === 'time_out') {
         console.log('✅ Time out successful!');
-        showToast('Successful time out!', 'success');
         await fetchVisitors();
         console.log('✅ Visitor list refreshed');
         
         setPendingScanData(null);
         setVerifiedConjugal(false);
-        // Add 2-second cooldown after time-out before allowing next scan
-        setTimeout(() => {
-          setScanLocked(false);
-          console.log('🔓 Scan unlocked after 2-second cooldown (time-out from purpose selection)');
-        }, 2000);
+        
+        // Show success modal instead of immediate unlock
+        setSuccessModalData({
+          type: 'time_out',
+          message: 'Successful time out!',
+          visitorData: {
+            visitor_name: pendingScanData?.visitor_name,
+            pdl_name: pendingScanData?.pdl_name,
+            cell: pendingScanData?.cell
+          }
+        });
+        setShowSuccessModal(true);
+        // Keep scanner locked until user clicks OK
         return; // Return early to prevent unlocking immediately
       } else if (action === 'time_in') {
         console.log('✅ Time in successful!');
-        showToast('Successful time in!', 'success');
+        await fetchVisitors();
+        console.log('✅ Visitor list refreshed');
+        
+        setPendingScanData(null);
+        setVerifiedConjugal(false);
+        
+        // Show success modal instead of immediate unlock
+        setSuccessModalData({
+          type: 'time_in',
+          message: 'Successful time in!',
+          visitorData: {
+            visitor_name: pendingScanData?.visitor_name,
+            pdl_name: pendingScanData?.pdl_name,
+            cell: pendingScanData?.cell,
+            purpose: purpose
+          }
+        });
+        setShowSuccessModal(true);
+        // Keep scanner locked until user clicks OK
+        return; // Return early to prevent unlocking immediately
       } else if (action === 'already_timed_out') {
         console.warn('⚠️ Visitor already timed out');
         showToast('This visitor has already timed out.', 'error');
+        setPendingScanData(null);
+        setVerifiedConjugal(false);
+        // Unlock after error
+        setTimeout(() => {
+          setScanLocked(false);
+          console.log('🔓 Scan unlocked after error');
+        }, 1000);
       } else {
         console.log('✅ Scan recorded!');
         showToast('Scan recorded!', 'success');
+        await fetchVisitors();
+        console.log('✅ Visitor list refreshed');
+        
+        setPendingScanData(null);
+        setVerifiedConjugal(false);
+        // Unlock scanning after a short cooldown for other actions
+        setTimeout(() => {
+          setScanLocked(false);
+          console.log('🔓 Scan unlocked after cooldown');
+        }, 2000);
       }
-
-      await fetchVisitors();
-      console.log('✅ Visitor list refreshed');
     } catch (error) {
       console.error('❌ Error adding scanned visitor:', error);
       showToast('Error adding scanned visitor', 'error');
+      setPendingScanData(null);
+      setVerifiedConjugal(false);
+      // Unlock after error
+      setTimeout(() => {
+        setScanLocked(false);
+        console.log('🔓 Scan unlocked after error');
+      }, 1000);
     }
-
-    setPendingScanData(null);
-    setVerifiedConjugal(false);
-    // Unlock scanning after a short cooldown to avoid immediate re-trigger (for time_in and other actions)
-    setTimeout(() => {
-      setScanLocked(false);
-      console.log('🔓 Scan unlocked after cooldown');
-    }, 2000);
   };
 
   const handleRowClick = (id) => {
@@ -1474,6 +1537,187 @@ const Dashboard = () => {
               </form>
             </div>
           </Modal>
+        )}
+
+        {/* Success Confirmation Modal */}
+        {showSuccessModal && ReactDOM.createPortal(
+          <div className="common-modal" onClick={(e) => {
+            // Don't allow closing by clicking outside - must click OK
+            e.stopPropagation();
+          }} style={{ zIndex: 10000 }}>
+            <div className="common-modal-content" onClick={e => e.stopPropagation()} style={{
+              maxWidth: isMobile ? '95%' : '500px',
+              width: '100%',
+              padding: isMobile ? '20px' : '32px',
+              textAlign: 'center'
+            }}>
+              {/* Success Icon */}
+              <div style={{
+                width: isMobile ? '64px' : '80px',
+                height: isMobile ? '64px' : '80px',
+                margin: '0 auto 24px',
+                borderRadius: '50%',
+                background: successModalData.type === 'time_out' 
+                  ? 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)'
+                  : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)'
+              }}>
+                <svg 
+                  width={isMobile ? "32" : "40"} 
+                  height={isMobile ? "32" : "40"} 
+                  viewBox="0 0 24 24" 
+                  fill="none" 
+                  stroke="white" 
+                  strokeWidth="3" 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round"
+                >
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                  <polyline points="22 4 12 14.01 9 11.01"/>
+                </svg>
+              </div>
+
+              {/* Success Message */}
+              <h3 style={{ 
+                margin: '0 0 20px 0', 
+                fontSize: isMobile ? '20px' : '24px', 
+                fontWeight: '700',
+                color: '#111827'
+              }}>
+                {successModalData.message}
+              </h3>
+
+              {/* Visitor Details */}
+              {successModalData.visitorData && (
+                <div style={{
+                  background: '#f8fafc',
+                  padding: isMobile ? '16px' : '20px',
+                  borderRadius: '12px',
+                  marginBottom: '24px',
+                  border: '1px solid #e2e8f0'
+                }}>
+                  <div style={{ 
+                    display: 'grid', 
+                    gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)',
+                    gap: '12px',
+                    textAlign: 'left'
+                  }}>
+                    <div>
+                      <div style={{ fontSize: isMobile ? '11px' : '12px', color: '#64748b', fontWeight: '600', textTransform: 'uppercase', marginBottom: '4px' }}>
+                        Visitor
+                      </div>
+                      <div style={{ fontSize: isMobile ? '14px' : '15px', color: '#0f172a', fontWeight: '500' }}>
+                        {capitalizeWords(successModalData.visitorData.visitor_name)}
+                      </div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: isMobile ? '11px' : '12px', color: '#64748b', fontWeight: '600', textTransform: 'uppercase', marginBottom: '4px' }}>
+                        PDL
+                      </div>
+                      <div style={{ fontSize: isMobile ? '14px' : '15px', color: '#0f172a', fontWeight: '500' }}>
+                        {capitalizeWords(successModalData.visitorData.pdl_name)}
+                      </div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: isMobile ? '11px' : '12px', color: '#64748b', fontWeight: '600', textTransform: 'uppercase', marginBottom: '4px' }}>
+                        Cell
+                      </div>
+                      <div style={{ fontSize: isMobile ? '14px' : '15px', color: '#0f172a', fontWeight: '500' }}>
+                        {capitalizeWords(successModalData.visitorData.cell)}
+                      </div>
+                    </div>
+                    {successModalData.visitorData.purpose && (
+                      <div>
+                        <div style={{ fontSize: isMobile ? '11px' : '12px', color: '#64748b', fontWeight: '600', textTransform: 'uppercase', marginBottom: '4px' }}>
+                          Purpose
+                        </div>
+                        <div style={{ fontSize: isMobile ? '14px' : '15px', color: '#0f172a', fontWeight: '500' }}>
+                          {capitalizeWords(successModalData.visitorData.purpose)}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Action Type Badge */}
+              <div style={{
+                display: 'inline-block',
+                padding: '6px 16px',
+                borderRadius: '20px',
+                fontSize: isMobile ? '12px' : '13px',
+                fontWeight: '600',
+                marginBottom: '24px',
+                background: successModalData.type === 'time_out' 
+                  ? 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)'
+                  : 'linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%)',
+                color: successModalData.type === 'time_out' ? '#92400e' : '#065f46',
+                border: successModalData.type === 'time_out' 
+                  ? '1px solid #fcd34d'
+                  : '1px solid #6ee7b7'
+              }}>
+                {successModalData.type === 'time_out' ? '⏰ Time Out' : '✅ Time In'}
+              </div>
+
+              {/* OK Button */}
+              <button 
+                type="button" 
+                onClick={() => {
+                  setShowSuccessModal(false);
+                  setSuccessModalData({ type: '', message: '', visitorData: null });
+                  // Unlock scanner after user confirms
+                  setTimeout(() => {
+                    setScanLocked(false);
+                    console.log('🔓 Scan unlocked after user confirmed success');
+                  }, 500);
+                }}
+                style={{
+                  background: 'linear-gradient(135deg, #4b5563 0%, #374151 100%)',
+                  color: 'white',
+                  border: 'none',
+                  padding: isMobile ? '14px 32px' : '12px 40px',
+                  borderRadius: '10px',
+                  fontSize: isMobile ? '15px' : '16px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+                  width: isMobile ? '100%' : 'auto',
+                  minHeight: isMobile ? '48px' : 'auto'
+                }}
+                onMouseEnter={(e) => {
+                  if (!isMobile) {
+                    e.target.style.transform = 'translateY(-2px)';
+                    e.target.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!isMobile) {
+                    e.target.style.transform = 'translateY(0)';
+                    e.target.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.1)';
+                  }
+                }}
+                onTouchStart={(e) => {
+                  if (isMobile) {
+                    e.target.style.transform = 'scale(0.98)';
+                  }
+                }}
+                onTouchEnd={(e) => {
+                  if (isMobile) {
+                    setTimeout(() => {
+                      e.target.style.transform = 'scale(1)';
+                    }, 150);
+                  }
+                }}
+              >
+                OK
+              </button>
+            </div>
+          </div>,
+          document.body
         )}
 
         {/* Schedule Modal */}
