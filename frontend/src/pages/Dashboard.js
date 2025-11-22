@@ -143,10 +143,12 @@ const Dashboard = () => {
   const currentDateString = getDateString(new Date().toISOString());
 
   const showToast = useCallback((message, type = 'success') => {
+    console.log('showToast called:', { message, type, timestamp: new Date().toISOString() });
     setToast({ show: true, message, type });
     setTimeout(() => {
+      console.log('Toast hiding after 4 seconds');
       setToast({ show: false, message: '', type: '' });
-    }, 3000);
+    }, 4000); // Increased to 4 seconds for better visibility
   }, []);
 
   const fetchVisitors = useCallback(async () => {
@@ -295,12 +297,29 @@ const Dashboard = () => {
 
   // Helper function to check if a cell number string matches any scheduled cell
   const isCellNumberScheduled = (cellNumberString) => {
+    console.log('Checking if cell is scheduled:', cellNumberString);
+    console.log('Available cells:', availableCells);
+    console.log('Scheduled cell IDs:', Array.from(scheduledCells));
+    
     // Find the cell by matching the cell number string
     const cell = availableCells.find(c => {
       const cellDisplay = c.cell_name ? `${c.cell_name} - ${c.cell_number}` : c.cell_number;
-      return cellDisplay === cellNumberString || c.cell_number === cellNumberString;
+      // Match against full display, just the cell number, or case-insensitive variants
+      const matches = 
+        cellDisplay.toLowerCase() === cellNumberString.toLowerCase() || 
+        c.cell_number.toLowerCase() === cellNumberString.toLowerCase() ||
+        String(c.cell_number) === String(cellNumberString);
+      
+      if (matches) {
+        console.log('Found matching cell:', c);
+      }
+      return matches;
     });
-    return cell ? scheduledCells.has(cell.id) : false;
+    
+    const isScheduled = cell ? scheduledCells.has(cell.id) : false;
+    console.log('Cell found:', cell, 'Is scheduled:', isScheduled);
+    
+    return isScheduled;
   };
 
   // QR File Upload Handler
@@ -610,6 +629,15 @@ const Dashboard = () => {
       alert('Failed to delete some visitors.');
     }
   };
+
+  // Debug: Log toast state changes
+  React.useEffect(() => {
+    if (toast.show) {
+      console.log('Toast is now visible:', toast);
+    } else {
+      console.log('Toast is now hidden');
+    }
+  }, [toast.show, toast.message, toast.type]);
 
   return (
     <div>

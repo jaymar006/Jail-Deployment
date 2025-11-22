@@ -47,9 +47,9 @@ const QRCodeScanner = ({ onScan, resetTrigger }) => {
 
     startAttemptRef.current = true;
 
-    // Optimize config for mobile devices
+    // Optimize config for mobile devices with 2-second scan interval
     const config = { 
-      fps: 10, 
+      fps: 0.5, // 0.5 FPS = 1 scan every 2 seconds (2000ms interval)
       qrbox: function(viewfinderWidth, viewfinderHeight) {
         // Make qrbox responsive to the viewfinder size
         const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
