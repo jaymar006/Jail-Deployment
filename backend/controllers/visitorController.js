@@ -232,10 +232,45 @@ exports.recordScan = async (req, res) => {
 exports.getScannedVisitors = async (req, res) => {
   try {
     const scannedVisitors = await ScannedVisitor.getAll();
-    res.json(scannedVisitors);
+    
+    // Format timestamps for frontend display
+    // PostgreSQL returns TIMESTAMP as Date objects which get serialized to ISO strings
+    // We need to ensure they're sent in a format that preserves the local time
+    const formattedVisitors = scannedVisitors.map(visitor => ({
+      ...visitor,
+      time_in: visitor.time_in ? formatTimestampForClient(visitor.time_in) : null,
+      time_out: visitor.time_out ? formatTimestampForClient(visitor.time_out) : null,
+      scan_date: visitor.scan_date ? formatTimestampForClient(visitor.scan_date) : null
+    }));
+    
+    res.json(formattedVisitors);
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch scanned visitors' });
   }
+};
+
+// Helper to format timestamp for client
+const formatTimestampForClient = (timestamp) => {
+  if (!timestamp) return null;
+  
+  // If it's already a string in 'YYYY-MM-DD HH:MM:SS' format, return as-is
+  if (typeof timestamp === 'string' && timestamp.match(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/)) {
+    return timestamp;
+  }
+  
+  // If it's a Date object (from PostgreSQL), format it without timezone conversion
+  if (timestamp instanceof Date) {
+    const pad = (n) => String(n).padStart(2, '0');
+    const year = timestamp.getFullYear();
+    const month = pad(timestamp.getMonth() + 1);
+    const day = pad(timestamp.getDate());
+    const hour = pad(timestamp.getHours());
+    const minute = pad(timestamp.getMinutes());
+    const second = pad(timestamp.getSeconds());
+    return `${year}-${month}-${day} ${hour}:${minute}:${second}`;
+  }
+  
+  return timestamp;
 };
 
 exports.addScannedVisitor = async (req, res) => {

@@ -99,14 +99,23 @@ const Dashboard = () => {
   const [isScanningFile, setIsScanningFile] = useState(false);
   const fileInputRef = useRef(null);
 
-  const formatTime = (isoString) => {
-    if (!isoString) return '';
-    const date = new Date(isoString);
-    return date.toLocaleTimeString('en-PH', {
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
-    });
+  const formatTime = (timestamp) => {
+    if (!timestamp) return '';
+    
+    // Backend sends timestamps in 'YYYY-MM-DD HH:MM:SS' format (Asia/Manila timezone)
+    // Simply extract and display the time portion
+    const dateStr = String(timestamp).trim();
+    
+    // Extract time portion (HH:MM:SS) from 'YYYY-MM-DD HH:MM:SS' format
+    if (dateStr.includes(' ')) {
+      const parts = dateStr.split(' ');
+      if (parts.length >= 2) {
+        return parts[1].substring(0, 8); // Return HH:MM:SS
+      }
+    }
+    
+    // Fallback: if timestamp is in different format
+    return dateStr;
   };
 
 
@@ -389,7 +398,10 @@ const Dashboard = () => {
 
   const handleScan = async (data) => {
     if (!data) return;
-    if (scanLocked) return;
+    if (scanLocked) {
+      console.log('Scan locked, ignoring scan');
+      return;
+    }
 
     const regex = /\[(.*?)\]/g;
     const matches = [...data.matchAll(regex)].map(match => match[1]);
@@ -419,13 +431,15 @@ const Dashboard = () => {
     const sig = `${visitorName}|${pdlName}|${cell}`;
     const nowMs = Date.now();
     if (lastScanSig === sig && nowMs - lastScanAt < 5000) {
+      console.log('Duplicate scan within 5 seconds, ignoring');
       return; // ignore duplicate immediately after previous scan
     }
     setLastScanSig(sig);
     setLastScanAt(nowMs);
 
-    // Lock scanning to prevent double fires from the same QR frame
+    // Lock scanning IMMEDIATELY to prevent double fires from the same QR frame
     setScanLocked(true);
+    console.log('Scan locked');
 
     // Preflight: ask backend if this is a time_in or time_out
     try {
@@ -850,7 +864,12 @@ const Dashboard = () => {
 
         {/* Purpose Selection Modal */}
         {showPurposeModal && (
-          <Modal onClose={() => setShowPurposeModal(false)}>
+          <Modal onClose={() => {
+            setShowPurposeModal(false);
+            setPendingScanData(null);
+            setScanLocked(false);
+            console.log('Purpose modal closed, scan unlocked');
+          }}>
             <div className="purpose-modal" style={{ maxWidth: '600px' }}>
               {/* Header Section */}
               <div style={{ textAlign: 'center', marginBottom: '32px' }}>

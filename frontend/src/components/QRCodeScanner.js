@@ -13,12 +13,14 @@ const QRCodeScanner = ({ onScan, resetTrigger }) => {
   const startScanner = useCallback(async (isRetry = false) => {
     // Prevent multiple simultaneous start attempts
     if (startAttemptRef.current) {
+      console.log('QRScanner: Start attempt already in progress, skipping');
       return;
     }
     
     const element = document.getElementById(qrCodeRegionId);
     if (!element) {
       setError('QR code scanner element not found');
+      startAttemptRef.current = false;
       return;
     }
 
@@ -32,48 +34,70 @@ const QRCodeScanner = ({ onScan, resetTrigger }) => {
         const state = html5QrcodeScannerRef.current.getState();
         if (state === Html5Qrcode.STATE.STARTED) {
           // Scanner is already running, no need to start again
+          console.log('QRScanner: Already running');
           setError(null);
+          startAttemptRef.current = false;
           return;
         }
       } catch (e) {
         // If we can't check state, continue with starting
+        console.log('QRScanner: Could not check state, continuing');
       }
     }
 
     startAttemptRef.current = true;
 
-    const config = { fps: 10, qrbox: null };
+    // Optimize config for mobile devices
+    const config = { 
+      fps: 10, 
+      qrbox: { width: 250, height: 250 }, // Add qrbox for better mobile focus
+      aspectRatio: 1.0 // Square aspect ratio works better on mobile
+    };
 
     try {
       // Check if camera is available before starting
       const cameras = await Html5Qrcode.getCameras();
       if (!cameras || cameras.length === 0) {
         setError('No camera found. Please connect a camera to use QR scanning.');
+        startAttemptRef.current = false;
         return;
       }
 
+      console.log('QRScanner: Starting camera...');
+      
       await html5QrcodeScannerRef.current.start(
         { facingMode: 'environment' },
         config,
         (decodedText) => {
+          // Only process scan if scanner is running and we haven't recently processed this QR
           if (isScannerRunningRef.current) {
-            // Don't set to false here - let the scanner continue running
+            console.log('QRScanner: QR detected:', decodedText.substring(0, 50) + '...');
             onScan(decodedText);
           }
+        },
+        (errorMessage) => {
+          // Scan error callback - don't log every frame error
+          // This is called for every frame that doesn't contain a QR code
+          // We silently ignore these to avoid console spam
         }
       );
+      
       isScannerRunningRef.current = true;
       setError(null);
-      setRetryCount(0); // Reset retry count on successful start
+      setRetryCount(0);
       setIsRetrying(false);
       startAttemptRef.current = false;
+      console.log('QRScanner: Camera started successfully');
     } catch (err) {
+      console.error('QRScanner: Start error:', err);
+      
       // Only show error if it's not a scanner already running error
       if (err.message && err.message.includes('Scanner is already running')) {
         // Scanner is already running, which is fine
         isScannerRunningRef.current = true;
         setError(null);
         startAttemptRef.current = false;
+        console.log('QRScanner: Already running (caught in error)');
         return;
       }
       
@@ -115,28 +139,41 @@ const QRCodeScanner = ({ onScan, resetTrigger }) => {
         let isRunning = false;
         
         if (html5QrcodeScannerRef.current.getState && Html5Qrcode.STATE) {
-          isRunning = html5QrcodeScannerRef.current.getState() === Html5Qrcode.STATE.STARTED;
+          try {
+            isRunning = html5QrcodeScannerRef.current.getState() === Html5Qrcode.STATE.STARTED;
+          } catch (stateErr) {
+            // Fallback: use our internal state tracking
+            isRunning = isScannerRunningRef.current;
+          }
         } else {
           // Fallback: use our internal state tracking
           isRunning = isScannerRunningRef.current;
         }
         
         if (isRunning) {
+          console.log('QRScanner: Stopping camera...');
           await html5QrcodeScannerRef.current.stop();
+          console.log('QRScanner: Camera stopped');
         }
         isScannerRunningRef.current = false;
+        startAttemptRef.current = false; // Reset start attempt flag
 
-        // Clear the scanner region DOM
+        // Clear the scanner region DOM to prevent visual artifacts
         const element = document.getElementById(qrCodeRegionId);
         if (element) element.innerHTML = '';
       } catch (err) {
         // Only log error if it's not the common "scanner not running" error
         if (!err.message || !err.message.includes('Cannot stop, scanner is not running')) {
-          console.error('Failed to stop scanner:', err);
+          console.error('QRScanner: Stop error:', err);
         }
         // Always reset the running state even if stop fails
         isScannerRunningRef.current = false;
+        startAttemptRef.current = false;
       }
+    } else {
+      // No scanner instance, just reset states
+      isScannerRunningRef.current = false;
+      startAttemptRef.current = false;
     }
   }, []);
 
@@ -156,21 +193,36 @@ const QRCodeScanner = ({ onScan, resetTrigger }) => {
   }, [isRetrying, stopScanner, startScanner]);
 
   useEffect(() => {
-    startScanner();
+    console.log('QRScanner: Component mounted, starting scanner');
+    let mounted = true;
+    
+    const initScanner = async () => {
+      if (mounted) {
+        await startScanner();
+      }
+    };
+    
+    initScanner();
 
     return () => {
+      console.log('QRScanner: Component unmounting, stopping scanner');
+      mounted = false;
       stopScanner();
     };
-  }, [startScanner, stopScanner]);
+  }, []); // Empty deps to run only once on mount/unmount
 
   useEffect(() => {
-    if (resetTrigger !== null) {
+    if (resetTrigger !== null && resetTrigger !== undefined) {
+      console.log('QRScanner: Reset trigger activated');
       (async () => {
         await stopScanner();
-        await startScanner();
+        // Wait a bit before restarting to ensure camera is released
+        setTimeout(async () => {
+          await startScanner();
+        }, 500);
       })();
     }
-  }, [resetTrigger, startScanner, stopScanner]);
+  }, [resetTrigger]); // Only depend on resetTrigger to avoid infinite loops
 
   return (
     <div style={{ width: '100%', maxWidth: '320px', margin: '0 auto' }}>
