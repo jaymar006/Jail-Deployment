@@ -781,7 +781,7 @@ const Dashboard = () => {
         return;
       }
 
-      // STEP 3: Time in - show purpose modal with exact message
+      // STEP 3: Time in - check if visitor is verified for conjugal visit
       // BUT: Don't show if we just timed out recently (within 5 seconds)
       // This prevents the modal from appearing immediately after time-out
       const checkTimeMs = Date.now();
@@ -792,6 +792,62 @@ const Dashboard = () => {
         return;
       }
       
+      // If visitor is NOT verified for conjugal visit, proceed directly with "normal" purpose
+      if (!conjugalVerified) {
+        logger.debug('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        logger.debug('STEP 3: Visitor NOT verified for conjugal - proceeding directly with NORMAL visit');
+        logger.debug('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        
+        // Automatically proceed with "normal" purpose without showing modal
+        try {
+          logger.debug('Sending time_in request to backend with "normal" purpose...');
+          const response = await api.post('/api/scanned_visitors', {
+            visitor_id: visitorId,
+            device_time: new Date().toISOString(),
+            purpose: 'normal'
+          });
+
+          const action = response?.data?.action;
+          logger.debug('Backend response:', { action });
+          
+          if (action === 'time_in') {
+            logger.debug('Time in successful!');
+            await fetchVisitors();
+            logger.debug('Visitor list refreshed');
+            
+            // Get visitor details from response
+            const responseVisitorName = response?.data?.visitor_name || visitorName;
+            const responsePdlName = response?.data?.pdl_name || pdlName;
+            const responseCell = response?.data?.cell || cell;
+            
+            // Show success modal with exact message
+            setSuccessModalData({
+              type: 'time_in',
+              message: 'You have successfully timed in.',
+              visitorData: {
+                visitor_name: responseVisitorName,
+                pdl_name: responsePdlName,
+                cell: responseCell,
+                purpose: 'normal'
+              }
+            });
+            setShowSuccessModal(true);
+            // Keep scanner locked until user clicks OK
+            return;
+          } else {
+            logger.warn('Unexpected action from backend:', action);
+            showToast('Unexpected response from server', 'error');
+            setTimeout(() => setScanLocked(false), 1000);
+          }
+        } catch (error) {
+          logger.error('Error adding scanned visitor (auto normal):', error);
+          showToast('Error adding scanned visitor', 'error');
+          setTimeout(() => setScanLocked(false), 1000);
+        }
+        return; // Exit early - don't show purpose modal
+      }
+      
+      // If visitor IS verified for conjugal visit, show purpose modal to let them choose
       // Double-check: Ensure purpose modal is not already open
       if (showPurposeModal) {
         logger.debug('Purpose modal already open, preventing duplicate');
@@ -800,9 +856,9 @@ const Dashboard = () => {
       }
       
       logger.debug('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      logger.debug('STEP 3: Showing purpose selection modal (TIME IN)');
+      logger.debug('STEP 3: Showing purpose selection modal (TIME IN) - Visitor verified for conjugal');
       logger.debug('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      logger.debug('Visitor has no active session - showing visit type selection');
+      logger.debug('Visitor has no active session and is verified for conjugal - showing visit type selection');
       
       setPendingScanData({
         visitor_id: visitorId,
@@ -811,7 +867,7 @@ const Dashboard = () => {
         cell: cell
       });
       setShowPurposeModal(true);
-      logger.debug('Purpose modal opened');
+      logger.debug('Purpose modal opened (conjugal verified visitor)');
     } catch (e) {
       logger.error('Preflight scan error:', e);
       showToast('Scan preflight failed', 'error');
