@@ -226,7 +226,9 @@ const VisitorPage = () => {
       relationship: normalizeRelationship(visitorForm.relationship),
       address: normalizeAddress(visitorForm.address),
       contact_number: contact,
-      age: clampAge(visitorForm.age)
+      age: clampAge(visitorForm.age),
+      has_contact_number: hasNumber, // Explicitly include has_contact_number
+      verified_conjugal: !!visitorForm.verified_conjugal // Explicitly include verified_conjugal as boolean
     };
     try {
       await api.put(`/api/visitors/${editingVisitorId}`, payload);
@@ -272,6 +274,10 @@ const VisitorPage = () => {
   };
 
   const openEditModal = (visitor) => {
+    // Check if contact_number is 'N/A' or empty to determine has_contact_number
+    const contactNum = visitor.contact_number || '';
+    const hasContact = contactNum.trim() !== '' && contactNum.trim().toUpperCase() !== 'N/A';
+    
     setVisitorForm({
       name: visitor.name || '',
       relationship: visitor.relationship || '',
@@ -279,9 +285,9 @@ const VisitorPage = () => {
       address: visitor.address || '',
       valid_id: visitor.valid_id || '',
       date_of_application: formatDateForInput(visitor.date_of_application),
-      contact_number: visitor.contact_number || '',
-      has_contact_number: !!(visitor.contact_number && String(visitor.contact_number).trim() !== ''),
-      verified_conjugal: !!visitor.verified_conjugal
+      contact_number: hasContact ? contactNum : '', // Only set contact if it's not N/A
+      has_contact_number: hasContact, // Properly check if contact exists and is not N/A
+      verified_conjugal: !!visitor.verified_conjugal // Ensure boolean conversion
     });
     setEditingVisitorId(visitor.id);
     setShowEditModal(true);

@@ -653,8 +653,9 @@ const Dashboard = () => {
     // Debounce same QR contents for a short window
     const sig = `${visitorName}|${pdlName}|${cell}`;
     const nowMs = Date.now();
-    if (lastScanSig === sig && nowMs - lastScanAt < 5000) {
-      console.log('⚠️ Duplicate scan within 5 seconds, ignoring');
+    // Extended debounce window: 8 seconds to prevent immediate re-scanning after time-out
+    if (lastScanSig === sig && nowMs - lastScanAt < 8000) {
+      console.log('⚠️ Duplicate scan within 8 seconds, ignoring');
       return; // ignore duplicate immediately after previous scan
     }
     setLastScanSig(sig);
@@ -1669,9 +1670,10 @@ const Dashboard = () => {
                   setShowSuccessModal(false);
                   setSuccessModalData({ type: '', message: '', visitorData: null });
                   
-                  // Clear last scan signature to prevent immediate re-scanning of the same QR
-                  setLastScanSig(null);
-                  setLastScanAt(0);
+                  // DON'T clear last scan signature - keep it to prevent immediate re-scanning
+                  // Instead, update the timestamp to extend the debounce window
+                  const nowMs = Date.now();
+                  setLastScanAt(nowMs);
                   
                   // Add longer cooldown after user confirms (3 seconds) to prevent immediate re-scan
                   setTimeout(() => {
