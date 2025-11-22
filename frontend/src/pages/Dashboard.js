@@ -346,10 +346,9 @@ const Dashboard = () => {
     const extractedCellNumber = extractCellNumber(cellNumberString);
     console.log('🔢 Extracted cell number:', `"${extractedCellNumber}"`);
     
-    // Find the cell by matching ONLY the cell number (ignoring names)
-    // This makes it compatible with both old QR codes (just "1") 
-    // and new QR codes ("Cell - 1", "Quarantine - 1")
-    const cell = availableCells.find(c => {
+    // Find ALL cells that match the cell number (there might be multiple with same number but different names)
+    // Examples: "Cell - 1" and "Quarantine - 1" both have cell_number = "1"
+    const matchingCells = availableCells.filter(c => {
       const cellNum = String(c.cell_number).trim();
       
       // Match if the extracted number equals the cell number in database
@@ -359,25 +358,32 @@ const Dashboard = () => {
         cellNum.toLowerCase() === extractedCellNumber.toLowerCase() ||
         parseInt(cellNum, 10) === parseInt(extractedCellNumber, 10);
       
-      console.log(`  🔍 Cell ${c.id} (DB:"${cellNum}") vs QR:"${extractedCellNumber}" → ${matches ? '✅ MATCH' : '❌'}`);
+      console.log(`  🔍 Cell ${c.id} (${c.cell_name || 'no name'} - ${cellNum}) vs QR:"${extractedCellNumber}" → ${matches ? '✅ MATCH' : '❌'}`);
       
       return matches;
     });
     
-    const isScheduled = cell ? scheduledCells.has(cell.id) : false;
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log('🎯 Cell found:', cell ? `ID ${cell.id} (${cell.cell_number})` : 'undefined');
-    console.log('📅 Is scheduled:', isScheduled);
+    console.log(`📊 Found ${matchingCells.length} cell(s) with number "${extractedCellNumber}"`);
     
-    if (!cell) {
+    // Check if ANY of the matching cells are scheduled
+    const scheduledMatchingCells = matchingCells.filter(c => scheduledCells.has(c.id));
+    const isScheduled = scheduledMatchingCells.length > 0;
+    
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    if (matchingCells.length === 0) {
       console.error(`❌ NO CELL MATCHED!`);
       console.error(`   QR had: "${cellNumberString}"`);
       console.error(`   Extracted: "${extractedCellNumber}"`);
       console.error(`   Available cell numbers in DB: ${availableCells.map(c => c.cell_number).join(', ')}`);
     } else if (!isScheduled) {
-      console.warn(`⚠️ Cell ${cell.id} found but NOT scheduled!`);
+      console.warn(`⚠️ Found ${matchingCells.length} cell(s) but NONE are scheduled!`);
+      console.warn(`   Matching cells: ${matchingCells.map(c => `ID ${c.id} (${c.cell_name || 'no name'} - ${c.cell_number})`).join(', ')}`);
+      console.warn(`   Scheduled cell IDs: ${Array.from(scheduledCells).join(', ')}`);
     } else {
-      console.log(`✅ SUCCESS! Cell ${cell.id} is scheduled and ready for visits.`);
+      console.log(`✅ SUCCESS! Found ${scheduledMatchingCells.length} scheduled cell(s):`);
+      scheduledMatchingCells.forEach(c => {
+        console.log(`   ✅ Cell ID ${c.id} (${c.cell_name || 'no name'} - ${c.cell_number}) is scheduled`);
+      });
     }
     
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
@@ -514,7 +520,8 @@ const Dashboard = () => {
     // Check if the cell is scheduled for visits
     if (!isCellNumberScheduled(cell)) {
       console.error('❌ Cell not scheduled - stopping scan process');
-      showToast(`Cell ${cell} is not scheduled for visits today. Please contact the administrator.`, 'error');
+      // Show cell value without adding "Cell" prefix (it might already be in the format "Cell - 1")
+      showToast(`${cell} is not scheduled for visits today. Please contact the administrator.`, 'error');
       // IMPORTANT: Don't lock the scanner on scheduling error - allow retry
       return;
     }

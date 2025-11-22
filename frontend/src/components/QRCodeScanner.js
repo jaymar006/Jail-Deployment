@@ -8,6 +8,7 @@ const QRCodeScanner = ({ onScan, resetTrigger }) => {
   const [error, setError] = useState(null);
   const [retryCount, setRetryCount] = useState(0);
   const [isRetrying, setIsRetrying] = useState(false);
+  const [isRunning, setIsRunning] = useState(false); // State to track if scanner is running (for re-renders)
   const startAttemptRef = useRef(false);
 
   const startScanner = useCallback(async (isRetry = false) => {
@@ -36,6 +37,7 @@ const QRCodeScanner = ({ onScan, resetTrigger }) => {
         if (state === Html5Qrcode.STATE.STARTED || state === Html5Qrcode.STATE.SCANNING) {
           console.log('QRScanner: Already running or scanning');
           isScannerRunningRef.current = true;
+          setIsRunning(true);
           setError(null);
           startAttemptRef.current = false;
           return;
@@ -102,6 +104,7 @@ const QRCodeScanner = ({ onScan, resetTrigger }) => {
       );
       
       isScannerRunningRef.current = true;
+      setIsRunning(true);
       setError(null);
       setRetryCount(0);
       setIsRetrying(false);
@@ -114,6 +117,7 @@ const QRCodeScanner = ({ onScan, resetTrigger }) => {
       if (err.message && err.message.includes('Scanner is already running')) {
         // Scanner is already running, which is fine
         isScannerRunningRef.current = true;
+        setIsRunning(true);
         setError(null);
         startAttemptRef.current = false;
         console.log('QRScanner: Already running (caught in error)');
@@ -139,6 +143,7 @@ const QRCodeScanner = ({ onScan, resetTrigger }) => {
       
       setError(errorMessage);
       isScannerRunningRef.current = false;
+      setIsRunning(false);
       startAttemptRef.current = false;
       
       // If this is a retry attempt, increment retry count
@@ -175,6 +180,7 @@ const QRCodeScanner = ({ onScan, resetTrigger }) => {
           console.log('QRScanner: Camera stopped');
         }
         isScannerRunningRef.current = false;
+        setIsRunning(false);
         startAttemptRef.current = false; // Reset start attempt flag
 
         // Clear the scanner region DOM to prevent visual artifacts
@@ -187,11 +193,13 @@ const QRCodeScanner = ({ onScan, resetTrigger }) => {
         }
         // Always reset the running state even if stop fails
         isScannerRunningRef.current = false;
+        setIsRunning(false);
         startAttemptRef.current = false;
       }
     } else {
       // No scanner instance, just reset states
       isScannerRunningRef.current = false;
+      setIsRunning(false);
       startAttemptRef.current = false;
     }
   }, []);
@@ -246,7 +254,8 @@ const QRCodeScanner = ({ onScan, resetTrigger }) => {
   return (
     <div style={{ width: '100%', maxWidth: '320px', margin: '0 auto' }}>
       <div id={qrCodeRegionId} style={{ width: '100%', maxWidth: '320px', height: '240px', minHeight: '200px' }} />
-      {error && (
+      {/* Only show error/retry button if there's an error AND scanner is NOT running */}
+      {error && !isRunning && (
         <div style={{ 
           marginTop: '12px', 
           textAlign: 'center',
