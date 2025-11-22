@@ -25,8 +25,21 @@ const QRCodeScanner = ({ onScan, resetTrigger }) => {
       return;
     }
 
-    if (!html5QrcodeScannerRef.current) {
+    // Always create a fresh instance on retry to avoid state issues
+    if (!html5QrcodeScannerRef.current || isRetry) {
+      // Clear any existing instance
+      if (html5QrcodeScannerRef.current) {
+        try {
+          const element = document.getElementById(qrCodeRegionId);
+          if (element) {
+            element.innerHTML = '';
+          }
+        } catch (e) {
+          console.log('QRScanner: Error clearing element:', e);
+        }
+      }
       html5QrcodeScannerRef.current = new Html5Qrcode(qrCodeRegionId);
+      console.log('QRScanner: Created new Html5Qrcode instance');
     }
 
     // Check if scanner is already running or in transition
@@ -77,6 +90,7 @@ const QRCodeScanner = ({ onScan, resetTrigger }) => {
       if (!cameras || cameras.length === 0) {
         setError('No camera found. Please connect a camera to use QR scanning.');
         startAttemptRef.current = false;
+        setIsRetrying(false);
         return;
       }
 
@@ -144,6 +158,7 @@ const QRCodeScanner = ({ onScan, resetTrigger }) => {
       isScannerRunningRef.current = false;
       setIsRunning(false);
       startAttemptRef.current = false;
+      setIsRetrying(false); // Reset retry flag on error so user can retry again
       
       // If this is a retry attempt, increment retry count
       if (isRetry) {
@@ -204,18 +219,88 @@ const QRCodeScanner = ({ onScan, resetTrigger }) => {
   }, []);
 
   const retryCamera = useCallback(async () => {
-    if (isRetrying) return;
+    if (isRetrying) {
+      console.log('QRScanner: Retry already in progress, skipping');
+      return;
+    }
     
+    console.log('QRScanner: Starting camera retry...');
     setIsRetrying(true);
     setError(null);
     
-    // Stop the current scanner first
-    await stopScanner();
-    
-    // Wait a bit before retrying
-    setTimeout(async () => {
-      await startScanner(true);
-    }, 1000);
+    try {
+      // Stop the current scanner first and wait for it to fully stop
+      await stopScanner();
+      
+      // Clear the scanner instance to force a fresh start
+      if (html5QrcodeScannerRef.current) {
+        try {
+          // Try to stop again to ensure it's fully stopped
+          if (html5QrcodeScannerRef.current.getState) {
+            const state = html5QrcodeScannerRef.current.getState();
+            if (state !== Html5Qrcode.STATE.NOT_STARTED) {
+              await html5QrcodeScannerRef.current.stop();
+            }
+          }
+        } catch (stopErr) {
+          console.log('QRScanner: Error during stop (may already be stopped):', stopErr.message);
+        }
+        
+        // Clear the scanner instance
+        html5QrcodeScannerRef.current = null;
+      }
+      
+      // Clear the DOM element
+      const element = document.getElementById(qrCodeRegionId);
+      if (element) {
+        element.innerHTML = '';
+      }
+      
+      // Reset all state flags
+      isScannerRunningRef.current = false;
+      setIsRunning(false);
+      startAttemptRef.current = false;
+      
+      // Wait longer on mobile to ensure camera is fully released (3 seconds for mobile)
+      // Mobile devices need more time to release camera resources
+      const waitTime = 3000;
+      console.log(`QRScanner: Waiting ${waitTime}ms before retrying (mobile-friendly delay)...`);
+      
+      await new Promise(resolve => setTimeout(resolve, waitTime));
+      
+      // Verify element still exists before starting
+      const elementAfterWait = document.getElementById(qrCodeRegionId);
+      if (!elementAfterWait) {
+        console.error('QRScanner: Element not found after wait, cannot retry');
+        setError('Scanner element not found. Please refresh the page.');
+        setIsRetrying(false);
+        return;
+      }
+      
+      // Now start fresh with a new instance
+      console.log('QRScanner: Attempting to start scanner after retry wait...');
+      
+      // Reset start attempt flag to allow new start
+      startAttemptRef.current = false;
+      
+      // Start the scanner
+      try {
+        await startScanner(true);
+        // Reset retry flag after successful start
+        setTimeout(() => {
+          setIsRetrying(false);
+          console.log('QRScanner: Retry process completed successfully');
+        }, 500);
+      } catch (startError) {
+        console.error('QRScanner: Failed to start after retry:', startError);
+        setError(startError.message || 'Failed to start camera after retry. Please try again.');
+        setIsRetrying(false);
+      }
+    } catch (retryError) {
+      console.error('QRScanner: Retry error:', retryError);
+      setError(retryError.message || 'Failed to retry camera. Please refresh the page.');
+      setIsRetrying(false);
+    }
   }, [isRetrying, stopScanner, startScanner]);
 
   useEffect(() => {

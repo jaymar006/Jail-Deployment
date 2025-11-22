@@ -54,6 +54,8 @@ const Dashboard = () => {
   const [scanLocked, setScanLocked] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [successModalData, setSuccessModalData] = useState({ type: '', message: '', visitorData: null });
+  const [lockoutUntil, setLockoutUntil] = useState(null); // Timestamp when lockout expires
+  const [lockoutMessage, setLockoutMessage] = useState('');
 
   // Prevent body scroll when success modal is open
   useEffect(() => {
@@ -69,6 +71,24 @@ const Dashboard = () => {
       };
     }
   }, [showSuccessModal]);
+
+  // Update lockout message countdown
+  useEffect(() => {
+    if (lockoutUntil && Date.now() < lockoutUntil) {
+      const interval = setInterval(() => {
+        const remaining = Math.ceil((lockoutUntil - Date.now()) / 1000);
+        if (remaining > 0) {
+          setLockoutMessage(`Please wait ${remaining} second${remaining !== 1 ? 's' : ''} before scanning again.`);
+        } else {
+          setLockoutUntil(null);
+          setLockoutMessage('');
+          clearInterval(interval);
+        }
+      }, 1000);
+      
+      return () => clearInterval(interval);
+    }
+  }, [lockoutUntil]);
   const [lastScanSig, setLastScanSig] = useState(null);
   const [lastScanAt, setLastScanAt] = useState(0);
   const [selectedDeleteIds, setSelectedDeleteIds] = useState([]);
@@ -576,6 +596,21 @@ const Dashboard = () => {
       return;
     }
     
+    // Check if scanner is in lockout period (5 seconds after time-out)
+    if (lockoutUntil && Date.now() < lockoutUntil) {
+      const remainingSeconds = Math.ceil((lockoutUntil - Date.now()) / 1000);
+      setLockoutMessage(`Please wait ${remainingSeconds} second${remainingSeconds !== 1 ? 's' : ''} before scanning again.`);
+      showToast(`Please wait ${remainingSeconds} second${remainingSeconds !== 1 ? 's' : ''} before scanning again.`, 'error');
+      console.log(`🔒 Scanner in lockout period. Remaining: ${remainingSeconds} seconds`);
+      return;
+    }
+    
+    // Clear lockout message if lockout period has expired
+    if (lockoutUntil && Date.now() >= lockoutUntil) {
+      setLockoutUntil(null);
+      setLockoutMessage('');
+    }
+    
     if (scanLocked) {
       console.log('🔒 Scan locked, ignoring scan. Current scanLocked state:', scanLocked);
       return;
@@ -709,10 +744,10 @@ const Dashboard = () => {
         console.log('✅ Time out successful!');
         await fetchVisitors();
         
-        // Show success modal instead of immediate unlock
+        // Show success modal with exact message
         setSuccessModalData({
           type: 'time_out',
-          message: 'Successful time out!',
+          message: 'You have successfully timed out.',
           visitorData: {
             visitor_name: visitorName,
             pdl_name: pdlName,
@@ -724,12 +759,11 @@ const Dashboard = () => {
         return;
       }
 
-      // STEP 4: Time in - show purpose modal (normal or conjugal)
+      // STEP 4: Time in - show purpose modal with exact message
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       console.log('📝 STEP 4: Showing purpose selection modal (TIME IN)');
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      console.log('   Visitor has no existing record or already timed out');
-      console.log('   Action needed: Select visit purpose (normal/conjugal)');
+      console.log('   Visitor has no active session - showing visit type selection');
       
       setPendingScanData({
         visitor_name: visitorName,
@@ -779,10 +813,10 @@ const Dashboard = () => {
         setPendingScanData(null);
         setVerifiedConjugal(false);
         
-        // Show success modal instead of immediate unlock
+        // Show success modal with exact message
         setSuccessModalData({
           type: 'time_out',
-          message: 'Successful time out!',
+          message: 'You have successfully timed out.',
           visitorData: {
             visitor_name: pendingScanData?.visitor_name,
             pdl_name: pendingScanData?.pdl_name,
@@ -800,10 +834,10 @@ const Dashboard = () => {
         setPendingScanData(null);
         setVerifiedConjugal(false);
         
-        // Show success modal instead of immediate unlock
+        // Show success modal with exact message
         setSuccessModalData({
           type: 'time_in',
-          message: 'Successful time in!',
+          message: 'You have successfully timed in.',
           visitorData: {
             visitor_name: pendingScanData?.visitor_name,
             pdl_name: pendingScanData?.pdl_name,
@@ -1022,6 +1056,23 @@ const Dashboard = () => {
             </button>
           </div>
           <div style={{ display: 'flex', justifyContent: 'center', flexDirection: 'column', alignItems: 'center', gap: '20px', width: '100%', maxWidth: '100%', padding: isMobile ? '0 10px' : '0' }}>
+            {/* Lockout Message Display */}
+            {lockoutUntil && Date.now() < lockoutUntil && (
+              <div style={{
+                width: '100%',
+                maxWidth: '320px',
+                padding: '12px 16px',
+                background: '#fef3c7',
+                border: '2px solid #fbbf24',
+                borderRadius: '8px',
+                textAlign: 'center',
+                color: '#92400e',
+                fontWeight: '600',
+                fontSize: '14px'
+              }}>
+                {lockoutMessage || 'Please wait before scanning again.'}
+              </div>
+            )}
             <QRCodeScanner onScan={handleScan} onError={() => showToast('QR Scan error', 'error')} resetTrigger={resetTrigger} />
             
             {qrUploadEnabled && (
@@ -1224,7 +1275,7 @@ const Dashboard = () => {
                     color: '#0f172a',
                     letterSpacing: '-0.5px'
                   }}>
-                    Select Visit Purpose
+                    Confirm Visit Type: Conjugal or Normal?
                   </h3>
                   <div style={{ 
                     display: 'grid', 
@@ -1670,16 +1721,36 @@ const Dashboard = () => {
                   setShowSuccessModal(false);
                   setSuccessModalData({ type: '', message: '', visitorData: null });
                   
-                  // DON'T clear last scan signature - keep it to prevent immediate re-scanning
-                  // Instead, update the timestamp to extend the debounce window
-                  const nowMs = Date.now();
-                  setLastScanAt(nowMs);
-                  
-                  // Add longer cooldown after user confirms (3 seconds) to prevent immediate re-scan
-                  setTimeout(() => {
-                    setScanLocked(false);
-                    console.log('🔓 Scan unlocked after user confirmed success (3-second cooldown)');
-                  }, 3000);
+                  // If this was a time-out, implement 5-second lockout
+                  if (successModalData.type === 'time_out') {
+                    const lockoutDuration = 5000; // 5 seconds
+                    const lockoutExpiry = Date.now() + lockoutDuration;
+                    setLockoutUntil(lockoutExpiry);
+                    setLockoutMessage('Please wait 5 seconds before scanning again.');
+                    
+                    // Show lockout message
+                    showToast('Please wait 5 seconds before scanning again.', 'error');
+                    
+                    // Unlock scanner after lockout period
+                    setTimeout(() => {
+                      setLockoutUntil(null);
+                      setLockoutMessage('');
+                      setScanLocked(false);
+                      console.log('🔓 Scanner lockout expired - scanning enabled again');
+                    }, lockoutDuration);
+                  } else {
+                    // For time-in, just unlock after a short delay
+                    // DON'T clear last scan signature - keep it to prevent immediate re-scanning
+                    // Instead, update the timestamp to extend the debounce window
+                    const nowMs = Date.now();
+                    setLastScanAt(nowMs);
+                    
+                    // Add cooldown after user confirms (2 seconds) to prevent immediate re-scan
+                    setTimeout(() => {
+                      setScanLocked(false);
+                      console.log('🔓 Scan unlocked after user confirmed success (2-second cooldown)');
+                    }, 2000);
+                  }
                 }}
                 style={{
                   background: 'linear-gradient(135deg, #4b5563 0%, #374151 100%)',
