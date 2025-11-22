@@ -689,10 +689,11 @@ const Dashboard = () => {
       return; // Ignore scan if we just timed out recently
     }
     
-    // Extended debounce window: 3 seconds to prevent immediate re-scanning (reduced from 8s for faster response)
-    if (lastScanSig === sig && nowMs - lastScanAt < 3000) {
-      logger.debug('Duplicate scan within 3 seconds, ignoring');
-      return; // ignore duplicate immediately after previous scan
+    // Extended debounce window: 1 second to prevent immediate re-scanning of SAME visitor
+    // This allows scanning different visitors quickly, but prevents duplicate scans of same visitor
+    if (lastScanSig === sig && nowMs - lastScanAt < 1000) {
+      logger.debug('Duplicate scan of same visitor within 1 second, ignoring');
+      return; // ignore duplicate immediately after previous scan of same visitor
     }
     
     // CRITICAL: Check if purpose modal is already open - prevent duplicate modals
@@ -1858,6 +1859,10 @@ const Dashboard = () => {
                   setShowSuccessModal(false);
                   setSuccessModalData({ type: '', message: '', visitorData: null });
                   
+                  // CRITICAL: Reset processing flag immediately when modal closes
+                  // This allows next scan to proceed even if lockout is still active
+                  isProcessingScanRef.current = false;
+                  
                   // If this was a time-out, the lockout was already set immediately after time-out
                   // Just respect the existing lockout and unlock scanner after it expires
                   if (successModalData.type === 'time_out') {
@@ -1876,17 +1881,14 @@ const Dashboard = () => {
                       logger.debug('Scanner unlocked (lockout already expired)');
                     }
                   } else {
-                    // For time-in, just unlock after a short delay
-                    // DON'T clear last scan signature - keep it to prevent immediate re-scanning
-                    // Instead, update the timestamp to extend the debounce window
+                    // For time-in, unlock immediately (debounce will handle duplicate prevention)
+                    // Update the timestamp to allow scanning different visitors quickly
                     const nowMs = Date.now();
                     setLastScanAt(nowMs);
                     
-                    // Add cooldown after user confirms (2 seconds) to prevent immediate re-scan
-                    setTimeout(() => {
-                      setScanLocked(false);
-                      logger.debug('Scan unlocked after user confirmed success (2-second cooldown)');
-                    }, 2000);
+                    // Unlock immediately - the 1-second debounce will prevent duplicate scans
+                    setScanLocked(false);
+                    logger.debug('Scan unlocked after user confirmed success');
                   }
                 }}
                 style={{
