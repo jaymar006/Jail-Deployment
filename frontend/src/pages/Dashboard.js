@@ -143,13 +143,23 @@ const Dashboard = () => {
   const currentDateString = getDateString(new Date().toISOString());
 
   const showToast = useCallback((message, type = 'success') => {
-    console.log('showToast called:', { message, type, timestamp: new Date().toISOString() });
+    console.log('🔔 showToast called:', { message, type, timestamp: new Date().toISOString() });
+    console.log('Current toast state before update:', toast);
+    
     setToast({ show: true, message, type });
+    
+    // TEMPORARY DEBUG: Also use alert for errors to ensure visibility
+    if (type === 'error') {
+      console.error('🚨 ERROR TOAST:', message);
+      // Uncomment this line if you still can't see the toast:
+      // alert('ERROR: ' + message);
+    }
+    
     setTimeout(() => {
       console.log('Toast hiding after 4 seconds');
       setToast({ show: false, message: '', type: '' });
     }, 4000); // Increased to 4 seconds for better visibility
-  }, []);
+  }, [toast]);
 
   const fetchVisitors = useCallback(async () => {
     try {
@@ -262,9 +272,10 @@ const Dashboard = () => {
   const fetchAvailableCells = async () => {
     try {
       const response = await api.get('/api/cells/active');
+      console.log('✅ Fetched available cells:', response.data);
       setAvailableCells(response.data);
     } catch (error) {
-      console.error('Failed to fetch cells:', error);
+      console.error('❌ Failed to fetch cells:', error);
     }
   };
 
@@ -297,47 +308,71 @@ const Dashboard = () => {
 
   // Helper function to check if a cell number string matches any scheduled cell
   const isCellNumberScheduled = (cellNumberString) => {
-    console.log('Checking if cell is scheduled:', cellNumberString);
-    console.log('Available cells:', availableCells);
-    console.log('Scheduled cell IDs:', Array.from(scheduledCells));
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('🔍 CELL SCHEDULING CHECK');
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('📥 Input cell string:', cellNumberString);
+    console.log('📋 Available cells count:', availableCells.length);
+    console.log('📋 Available cells:', availableCells.map(c => ({id: c.id, number: c.cell_number, name: c.cell_name})));
+    console.log('✅ Scheduled cell IDs:', Array.from(scheduledCells));
+    
+    // Check if availableCells is empty
+    if (!availableCells || availableCells.length === 0) {
+      console.error('❌ ERROR: No available cells loaded! Cannot match cell.');
+      return false;
+    }
     
     // Extract just the cell number from formats like "Cell - 1", "Cell Name - 1", or "1"
     const extractCellNumber = (str) => {
       if (!str) return '';
+      const strTrimmed = str.trim();
+      
       // If format is "Something - Number", extract the number
-      if (str.includes(' - ')) {
-        const parts = str.split(' - ');
-        return parts[parts.length - 1].trim(); // Get the last part after the last " - "
+      if (strTrimmed.includes(' - ')) {
+        const parts = strTrimmed.split(' - ');
+        const lastPart = parts[parts.length - 1].trim();
+        console.log(`  Extracting from "${strTrimmed}" → parts: [${parts.join(', ')}] → last: "${lastPart}"`);
+        return lastPart;
       }
-      return str.trim();
+      return strTrimmed;
     };
     
     const extractedCellNumber = extractCellNumber(cellNumberString);
-    console.log('Extracted cell number:', extractedCellNumber);
+    console.log('🔢 Extracted cell number:', `"${extractedCellNumber}"`);
     
     // Find the cell by matching the cell number
     const cell = availableCells.find(c => {
       const cellDisplay = c.cell_name ? `${c.cell_name} - ${c.cell_number}` : c.cell_number;
       const cellNum = String(c.cell_number).trim();
       
-      // Match against:
-      // 1. Full display string
-      // 2. Just the cell number
-      // 3. Extracted cell number from QR code
-      const matches = 
-        cellDisplay.toLowerCase() === cellNumberString.toLowerCase() || 
-        cellNum.toLowerCase() === cellNumberString.toLowerCase() ||
-        cellNum.toLowerCase() === extractedCellNumber.toLowerCase() ||
-        cellNum === extractedCellNumber;
+      console.log(`  Comparing QR:"${extractedCellNumber}" with DB cell ${c.id}: "${cellNum}" (name: "${c.cell_name || 'none'}")`);
+      
+      // Try multiple matching strategies
+      const exactMatch = cellNum === extractedCellNumber;
+      const caseInsensitiveMatch = cellNum.toLowerCase() === extractedCellNumber.toLowerCase();
+      const fullDisplayMatch = cellDisplay.toLowerCase() === cellNumberString.toLowerCase();
+      const originalMatch = cellNum.toLowerCase() === cellNumberString.toLowerCase();
+      
+      console.log(`    Exact: ${exactMatch}, CaseInsensitive: ${caseInsensitiveMatch}, FullDisplay: ${fullDisplayMatch}, Original: ${originalMatch}`);
+      
+      const matches = exactMatch || caseInsensitiveMatch || fullDisplayMatch || originalMatch;
       
       if (matches) {
-        console.log('Found matching cell:', c);
+        console.log(`  ✅ MATCH FOUND for cell ${c.id}! (${cellNum})`);
       }
       return matches;
     });
     
     const isScheduled = cell ? scheduledCells.has(cell.id) : false;
-    console.log('Cell found:', cell, 'Is scheduled:', isScheduled);
+    console.log('🎯 Cell found:', cell);
+    console.log('📅 Is scheduled:', isScheduled);
+    
+    if (!cell) {
+      console.error(`❌ NO CELL MATCHED! QR had "${cellNumberString}", extracted "${extractedCellNumber}"`);
+      console.error('💡 Available cell numbers:', availableCells.map(c => c.cell_number).join(', '));
+    }
+    
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
     
     return isScheduled;
   };
@@ -470,9 +505,13 @@ const Dashboard = () => {
 
     // Check if the cell is scheduled for visits
     if (!isCellNumberScheduled(cell)) {
+      console.error('❌ Cell not scheduled - stopping scan process');
       showToast(`Cell ${cell} is not scheduled for visits today. Please contact the administrator.`, 'error');
+      // IMPORTANT: Don't lock the scanner on scheduling error - allow retry
       return;
     }
+    
+    console.log('✅ Cell is scheduled, proceeding with scan...');
 
     // Debounce same QR contents for a short window
     const sig = `${visitorName}|${pdlName}|${cell}`;
@@ -661,9 +700,22 @@ const Dashboard = () => {
 
   return (
     <div>
-      {/* Toast Notification */}
-      {toast.show && (
-        <div className={`dashboard-toast dashboard-toast-${toast.type}`}>
+      {/* Toast Notification - Render via Portal to body */}
+      {toast.show && ReactDOM.createPortal(
+        <div 
+          className={`dashboard-toast dashboard-toast-${toast.type}`}
+          style={{
+            position: 'fixed',
+            top: isMobile ? '80px' : '100px', // Position below navbar (navbar is ~60-80px on mobile, ~80-100px on desktop)
+            left: isMobile ? '10px' : '50%',
+            right: isMobile ? '10px' : 'auto',
+            transform: isMobile ? 'none' : 'translateX(-50%)',
+            zIndex: 999999,
+            maxWidth: isMobile ? 'calc(100vw - 20px)' : '400px',
+            minWidth: isMobile ? 'auto' : '300px',
+            width: isMobile ? 'auto' : 'auto'
+          }}
+        >
           <div className="dashboard-toast-content">
             <div className="dashboard-toast-icon">
               <svg 
@@ -691,7 +743,8 @@ const Dashboard = () => {
             </div>
             <span className="dashboard-toast-message">{toast.message}</span>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
       
       <main className="dashboard-main">

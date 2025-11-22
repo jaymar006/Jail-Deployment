@@ -127,7 +127,7 @@
 /* Toast Notifications */
 .dashboard-toast {
   position: fixed !important;
-  top: 20px !important;
+  top: 100px !important; /* Position below navbar */
   left: 50% !important;
   transform: translateX(-50%) !important;
   min-width: 300px;
@@ -135,7 +135,7 @@
   padding: 1rem;
   border-radius: 12px;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25), 0 0 0 4px rgba(255, 255, 255, 0.3);
-  z-index: 99999 !important; /* Increased z-index */
+  z-index: 99999 !important; /* Higher than navbar (1000) */
   display: flex !important;
   align-items: center;
   justify-content: space-between;
@@ -297,7 +297,7 @@
   /* Toast mobile responsive */
   .dashboard-toast {
     position: fixed !important;
-    top: 20px !important;
+    top: 80px !important; /* Position below mobile navbar */
     left: 10px !important;
     right: 10px !important;
     transform: none !important;
@@ -412,7 +412,7 @@
   /* Toast small mobile responsive */
   .dashboard-toast {
     position: fixed !important;
-    top: 10px !important;
+    top: 70px !important; /* Position below small mobile navbar */
     left: 10px !important;
     right: 10px !important;
     padding: 0.75rem !important;
