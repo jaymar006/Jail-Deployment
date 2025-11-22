@@ -691,7 +691,11 @@ const Dashboard = () => {
         console.log('✅ Time out successful!');
         showToast('Successful time out!', 'success');
         await fetchVisitors();
-        setTimeout(() => setScanLocked(false), 1200);
+        // Add 2-second cooldown after time-out before allowing next scan
+        setTimeout(() => {
+          setScanLocked(false);
+          console.log('🔓 Scan unlocked after 2-second cooldown (time-out)');
+        }, 2000);
         return;
       }
 
@@ -745,6 +749,17 @@ const Dashboard = () => {
       if (action === 'time_out') {
         console.log('✅ Time out successful!');
         showToast('Successful time out!', 'success');
+        await fetchVisitors();
+        console.log('✅ Visitor list refreshed');
+        
+        setPendingScanData(null);
+        setVerifiedConjugal(false);
+        // Add 2-second cooldown after time-out before allowing next scan
+        setTimeout(() => {
+          setScanLocked(false);
+          console.log('🔓 Scan unlocked after 2-second cooldown (time-out from purpose selection)');
+        }, 2000);
+        return; // Return early to prevent unlocking immediately
       } else if (action === 'time_in') {
         console.log('✅ Time in successful!');
         showToast('Successful time in!', 'success');
@@ -765,7 +780,7 @@ const Dashboard = () => {
 
     setPendingScanData(null);
     setVerifiedConjugal(false);
-    // Unlock scanning after a short cooldown to avoid immediate re-trigger
+    // Unlock scanning after a short cooldown to avoid immediate re-trigger (for time_in and other actions)
     setTimeout(() => {
       setScanLocked(false);
       console.log('🔓 Scan unlocked after cooldown');

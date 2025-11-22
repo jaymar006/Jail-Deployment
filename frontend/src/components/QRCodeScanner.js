@@ -56,16 +56,15 @@ const QRCodeScanner = ({ onScan, resetTrigger }) => {
 
     startAttemptRef.current = true;
 
-    // Optimize config for mobile devices with 2-second scan interval
+    // Optimize config for fast scanning without system overload
     const config = { 
-      fps: 0.5, // 0.5 FPS = 1 scan every 2 seconds (2000ms interval)
+      fps: 3, // 3 FPS = fast scanning but not system-breaking (scans 3 times per second)
+      // Remove qrbox restriction - scan entire viewfinder instead of a restricted box
       qrbox: function(viewfinderWidth, viewfinderHeight) {
-        // Make qrbox responsive to the viewfinder size
-        const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
-        const qrboxSize = Math.floor(minEdge * 0.7); // 70% of the smaller dimension
+        // Return full viewfinder dimensions to scan entire area (no restricted box)
         return {
-          width: qrboxSize,
-          height: qrboxSize
+          width: viewfinderWidth,
+          height: viewfinderHeight
         };
       },
       aspectRatio: 1.0, // Square aspect ratio works better on mobile

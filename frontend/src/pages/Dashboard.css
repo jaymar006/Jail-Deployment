@@ -2,6 +2,29 @@
   display: none;
 }
 
+/* Hide QR code scanning box/shaded region - scan entire viewfinder instead */
+#html5qr-code-full-region #qr-shaded-region,
+#html5qr-code-full-region .qr-shaded-region,
+#html5qr-code-full-region [id*="qr-shaded"],
+#html5qr-code-full-region [class*="qr-shaded"],
+#html5qr-code-full-region [id*="qrbox"],
+#html5qr-code-full-region [class*="qrbox"],
+#html5qr-code-full-region div[style*="position: absolute"][style*="border"],
+#html5qr-code-full-region div[style*="position: absolute"][style*="background"] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+/* Hide scanning box border/overlay elements */
+#html5qr-code-full-region > div > div[style*="border"]:not([id*="video"]):not([id*="canvas"]),
+#html5qr-code-full-region > div > div[style*="position: absolute"]:not([id*="video"]):not([id*="canvas"]) {
+  display: none !important;
+}
+
 @media print {
   body * {
     visibility: hidden;
@@ -406,6 +429,17 @@
     display: block !important;
     margin: 0 auto !important;
   }
+
+  /* Hide QR code scanning box/shaded region - scan entire viewfinder */
+  #html5qr-code-full-region #qr-shaded-region,
+  #html5qr-code-full-region .qr-shaded-region,
+  #html5qr-code-full-region [id*="qr-shaded"],
+  #html5qr-code-full-region [class*="qr-shaded"] {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+  }
+  
 
   /* Ensure QR scanner container doesn't overflow */
   .dashboard-main > div > div[style*="flexDirection: 'column'"] {
