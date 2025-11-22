@@ -28,14 +28,21 @@ const QRCodeScanner = ({ onScan, resetTrigger }) => {
       html5QrcodeScannerRef.current = new Html5Qrcode(qrCodeRegionId);
     }
 
-    // Check if scanner is already running
-    if (isScannerRunningRef.current && html5QrcodeScannerRef.current.getState) {
+    // Check if scanner is already running or in transition
+    if (html5QrcodeScannerRef.current.getState) {
       try {
         const state = html5QrcodeScannerRef.current.getState();
-        if (state === Html5Qrcode.STATE.STARTED) {
-          // Scanner is already running, no need to start again
-          console.log('QRScanner: Already running');
+        // Don't start if already started or in transition
+        if (state === Html5Qrcode.STATE.STARTED || state === Html5Qrcode.STATE.SCANNING) {
+          console.log('QRScanner: Already running or scanning');
+          isScannerRunningRef.current = true;
           setError(null);
+          startAttemptRef.current = false;
+          return;
+        }
+        // Wait if in transition
+        if (state === Html5Qrcode.STATE.PAUSED) {
+          console.log('QRScanner: In transition, waiting...');
           startAttemptRef.current = false;
           return;
         }

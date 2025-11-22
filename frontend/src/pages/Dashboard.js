@@ -301,14 +301,34 @@ const Dashboard = () => {
     console.log('Available cells:', availableCells);
     console.log('Scheduled cell IDs:', Array.from(scheduledCells));
     
-    // Find the cell by matching the cell number string
+    // Extract just the cell number from formats like "Cell - 1", "Cell Name - 1", or "1"
+    const extractCellNumber = (str) => {
+      if (!str) return '';
+      // If format is "Something - Number", extract the number
+      if (str.includes(' - ')) {
+        const parts = str.split(' - ');
+        return parts[parts.length - 1].trim(); // Get the last part after the last " - "
+      }
+      return str.trim();
+    };
+    
+    const extractedCellNumber = extractCellNumber(cellNumberString);
+    console.log('Extracted cell number:', extractedCellNumber);
+    
+    // Find the cell by matching the cell number
     const cell = availableCells.find(c => {
       const cellDisplay = c.cell_name ? `${c.cell_name} - ${c.cell_number}` : c.cell_number;
-      // Match against full display, just the cell number, or case-insensitive variants
+      const cellNum = String(c.cell_number).trim();
+      
+      // Match against:
+      // 1. Full display string
+      // 2. Just the cell number
+      // 3. Extracted cell number from QR code
       const matches = 
         cellDisplay.toLowerCase() === cellNumberString.toLowerCase() || 
-        c.cell_number.toLowerCase() === cellNumberString.toLowerCase() ||
-        String(c.cell_number) === String(cellNumberString);
+        cellNum.toLowerCase() === cellNumberString.toLowerCase() ||
+        cellNum.toLowerCase() === extractedCellNumber.toLowerCase() ||
+        cellNum === extractedCellNumber;
       
       if (matches) {
         console.log('Found matching cell:', c);
