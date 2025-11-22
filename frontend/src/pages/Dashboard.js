@@ -639,54 +639,38 @@ const Dashboard = () => {
       }
     }
 
-    // STEP 1: Parse QR code data
-    const regex = /\[(.*?)\]/g;
-    const matches = [...data.matchAll(regex)].map(match => match[1]);
-    console.log('📋 Parsed matches from QR code:', matches);
+    // STEP 1: Extract visitor_id from QR code (NEW WORKFLOW: Only visitor_id in QR)
+    let visitorId = null;
+    
+    // Try new format first: "visitor_id:19" or just "19"
+    if (data.includes('visitor_id:')) {
+      const match = data.match(/visitor_id:(\d+)/i);
+      if (match) {
+        visitorId = match[1];
+      }
+    } else if (/^\d+$/.test(data.trim())) {
+      // QR code is just a number (visitor_id)
+      visitorId = data.trim();
+    } else {
+      // Legacy format: try to extract from old format for backward compatibility
+      const regex = /\[(.*?)\]/g;
+      const matches = [...data.matchAll(regex)].map(match => match[1]);
+      const visitorIdMatch = matches.find(part => part.startsWith('visitor_id:'));
+      if (visitorIdMatch) {
+        visitorId = visitorIdMatch.replace('visitor_id:', '').trim();
+      }
+    }
 
-    let visitorName = '', pdlName = '', cell = '', relationship = '', contactNumber = '';
+    console.log('📋 Extracted visitor_id from QR code:', visitorId);
 
-    matches.forEach(part => {
-      if (part.startsWith('Visitor:')) visitorName = part.replace('Visitor:', '').trim();
-      else if (part.startsWith('PDL:')) pdlName = part.replace('PDL:', '').trim();
-      else if (part.startsWith('Cell:')) cell = part.replace('Cell:', '').trim();
-      else if (part.startsWith('Relationship:')) relationship = part.replace('Relationship:', '').trim();
-      else if (part.startsWith('Contact:')) contactNumber = part.replace('Contact:', '').trim();
-    });
-
-    console.log('✅ Extracted data:', { visitorName, pdlName, cell, relationship, contactNumber });
-
-    if (!visitorName || !pdlName || !cell) {
-      console.error('❌ Invalid QR format - missing required fields');
-      showToast('Invalid QR code format', 'error');
+    if (!visitorId) {
+      console.error('❌ Invalid QR format - visitor_id not found');
+      showToast('Invalid QR code format. Please use a valid visitor QR code.', 'error');
       return;
     }
 
-    // STEP 2: Check if the cell is scheduled for visits today
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log('📅 STEP 2: Checking if cell is scheduled...');
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log(`   Cells loaded: ${cellsLoaded}`);
-    console.log(`   Available cells count: ${cellsToUse.length}`);
-    console.log(`   Using cells: ${cellsToUse === availableCells ? 'FROM STATE' : 'FRESH FETCH'}`);
-    
-    // Pass cells directly to avoid state update timing issues
-    const isScheduled = isCellNumberScheduled(cell, cellsToUse);
-    
-    if (!isScheduled) {
-      console.error('❌ Cell not scheduled - stopping scan process');
-      console.error(`   Cell from QR: "${cell}"`);
-      console.error(`   Available cells: ${availableCells.length}`);
-      console.error(`   Scheduled cell IDs: ${Array.from(scheduledCells).join(', ')}`);
-      showToast(`${cell} is not scheduled for visits today. Please contact the administrator.`, 'error');
-      // IMPORTANT: Don't lock the scanner on scheduling error - allow retry
-      return;
-    }
-    
-    console.log('✅ Cell is scheduled, proceeding to next step...');
-
-    // Debounce same QR contents for a short window
-    const sig = `${visitorName}|${pdlName}|${cell}`;
+    // Debounce same visitor_id for a short window
+    const sig = `visitor_id:${visitorId}`;
     const nowMs = Date.now();
     // Extended debounce window: 8 seconds to prevent immediate re-scanning after time-out
     if (lastScanSig === sig && nowMs - lastScanAt < 8000) {
@@ -700,58 +684,62 @@ const Dashboard = () => {
     setScanLocked(true);
     console.log('🔒 Scan locked to prevent duplicate processing');
 
-    // STEP 3: Check if visitor has existing record in system (preflight check)
+    // STEP 2: Check if visitor has existing record in system (preflight check)
+    // Backend will look up visitor details and check latest log
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log('🔍 STEP 3: Checking if visitor has existing record...');
+    console.log('🔍 STEP 2: Checking visitor status (backend-side validation)...');
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     
     try {
       const preflight = await api.post('/api/scanned_visitors', {
-        visitor_name: visitorName,
-        pdl_name: pdlName,
-        cell,
-        relationship,
-        contact_number: contactNumber,
+        visitor_id: visitorId,
         only_check: true
       });
 
       const planned = preflight?.data?.action;
       const conjugalVerified = preflight?.data?.verified_conjugal === true;
-      console.log('📊 Preflight response:', { action: planned, verified_conjugal: conjugalVerified });
+      const visitorName = preflight?.data?.visitor_name;
+      const pdlName = preflight?.data?.pdl_name;
+      const cell = preflight?.data?.cell;
       
-      // Store verified_conjugal status
+      console.log('📊 Preflight response:', { 
+        action: planned, 
+        verified_conjugal: conjugalVerified,
+        visitor_name: visitorName,
+        pdl_name: pdlName,
+        cell: cell
+      });
+      
+      // Store verified_conjugal status and visitor details
       setVerifiedConjugal(conjugalVerified);
       
       if (planned === 'time_out') {
-        // STEP 5: Time out - visitor already has time_in, directly execute time_out
+        // STEP 3: Time out - visitor already has time_in, directly execute time_out
         console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        console.log('⏰ STEP 5: Executing TIME OUT (visitor already has time_in)');
+        console.log('⏰ STEP 3: Executing TIME OUT (visitor already has time_in)');
         console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
         
-        const scanData = {
-          visitor_name: visitorName,
-          pdl_name: pdlName,
-          cell,
-          relationship,
-          contact_number: contactNumber
-        };
-        
-        await api.post('/api/scanned_visitors', {
-          ...scanData,
+        const timeOutResponse = await api.post('/api/scanned_visitors', {
+          visitor_id: visitorId,
           device_time: new Date().toISOString()
         });
         
         console.log('✅ Time out successful!');
         await fetchVisitors();
         
+        // Get visitor details from response (or use from preflight)
+        const finalVisitorName = timeOutResponse?.data?.visitor_name || visitorName;
+        const finalPdlName = timeOutResponse?.data?.pdl_name || pdlName;
+        const finalCell = timeOutResponse?.data?.cell || cell;
+        
         // Show success modal with exact message
         setSuccessModalData({
           type: 'time_out',
           message: 'You have successfully timed out.',
           visitorData: {
-            visitor_name: visitorName,
-            pdl_name: pdlName,
-            cell
+            visitor_name: finalVisitorName,
+            pdl_name: finalPdlName,
+            cell: finalCell
           }
         });
         setShowSuccessModal(true);
@@ -759,18 +747,17 @@ const Dashboard = () => {
         return;
       }
 
-      // STEP 4: Time in - show purpose modal with exact message
+      // STEP 3: Time in - show purpose modal with exact message
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      console.log('📝 STEP 4: Showing purpose selection modal (TIME IN)');
+      console.log('📝 STEP 3: Showing purpose selection modal (TIME IN)');
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       console.log('   Visitor has no active session - showing visit type selection');
       
       setPendingScanData({
+        visitor_id: visitorId,
         visitor_name: visitorName,
         pdl_name: pdlName,
-        cell,
-        relationship,
-        contact_number: contactNumber
+        cell: cell
       });
       setShowPurposeModal(true);
       console.log('✅ Purpose modal opened');
@@ -797,7 +784,7 @@ const Dashboard = () => {
     try {
       console.log('📤 Sending time_in request to backend...');
       const response = await api.post('/api/scanned_visitors', {
-        ...pendingScanData,
+        visitor_id: pendingScanData?.visitor_id,
         device_time: new Date().toISOString(),
         purpose
       });
@@ -810,6 +797,11 @@ const Dashboard = () => {
         await fetchVisitors();
         console.log('✅ Visitor list refreshed');
         
+        // Get visitor details from response
+        const responseVisitorName = response?.data?.visitor_name || pendingScanData?.visitor_name;
+        const responsePdlName = response?.data?.pdl_name || pendingScanData?.pdl_name;
+        const responseCell = response?.data?.cell || pendingScanData?.cell;
+        
         setPendingScanData(null);
         setVerifiedConjugal(false);
         
@@ -818,9 +810,9 @@ const Dashboard = () => {
           type: 'time_out',
           message: 'You have successfully timed out.',
           visitorData: {
-            visitor_name: pendingScanData?.visitor_name,
-            pdl_name: pendingScanData?.pdl_name,
-            cell: pendingScanData?.cell
+            visitor_name: responseVisitorName,
+            pdl_name: responsePdlName,
+            cell: responseCell
           }
         });
         setShowSuccessModal(true);
@@ -831,6 +823,11 @@ const Dashboard = () => {
         await fetchVisitors();
         console.log('✅ Visitor list refreshed');
         
+        // Get visitor details from response
+        const responseVisitorName = response?.data?.visitor_name || pendingScanData?.visitor_name;
+        const responsePdlName = response?.data?.pdl_name || pendingScanData?.pdl_name;
+        const responseCell = response?.data?.cell || pendingScanData?.cell;
+        
         setPendingScanData(null);
         setVerifiedConjugal(false);
         
@@ -839,9 +836,9 @@ const Dashboard = () => {
           type: 'time_in',
           message: 'You have successfully timed in.',
           visitorData: {
-            visitor_name: pendingScanData?.visitor_name,
-            pdl_name: pendingScanData?.pdl_name,
-            cell: pendingScanData?.cell,
+            visitor_name: responseVisitorName,
+            pdl_name: responsePdlName,
+            cell: responseCell,
             purpose: purpose
           }
         });
@@ -1073,7 +1070,12 @@ const Dashboard = () => {
                 {lockoutMessage || 'Please wait before scanning again.'}
               </div>
             )}
-            <QRCodeScanner onScan={handleScan} onError={() => showToast('QR Scan error', 'error')} resetTrigger={resetTrigger} />
+            <QRCodeScanner 
+              onScan={handleScan} 
+              onError={() => showToast('QR Scan error', 'error')} 
+              resetTrigger={resetTrigger}
+              scanLocked={scanLocked}
+            />
             
             {qrUploadEnabled && (
               <div
@@ -1275,7 +1277,7 @@ const Dashboard = () => {
                     color: '#0f172a',
                     letterSpacing: '-0.5px'
                   }}>
-                    Confirm Visit Type: Conjugal or Normal?
+                    Select Visit Type: Conjugal or Normal.
                   </h3>
                   <div style={{ 
                     display: 'grid', 

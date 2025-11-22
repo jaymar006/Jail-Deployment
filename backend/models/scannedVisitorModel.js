@@ -18,6 +18,25 @@ const ScannedVisitor = {
     return results.length > 0 ? results[0] : null;
   },
 
+  // Find open scan by visitor_id (from visitors table)
+  // Since scanned_visitors stores visitor_name, we need to join with visitors table
+  findOpenScanByVisitorId: async (visitor_id) => {
+    console.log('findOpenScanByVisitorId called with:', visitor_id);
+    // Join with visitors table to match by visitor_id, then match scanned_visitors by visitor_name
+    const [results] = await db.query(
+      `SELECT sv.* 
+       FROM scanned_visitors sv
+       INNER JOIN visitors v ON LOWER(TRIM(sv.visitor_name)) = LOWER(TRIM(v.name))
+       WHERE v.visitor_id = ? 
+         AND sv.time_out IS NULL 
+       ORDER BY sv.scan_date DESC 
+       LIMIT 1`,
+      [visitor_id]
+    );
+    console.log('findOpenScanByVisitorId results:', results);
+    return results.length > 0 ? results[0] : null;
+  },
+
   findOpenScanByVisitorDetails: async (visitor_name, pdl_name, cell) => {
     console.log('findOpenScanByVisitorDetails called with:', visitor_name, pdl_name, cell);
     const [results] = await db.query(

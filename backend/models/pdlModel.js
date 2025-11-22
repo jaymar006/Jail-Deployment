@@ -120,6 +120,11 @@ const PDL = {
         else resolve(result);
       });
     });
+  },
+
+  getById: async (id) => {
+    const [results] = await db.query('SELECT * FROM pdls WHERE id = ?', [id]);
+    return results[0];
   }
 };
 

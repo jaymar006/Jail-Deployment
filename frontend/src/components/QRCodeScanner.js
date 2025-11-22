@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
 
-const QRCodeScanner = ({ onScan, resetTrigger }) => {
+const QRCodeScanner = ({ onScan, resetTrigger, scanLocked = false }) => {
   const qrCodeRegionId = 'html5qr-code-full-region';
   const html5QrcodeScannerRef = useRef(null);
   const isScannerRunningRef = useRef(false);
@@ -10,6 +10,7 @@ const QRCodeScanner = ({ onScan, resetTrigger }) => {
   const [isRetrying, setIsRetrying] = useState(false);
   const [isRunning, setIsRunning] = useState(false); // State to track if scanner is running (for re-renders)
   const startAttemptRef = useRef(false);
+  const lastScannedTextRef = useRef(null); // Track last scanned text to prevent duplicates
 
   const startScanner = useCallback(async (isRetry = false) => {
     // Prevent multiple simultaneous start attempts
@@ -100,14 +101,35 @@ const QRCodeScanner = ({ onScan, resetTrigger }) => {
         { facingMode: 'environment' },
         config,
         (decodedText) => {
-          // Only process scan if scanner is running and we haven't recently processed this QR
-          if (isScannerRunningRef.current) {
-            console.log('QRScanner: QR detected! Full text:', decodedText);
-            console.log('QRScanner: Calling onScan callback...');
-            onScan(decodedText);
-          } else {
+          // Only process scan if scanner is running and not locked
+          if (!isScannerRunningRef.current) {
             console.log('QRScanner: QR detected but scanner is not running, ignoring');
+            return;
           }
+          
+          // Check if scanning is locked (passed from parent)
+          if (scanLocked) {
+            console.log('QRScanner: QR detected but scanning is locked, ignoring');
+            return;
+          }
+          
+          // Prevent duplicate scans of the same QR code within 2 seconds
+          const now = Date.now();
+          if (lastScannedTextRef.current?.text === decodedText && 
+              now - lastScannedTextRef.current?.timestamp < 2000) {
+            console.log('QRScanner: Duplicate QR code detected within 2 seconds, ignoring');
+            return;
+          }
+          
+          // Update last scanned text
+          lastScannedTextRef.current = {
+            text: decodedText,
+            timestamp: now
+          };
+          
+          console.log('QRScanner: QR detected! Full text:', decodedText);
+          console.log('QRScanner: Calling onScan callback...');
+          onScan(decodedText);
         },
         (errorMessage) => {
           // Scan error callback - don't log every frame error

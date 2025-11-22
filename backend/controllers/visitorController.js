@@ -1,6 +1,7 @@
 const Visitor = require('../models/visitorModel');
 const ScannedVisitor = require('../models/scannedVisitorModel');
 const Cell = require('../models/cellModel');
+const PDL = require('../models/pdlModel');
 
 const APP_TIMEZONE = process.env.APP_TIMEZONE || 'Asia/Manila';
 
@@ -275,9 +276,130 @@ const formatTimestampForClient = (timestamp) => {
 
 exports.addScannedVisitor = async (req, res) => {
   try {
-    let { visitor_name, pdl_name, cell, relationship, contact_number, device_time, purpose, only_check } = req.body;
+    // NEW WORKFLOW: Accept only visitor_id, all validation backend-side
+    let { visitor_id, device_time, purpose, only_check } = req.body;
+    
+    // Support legacy format for backward compatibility during transition
+    let { visitor_name, pdl_name, cell, relationship, contact_number } = req.body;
+    
+    // If visitor_id is provided, use new workflow
+    if (visitor_id) {
+      visitor_id = visitor_id.trim();
+      console.log('addScannedVisitor (NEW WORKFLOW): visitor_id =', visitor_id);
+      
+      // Look up visitor from database using visitor_id
+      const visitor = await Visitor.getByVisitorId(visitor_id);
+      if (!visitor) {
+        return res.status(404).json({ error: 'Visitor not found' });
+      }
+      
+      // Get PDL information from visitor's pdl_id
+      const pdl = await PDL.getById(visitor.pdl_id);
+      if (!pdl) {
+        return res.status(404).json({ error: 'PDL not found for this visitor' });
+      }
+      
+      // Extract visitor details from database
+      visitor_name = visitor.name;
+      pdl_name = `${pdl.last_name}, ${pdl.first_name} ${pdl.middle_name || ''}`.trim();
+      cell = pdl.cell_number;
+      relationship = visitor.relationship;
+      contact_number = visitor.contact_number;
+      const verifiedConjugal = visitor.verified_conjugal === 1 || visitor.verified_conjugal === true;
+      
+      console.log('addScannedVisitor: Looked up visitor details:', { 
+        visitor_name, pdl_name, cell, relationship, contact_number, verifiedConjugal 
+      });
+      
+      // Format cell display value
+      const formattedCell = await resolveCellDisplayValue(cell);
+      
+      // Check latest visit log by visitor_id
+      const openScan = await ScannedVisitor.findOpenScanByVisitorId(visitor_id);
+      
+      if (only_check) {
+        if (openScan && !openScan.time_out) {
+          return res.status(200).json({ 
+            action: 'time_out',
+            verified_conjugal: verifiedConjugal,
+            visitor_name: visitor_name,
+            pdl_name: pdl_name,
+            cell: formattedCell
+          });
+        }
+        return res.status(200).json({ 
+          action: 'time_in_pending',
+          verified_conjugal: verifiedConjugal,
+          visitor_name: visitor_name,
+          pdl_name: pdl_name,
+          cell: formattedCell
+        });
+      }
+      
+      // Continue with time_in/time_out logic below...
+      const normalizedPurpose = purpose ? purpose.trim() : 'normal';
+      
+      // Use client-provided device time if valid ISO string; fallback to server time
+      let referenceDate = device_time ? new Date(device_time) : new Date();
+      if (Number.isNaN(referenceDate.getTime())) {
+        referenceDate = new Date();
+      }
+      let localizedTimestamp = formatToAppTimezone(referenceDate);
+      if (!localizedTimestamp) {
+        localizedTimestamp = formatToAppTimezone(new Date());
+      }
+
+      if (openScan) {
+        if (!openScan.time_out) {
+          const localTimeOut = localizedTimestamp;
+          await ScannedVisitor.updateTimeOut(openScan.id, localTimeOut);
+          return res.status(200).json({ 
+            message: `Visitor "${visitor_name}" scan timed out`, 
+            id: openScan.id, 
+            time_out: localTimeOut, 
+            action: 'time_out',
+            visitor_name: visitor_name,
+            pdl_name: pdl_name,
+            cell: formattedCell
+          });
+        } else {
+          return res.status(200).json({ 
+            message: `Visitor "${visitor_name}" has already timed out`, 
+            id: openScan.id, 
+            time_out: openScan.time_out, 
+            action: 'already_timed_out' 
+          });
+        }
+      } else {
+        // No open scan found, create new record
+        const scannedVisitorData = {
+          visitor_name,
+          pdl_name,
+          cell: formattedCell,
+          time_in: localizedTimestamp,
+          time_out: null,
+          scan_date: localizedTimestamp,
+          relationship,
+          contact_number,
+          purpose: normalizedPurpose
+        };
+        const result = await ScannedVisitor.add(scannedVisitorData);
+        return res.status(201).json({ 
+          message: 'Scanned visitor added', 
+          id: result.insertId, 
+          time_in: localizedTimestamp, 
+          action: 'time_in',
+          visitor_name: visitor_name,
+          pdl_name: pdl_name,
+          cell: formattedCell,
+          purpose: normalizedPurpose
+        });
+      }
+    }
+    
+    // LEGACY WORKFLOW: Support old format for backward compatibility
     if (!visitor_name || !pdl_name || !cell) {
-      return res.status(400).json({ error: 'visitor_name, pdl_name, and cell are required' });
+      return res.status(400).json({ error: 'visitor_id (or visitor_name, pdl_name, and cell) is required' });
     }
 
     visitor_name = visitor_name.trim();
@@ -290,7 +412,7 @@ exports.addScannedVisitor = async (req, res) => {
     const formattedCell = await resolveCellDisplayValue(trimmedCell);
     const cellCandidates = Array.from(new Set([formattedCell, trimmedCell].filter(Boolean)));
 
-    console.log('addScannedVisitor input:', { visitor_name, pdl_name, cell: formattedCell, relationship, contact_number, normalizedPurpose });
+    console.log('addScannedVisitor (LEGACY):', { visitor_name, pdl_name, cell: formattedCell, relationship, contact_number, normalizedPurpose });
 
     const findOpenScan = async () => {
       for (const candidate of cellCandidates) {

@@ -1119,7 +1119,7 @@ const VisitorPage = () => {
                       </div>
                       <div className="id-card-qr" style={{ backgroundColor: 'transparent', padding: '5px', objectFit: 'fill', position: 'relative', zIndex: 9999, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
                         <QRCodeCanvas
-                          value={`[visitor_id:${visitor.id}][Visitor: ${visitor.name}][Relationship: ${visitor.relationship}][Contact: ${visitor.contact_number}][PDL: ${pdl ? `${pdl.first_name} ${pdl.last_name}` : ''}][Cell: ${pdl ? pdl.cell_number : ''}]`}
+                          value={`visitor_id:${visitor.id}`}
                           size={200}
                         />
                       </div>
