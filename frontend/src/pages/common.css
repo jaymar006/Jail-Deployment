@@ -634,6 +634,15 @@ body, .common-container {
     max-width: 95%;
     padding: 16px;
     margin: 10px;
+    max-height: 90vh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .common-modal {
+    padding: 10px;
+    align-items: flex-start;
+    padding-top: 20px;
   }
 
   .common-modal-content.wide {

@@ -107,6 +107,8 @@
   background: none;
   padding: 0;
   width: 100%;
+  -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1);
+  touch-action: manipulation; /* Prevent double-tap zoom */
 }
 
 .purpose-button:focus {
@@ -116,6 +118,33 @@
 
 .purpose-button:active {
   transform: translateY(1px) !important;
+}
+
+/* Mobile responsive purpose modal */
+@media (max-width: 768px) {
+  .purpose-modal {
+    max-width: 95%;
+    width: 95%;
+    max-height: 90vh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .purpose-button {
+    min-height: 140px;
+  }
+}
+
+/* Prevent zoom gestures on mobile */
+@media (max-width: 768px) {
+  * {
+    touch-action: manipulation; /* Prevent double-tap zoom */
+    -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1);
+  }
+  
+  input, textarea, select {
+    font-size: 16px !important; /* Prevents iOS zoom on focus */
+  }
 }
 
 /* Camera retry animation */

@@ -1115,19 +1115,25 @@ const Dashboard = () => {
             setScanLocked(false);
             console.log('Purpose modal closed, scan unlocked');
           }}>
-            <div className="purpose-modal" style={{ maxWidth: '600px' }}>
+            <div className="purpose-modal" style={{ 
+              maxWidth: isMobile ? '95%' : '600px',
+              width: '100%',
+              padding: isMobile ? '16px' : '24px',
+              maxHeight: isMobile ? '90vh' : 'auto',
+              overflowY: isMobile ? 'auto' : 'visible'
+            }}>
               {/* Header Section */}
-              <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+              <div style={{ textAlign: 'center', marginBottom: isMobile ? '20px' : '32px' }}>
                 <div style={{
                   background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
                   border: '1px solid #e2e8f0',
-                  padding: '24px',
+                  padding: isMobile ? '16px' : '24px',
                   borderRadius: '16px',
                   boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)'
                 }}>
                   <h3 style={{ 
                     margin: '0 0 20px 0', 
-                    fontSize: '22px', 
+                    fontSize: isMobile ? '18px' : '22px', 
                     fontWeight: '700',
                     color: '#0f172a',
                     letterSpacing: '-0.5px'
@@ -1136,46 +1142,46 @@ const Dashboard = () => {
                   </h3>
                   <div style={{ 
                     display: 'grid', 
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
-                    gap: '16px',
+                    gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(150px, 1fr))',
+                    gap: isMobile ? '12px' : '16px',
                     textAlign: 'left'
                   }}>
                     <div style={{
-                      padding: '12px',
+                      padding: isMobile ? '10px' : '12px',
                       background: 'white',
                       borderRadius: '8px',
                       border: '1px solid #e2e8f0'
                     }}>
-                      <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>
+                      <div style={{ fontSize: isMobile ? '10px' : '11px', color: '#64748b', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>
                         Visitor
                       </div>
-                      <div style={{ fontSize: '14px', color: '#0f172a', fontWeight: '500' }}>
+                      <div style={{ fontSize: isMobile ? '13px' : '14px', color: '#0f172a', fontWeight: '500', wordBreak: 'break-word' }}>
                         {capitalizeWords(pendingScanData?.visitor_name)}
                       </div>
                     </div>
                     <div style={{
-                      padding: '12px',
+                      padding: isMobile ? '10px' : '12px',
                       background: 'white',
                       borderRadius: '8px',
                       border: '1px solid #e2e8f0'
                     }}>
-                      <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>
+                      <div style={{ fontSize: isMobile ? '10px' : '11px', color: '#64748b', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>
                         PDL
                       </div>
-                      <div style={{ fontSize: '14px', color: '#0f172a', fontWeight: '500' }}>
+                      <div style={{ fontSize: isMobile ? '13px' : '14px', color: '#0f172a', fontWeight: '500', wordBreak: 'break-word' }}>
                         {capitalizeWords(pendingScanData?.pdl_name)}
                       </div>
                     </div>
                     <div style={{
-                      padding: '12px',
+                      padding: isMobile ? '10px' : '12px',
                       background: 'white',
                       borderRadius: '8px',
                       border: '1px solid #e2e8f0'
                     }}>
-                      <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>
+                      <div style={{ fontSize: isMobile ? '10px' : '11px', color: '#64748b', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>
                         Cell
                       </div>
-                      <div style={{ fontSize: '14px', color: '#0f172a', fontWeight: '500' }}>
+                      <div style={{ fontSize: isMobile ? '13px' : '14px', color: '#0f172a', fontWeight: '500', wordBreak: 'break-word' }}>
                         {capitalizeWords(pendingScanData?.cell)}
                       </div>
                     </div>
@@ -1186,9 +1192,9 @@ const Dashboard = () => {
               {/* Purpose Buttons */}
               <div style={{ 
                 display: 'grid', 
-                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
-                gap: '16px',
-                marginBottom: '24px'
+                gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(200px, 1fr))', 
+                gap: isMobile ? '12px' : '16px',
+                marginBottom: isMobile ? '20px' : '24px'
               }}>
                 <button 
                   className="purpose-button conjugal" 
@@ -1196,7 +1202,7 @@ const Dashboard = () => {
                   style={{ 
                     background: 'linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)',
                     color: '#991b1b',
-                    padding: '24px 20px',
+                    padding: isMobile ? '20px 16px' : '24px 20px',
                     borderRadius: '16px',
                     textAlign: 'center',
                     cursor: 'pointer',
@@ -1204,40 +1210,60 @@ const Dashboard = () => {
                     border: '2px solid #fecaca',
                     boxShadow: '0 2px 8px rgba(220, 38, 38, 0.08)',
                     position: 'relative',
-                    overflow: 'hidden'
+                    overflow: 'hidden',
+                    minHeight: isMobile ? '140px' : 'auto',
+                    width: '100%'
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = 'translateY(-4px)';
-                    e.currentTarget.style.boxShadow = '0 8px 16px rgba(220, 38, 38, 0.15)';
-                    e.currentTarget.style.borderColor = '#fca5a5';
-                    e.currentTarget.style.background = 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)';
+                    if (!isMobile) {
+                      e.currentTarget.style.transform = 'translateY(-4px)';
+                      e.currentTarget.style.boxShadow = '0 8px 16px rgba(220, 38, 38, 0.15)';
+                      e.currentTarget.style.borderColor = '#fca5a5';
+                      e.currentTarget.style.background = 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)';
+                    }
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = 'translateY(0)';
-                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(220, 38, 38, 0.08)';
-                    e.currentTarget.style.borderColor = '#fecaca';
-                    e.currentTarget.style.background = 'linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)';
+                    if (!isMobile) {
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(220, 38, 38, 0.08)';
+                      e.currentTarget.style.borderColor = '#fecaca';
+                      e.currentTarget.style.background = 'linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)';
+                    }
+                  }}
+                  onTouchStart={(e) => {
+                    if (isMobile) {
+                      e.currentTarget.style.background = 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)';
+                      e.currentTarget.style.borderColor = '#fca5a5';
+                    }
+                  }}
+                  onTouchEnd={(e) => {
+                    if (isMobile) {
+                      setTimeout(() => {
+                        e.currentTarget.style.background = 'linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)';
+                        e.currentTarget.style.borderColor = '#fecaca';
+                      }, 150);
+                    }
                   }}
                 >
                   <div style={{ 
                     background: 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)',
                     borderRadius: '12px', 
-                    width: '56px', 
-                    height: '56px', 
-                    margin: '0 auto 16px',
+                    width: isMobile ? '48px' : '56px', 
+                    height: isMobile ? '48px' : '56px', 
+                    margin: '0 auto 12px',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     boxShadow: '0 4px 8px rgba(220, 38, 38, 0.2)'
                   }}>
-                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <svg width={isMobile ? "24" : "28"} height={isMobile ? "24" : "28"} viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
                       <circle cx="12" cy="7" r="4"/>
                       <path d="M12 14l3-3 3 3"/>
                     </svg>
                   </div>
-                  <h4 style={{ margin: '0 0 6px 0', fontSize: '16px', fontWeight: '600', color: '#991b1b' }}>Conjugal Visit</h4>
-                  <p style={{ margin: '0', fontSize: '13px', color: '#7f1d1d', opacity: '0.8' }}>Private family visit</p>
+                  <h4 style={{ margin: '0 0 6px 0', fontSize: isMobile ? '15px' : '16px', fontWeight: '600', color: '#991b1b' }}>Conjugal Visit</h4>
+                  <p style={{ margin: '0', fontSize: isMobile ? '12px' : '13px', color: '#7f1d1d', opacity: '0.8' }}>Private family visit</p>
                 </button>
                 
                 <button 
@@ -1246,7 +1272,7 @@ const Dashboard = () => {
                   style={{ 
                     background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)',
                     color: '#166534',
-                    padding: '24px 20px',
+                    padding: isMobile ? '20px 16px' : '24px 20px',
                     borderRadius: '16px',
                     textAlign: 'center',
                     cursor: 'pointer',
@@ -1254,46 +1280,66 @@ const Dashboard = () => {
                     border: '2px solid #bbf7d0',
                     boxShadow: '0 2px 8px rgba(5, 150, 105, 0.08)',
                     position: 'relative',
-                    overflow: 'hidden'
+                    overflow: 'hidden',
+                    minHeight: isMobile ? '140px' : 'auto',
+                    width: '100%'
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = 'translateY(-4px)';
-                    e.currentTarget.style.boxShadow = '0 8px 16px rgba(5, 150, 105, 0.15)';
-                    e.currentTarget.style.borderColor = '#86efac';
-                    e.currentTarget.style.background = 'linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%)';
+                    if (!isMobile) {
+                      e.currentTarget.style.transform = 'translateY(-4px)';
+                      e.currentTarget.style.boxShadow = '0 8px 16px rgba(5, 150, 105, 0.15)';
+                      e.currentTarget.style.borderColor = '#86efac';
+                      e.currentTarget.style.background = 'linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%)';
+                    }
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = 'translateY(0)';
-                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(5, 150, 105, 0.08)';
-                    e.currentTarget.style.borderColor = '#bbf7d0';
-                    e.currentTarget.style.background = 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)';
+                    if (!isMobile) {
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(5, 150, 105, 0.08)';
+                      e.currentTarget.style.borderColor = '#bbf7d0';
+                      e.currentTarget.style.background = 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)';
+                    }
+                  }}
+                  onTouchStart={(e) => {
+                    if (isMobile) {
+                      e.currentTarget.style.background = 'linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%)';
+                      e.currentTarget.style.borderColor = '#86efac';
+                    }
+                  }}
+                  onTouchEnd={(e) => {
+                    if (isMobile) {
+                      setTimeout(() => {
+                        e.currentTarget.style.background = 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)';
+                        e.currentTarget.style.borderColor = '#bbf7d0';
+                      }, 150);
+                    }
                   }}
                 >
                   <div style={{ 
                     background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
                     borderRadius: '12px', 
-                    width: '56px', 
-                    height: '56px', 
-                    margin: '0 auto 16px',
+                    width: isMobile ? '48px' : '56px', 
+                    height: isMobile ? '48px' : '56px', 
+                    margin: '0 auto 12px',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     boxShadow: '0 4px 8px rgba(5, 150, 105, 0.2)'
                   }}>
-                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <svg width={isMobile ? "24" : "28"} height={isMobile ? "24" : "28"} viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
                       <circle cx="9" cy="7" r="4"/>
                       <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
                       <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
                     </svg>
                   </div>
-                  <h4 style={{ margin: '0 0 6px 0', fontSize: '16px', fontWeight: '600', color: '#166534' }}>Normal Visit</h4>
-                  <p style={{ margin: '0', fontSize: '13px', color: '#15803d', opacity: '0.8' }}>Regular visitation</p>
+                  <h4 style={{ margin: '0 0 6px 0', fontSize: isMobile ? '15px' : '16px', fontWeight: '600', color: '#166534' }}>Normal Visit</h4>
+                  <p style={{ margin: '0', fontSize: isMobile ? '12px' : '13px', color: '#15803d', opacity: '0.8' }}>Regular visitation</p>
                 </button>
               </div>
               
               {/* Cancel Button */}
-              <div style={{ textAlign: 'center', paddingTop: '16px', borderTop: '1px solid #e2e8f0' }}>
+              <div style={{ textAlign: 'center', paddingTop: isMobile ? '12px' : '16px', borderTop: '1px solid #e2e8f0' }}>
                 <button 
                   type="button" 
                   onClick={() => {
@@ -1305,25 +1351,45 @@ const Dashboard = () => {
                     background: '#f8fafc',
                     color: '#475569',
                     border: '1px solid #e2e8f0',
-                    padding: '12px 32px',
+                    padding: isMobile ? '14px 24px' : '12px 32px',
                     borderRadius: '10px',
-                    fontSize: '14px',
+                    fontSize: isMobile ? '15px' : '14px',
                     fontWeight: '600',
                     cursor: 'pointer',
                     transition: 'all 0.2s ease',
-                    boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)'
+                    boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
+                    width: isMobile ? '100%' : 'auto',
+                    minHeight: isMobile ? '48px' : 'auto'
                   }}
                   onMouseEnter={(e) => {
-                    e.target.style.background = '#f1f5f9';
-                    e.target.style.borderColor = '#cbd5e1';
-                    e.target.style.transform = 'translateY(-1px)';
-                    e.target.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)';
+                    if (!isMobile) {
+                      e.target.style.background = '#f1f5f9';
+                      e.target.style.borderColor = '#cbd5e1';
+                      e.target.style.transform = 'translateY(-1px)';
+                      e.target.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)';
+                    }
                   }}
                   onMouseLeave={(e) => {
-                    e.target.style.background = '#f8fafc';
-                    e.target.style.borderColor = '#e2e8f0';
-                    e.target.style.transform = 'translateY(0)';
-                    e.target.style.boxShadow = '0 1px 2px rgba(0, 0, 0, 0.05)';
+                    if (!isMobile) {
+                      e.target.style.background = '#f8fafc';
+                      e.target.style.borderColor = '#e2e8f0';
+                      e.target.style.transform = 'translateY(0)';
+                      e.target.style.boxShadow = '0 1px 2px rgba(0, 0, 0, 0.05)';
+                    }
+                  }}
+                  onTouchStart={(e) => {
+                    if (isMobile) {
+                      e.target.style.background = '#f1f5f9';
+                      e.target.style.borderColor = '#cbd5e1';
+                    }
+                  }}
+                  onTouchEnd={(e) => {
+                    if (isMobile) {
+                      setTimeout(() => {
+                        e.target.style.background = '#f8fafc';
+                        e.target.style.borderColor = '#e2e8f0';
+                      }, 150);
+                    }
                   }}
                 >
                   Cancel
