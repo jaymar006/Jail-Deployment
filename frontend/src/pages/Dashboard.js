@@ -73,16 +73,19 @@ const Dashboard = () => {
         const savedDuration = localStorage.getItem('scheduleDuration');
         const duration = savedDuration !== null ? parseInt(savedDuration, 10) : 12;
         
+        // Normalize IDs to numbers (Set uses strict equality, so type matters)
+        const normalizedIds = (data.cellIds || []).map(id => Number(id));
+        
         // Check if schedule is still valid
         if (duration === -1) {
           // Indefinitely - always valid
-          return new Set(data.cellIds || []);
+          return new Set(normalizedIds);
         } else {
           // Check if within duration
           const now = Date.now();
           const elapsed = (now - data.timestamp) / (1000 * 60 * 60); // hours
           if (elapsed < duration) {
-            return new Set(data.cellIds || []);
+            return new Set(normalizedIds);
           }
         }
       }
@@ -200,14 +203,16 @@ const Dashboard = () => {
           if (saved) {
             const data = JSON.parse(saved);
             if (newDuration === -1) {
-              // Indefinitely - keep all
-              setScheduledCells(new Set(data.cellIds || []));
+              // Indefinitely - keep all (normalize IDs to numbers)
+              const normalizedIds = (data.cellIds || []).map(id => Number(id));
+              setScheduledCells(new Set(normalizedIds));
             } else {
               // Check if still valid
               const now = Date.now();
               const elapsed = (now - data.timestamp) / (1000 * 60 * 60); // hours
               if (elapsed < newDuration) {
-                setScheduledCells(new Set(data.cellIds || []));
+                const normalizedIds = (data.cellIds || []).map(id => Number(id));
+                setScheduledCells(new Set(normalizedIds));
               } else {
                 // Expired - clear
                 setScheduledCells(new Set());
@@ -244,8 +249,9 @@ const Dashboard = () => {
           if (saved) {
             const data = JSON.parse(saved);
             if (currentDuration === -1) {
-              // Indefinitely - keep all
-              setScheduledCells(new Set(data.cellIds || []));
+              // Indefinitely - keep all (normalize IDs to numbers)
+              const normalizedIds = (data.cellIds || []).map(id => Number(id));
+              setScheduledCells(new Set(normalizedIds));
             } else {
               // Check if still valid
               const now = Date.now();
@@ -254,6 +260,10 @@ const Dashboard = () => {
                 // Expired - clear
                 setScheduledCells(new Set());
                 localStorage.removeItem('scheduledCells');
+              } else {
+                // Still valid - normalize IDs
+                const normalizedIds = (data.cellIds || []).map(id => Number(id));
+                setScheduledCells(new Set(normalizedIds));
               }
             }
           }
@@ -274,6 +284,32 @@ const Dashboard = () => {
       const response = await api.get('/api/cells/active');
       console.log('✅ Fetched available cells:', response.data);
       setAvailableCells(response.data);
+      
+      // Validate scheduledCells against newly loaded cells
+      // Remove any scheduled cell IDs that don't exist in availableCells
+      setScheduledCells(prev => {
+        const availableCellIds = new Set(response.data.map(c => Number(c.id)));
+        const validScheduledIds = Array.from(prev).filter(id => availableCellIds.has(Number(id)));
+        
+        if (validScheduledIds.length !== prev.size) {
+          console.warn(`⚠️ Removed ${prev.size - validScheduledIds.length} invalid scheduled cell IDs`);
+          const newSet = new Set(validScheduledIds.map(id => Number(id)));
+          
+          // Update localStorage
+          try {
+            localStorage.setItem('scheduledCells', JSON.stringify({
+              cellIds: Array.from(newSet).map(id => Number(id)),
+              timestamp: Date.now()
+            }));
+          } catch (error) {
+            console.error('Error updating scheduled cells:', error);
+          }
+          
+          return newSet;
+        }
+        
+        return prev;
+      });
     } catch (error) {
       console.error('❌ Failed to fetch cells:', error);
     }
@@ -282,16 +318,19 @@ const Dashboard = () => {
   const handleCellScheduleToggle = (cellId) => {
     setScheduledCells(prev => {
       const newSet = new Set(prev);
-      if (newSet.has(cellId)) {
-        newSet.delete(cellId);
+      // Normalize cellId to number for consistent comparison
+      const normalizedId = Number(cellId);
+      
+      if (newSet.has(normalizedId)) {
+        newSet.delete(normalizedId);
       } else {
-        newSet.add(cellId);
+        newSet.add(normalizedId);
       }
       
-      // Save to localStorage
+      // Save to localStorage (normalize all IDs to numbers)
       try {
         localStorage.setItem('scheduledCells', JSON.stringify({
-          cellIds: Array.from(newSet),
+          cellIds: Array.from(newSet).map(id => Number(id)),
           timestamp: Date.now()
         }));
       } catch (error) {
@@ -303,7 +342,9 @@ const Dashboard = () => {
   };
 
   const isCellScheduled = (cellId) => {
-    return scheduledCells.has(cellId);
+    // Normalize to number for consistent comparison
+    const normalizedId = Number(cellId);
+    return scheduledCells.has(normalizedId);
   };
 
   // Helper function to check if a cell number string matches any scheduled cell
@@ -314,8 +355,14 @@ const Dashboard = () => {
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     console.log('📥 Input cell string:', cellNumberString);
     console.log('📋 Available cells count:', availableCells.length);
-    console.log('📋 Available cells:', availableCells.map(c => ({id: c.id, number: c.cell_number, name: c.cell_name})));
+    console.log('📋 Available cells:', availableCells.map(c => ({
+      id: c.id, 
+      idType: typeof c.id,
+      number: c.cell_number, 
+      name: c.cell_name
+    })));
     console.log('✅ Scheduled cell IDs:', Array.from(scheduledCells));
+    console.log('✅ Scheduled cell ID types:', Array.from(scheduledCells).map(id => ({id, type: typeof id})));
     
     // Check if availableCells is empty
     if (!availableCells || availableCells.length === 0) {
@@ -366,7 +413,13 @@ const Dashboard = () => {
     console.log(`📊 Found ${matchingCells.length} cell(s) with number "${extractedCellNumber}"`);
     
     // Check if ANY of the matching cells are scheduled
-    const scheduledMatchingCells = matchingCells.filter(c => scheduledCells.has(c.id));
+    // Normalize cell.id to number for consistent comparison (Set uses strict equality)
+    const scheduledMatchingCells = matchingCells.filter(c => {
+      const normalizedId = Number(c.id);
+      const isScheduled = scheduledCells.has(normalizedId);
+      console.log(`  📅 Checking if cell ${c.id} (normalized: ${normalizedId}) is scheduled: ${isScheduled}`);
+      return isScheduled;
+    });
     const isScheduled = scheduledMatchingCells.length > 0;
     
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
@@ -1349,12 +1402,13 @@ const Dashboard = () => {
                   <button 
                     type="button" 
                     onClick={() => {
-                      const allCellIds = new Set(availableCells.map(cell => cell.id));
+                      // Normalize all IDs to numbers for consistent comparison
+                      const allCellIds = new Set(availableCells.map(cell => Number(cell.id)));
                       setScheduledCells(allCellIds);
-                      // Save to localStorage
+                      // Save to localStorage (normalize to numbers)
                       try {
                         localStorage.setItem('scheduledCells', JSON.stringify({
-                          cellIds: Array.from(allCellIds),
+                          cellIds: Array.from(allCellIds).map(id => Number(id)),
                           timestamp: Date.now()
                         }));
                       } catch (error) {
