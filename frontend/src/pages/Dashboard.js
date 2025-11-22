@@ -689,9 +689,9 @@ const Dashboard = () => {
       return; // Ignore scan if we just timed out recently
     }
     
-    // Extended debounce window: 8 seconds to prevent immediate re-scanning after time-out
-    if (lastScanSig === sig && nowMs - lastScanAt < 8000) {
-      logger.debug('Duplicate scan within 8 seconds, ignoring');
+    // Extended debounce window: 3 seconds to prevent immediate re-scanning (reduced from 8s for faster response)
+    if (lastScanSig === sig && nowMs - lastScanAt < 3000) {
+      logger.debug('Duplicate scan within 3 seconds, ignoring');
       return; // ignore duplicate immediately after previous scan
     }
     

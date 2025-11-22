@@ -73,7 +73,7 @@ const QRCodeScanner = ({ onScan, resetTrigger, scanLocked = false }) => {
 
     // Optimize config for fast scanning without system overload
     const config = { 
-      fps: 3, // 3 FPS = fast scanning but not system-breaking (scans 3 times per second)
+      fps: 10, // 10 FPS = very fast scanning for immediate response (scans 10 times per second)
       // Remove qrbox restriction - scan entire viewfinder instead of a restricted box
       qrbox: function(viewfinderWidth, viewfinderHeight) {
         // Return full viewfinder dimensions to scan entire area (no restricted box)
@@ -123,11 +123,11 @@ const QRCodeScanner = ({ onScan, resetTrigger, scanLocked = false }) => {
             return;
           }
           
-          // Prevent duplicate scans of the same QR code within 2 seconds
+          // Prevent duplicate scans of the same QR code within 500ms (very short debounce)
           const now = Date.now();
           if (lastScannedTextRef.current?.text === decodedText && 
-              now - lastScannedTextRef.current?.timestamp < 2000) {
-            logger.debug('QRScanner: Duplicate QR code detected within 2 seconds, ignoring');
+              now - lastScannedTextRef.current?.timestamp < 500) {
+            logger.debug('QRScanner: Duplicate QR code detected within 500ms, ignoring');
             return;
           }
           
