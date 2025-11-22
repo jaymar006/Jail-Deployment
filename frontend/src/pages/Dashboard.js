@@ -760,6 +760,16 @@ const Dashboard = () => {
       }
 
       // STEP 3: Time in - show purpose modal with exact message
+      // BUT: Don't show if we just timed out recently (within 10 seconds)
+      // This prevents the modal from appearing immediately after time-out
+      const nowMs = Date.now();
+      if (lastTimeOutAt && nowMs - lastTimeOutAt < 10000) {
+        logger.debug('Recent time-out detected, preventing purpose modal from showing');
+        showToast('Please wait before scanning again after time-out.', 'error');
+        setTimeout(() => setScanLocked(false), 1000);
+        return;
+      }
+      
       logger.debug('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       logger.debug('STEP 3: Showing purpose selection modal (TIME IN)');
       logger.debug('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
