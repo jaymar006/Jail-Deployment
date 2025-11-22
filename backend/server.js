@@ -3,12 +3,18 @@ const cors = require('cors');
 const dotenv = require('dotenv');
 dotenv.config();
 
+const logger = require('./utils/logger');
+const requestLogger = require('./middleware/requestLogger');
+
 const pdlRoutes = require('./routes/pdlRoutes');
 const visitorRoutes = require('./routes/visitorRoutes');
 const authRoutes = require('./routes/authRoutes');
 const cellRoutes = require('./routes/cellRoutes');
 
 const app = express();
+
+// Add request logging middleware (before routes)
+app.use(requestLogger);
 
 // Trust proxy for accurate IP addresses in rate limiting (important for deployed apps)
 app.set('trust proxy', 1);
@@ -24,7 +30,7 @@ const corsOptions = {
     // This is safe because we're behind a firewall/network
     if (process.env.NODE_ENV === 'production') {
       // Log for debugging
-      console.log(`CORS: Allowing origin ${origin}`);
+      logger.debug(`CORS: Allowing origin ${origin}`);
       return callback(null, true);
     }
     
@@ -93,31 +99,62 @@ const initDefaultUser = require('./scripts/initDefaultUser');
 
 const PORT = process.env.PORT || 10000;
 
+// Global error handlers for uncaught exceptions and unhandled rejections
+// These ensure all errors are logged before the process exits
+process.on('uncaughtException', (error) => {
+  logger.error('UNCAUGHT EXCEPTION - Process will exit:', error);
+  logger.error('Stack:', error.stack);
+  // Give time for logs to be written
+  setTimeout(() => {
+    process.exit(1);
+  }, 1000);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  logger.error('UNHANDLED REJECTION at:', promise);
+  logger.error('Reason:', reason);
+  if (reason instanceof Error) {
+    logger.error('Stack:', reason.stack);
+  }
+});
+
+// Handle SIGTERM (Docker stop signal)
+process.on('SIGTERM', () => {
+  logger.info('SIGTERM received - shutting down gracefully');
+  process.exit(0);
+});
+
+// Handle SIGINT (Ctrl+C)
+process.on('SIGINT', () => {
+  logger.info('SIGINT received - shutting down gracefully');
+  process.exit(0);
+});
+
 // Wait for database schema to be ready before starting server
 const startServer = async () => {
   try {
-    console.log('🚀 Starting server...');
-    console.log(`📦 Node version: ${process.version}`);
-    console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
-    console.log(`🔌 Database: ${process.env.DATABASE_URL ? 'PostgreSQL' : 'SQLite'}`);
+    logger.info('🚀 Starting server...');
+    logger.info(`📦 Node version: ${process.version}`);
+    logger.info(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+    logger.info(`🔌 Database: ${process.env.DATABASE_URL ? 'PostgreSQL' : 'SQLite'}`);
     
     // If using PostgreSQL, wait for schema initialization (with timeout)
     if (process.env.DATABASE_URL) {
       try {
         const db = require('./config/db');
         if (db.waitForSchema) {
-          console.log('⏳ Waiting for database schema to initialize...');
+          logger.info('⏳ Waiting for database schema to initialize...');
           // Add timeout to prevent hanging
           const schemaPromise = db.waitForSchema();
           const timeoutPromise = new Promise((_, reject) => 
             setTimeout(() => reject(new Error('Schema initialization timeout')), 30000)
           );
           await Promise.race([schemaPromise, timeoutPromise]);
-          console.log('✅ Database schema ready');
+          logger.info('✅ Database schema ready');
         }
       } catch (dbError) {
-        console.error('⚠️  Database initialization warning:', dbError.message);
-        console.warn('⚠️  Server will start anyway - database may not be fully initialized');
+        logger.warn('⚠️  Database initialization warning:', dbError.message);
+        logger.warn('⚠️  Server will start anyway - database may not be fully initialized');
       }
     }
     
@@ -127,19 +164,20 @@ const startServer = async () => {
       // Email service loaded (silent - not using email for password reset)
     } catch (emailError) {
       // Email service not available - that's OK, we use Telegram
+      logger.debug('Email service not available (using Telegram instead)');
     }
     
     // Start the server
     app.listen(PORT, '0.0.0.0', async () => {
-      console.log(`✅ Server running on port ${PORT}`);
-      console.log(`🌐 Health check:  https://jail-deployment.onrender.com:${PORT}/api/health`);
+      logger.info(`✅ Server running on port ${PORT}`);
+      logger.info(`🌐 Health check: https://jail-deployment.onrender.com:${PORT}/api/health`);
       
       // Wait a moment for everything to settle, then create default user
       setTimeout(async () => {
         try {
           await initDefaultUser();
         } catch (error) {
-          console.error('⚠️  Failed to initialize default user:', error.message);
+          logger.warn('⚠️  Failed to initialize default user:', error.message);
           // Don't crash - server can still run
         }
       }, 1000);
@@ -147,12 +185,12 @@ const startServer = async () => {
     
     // Handle server errors
     app.on('error', (error) => {
-      console.error('❌ Server error:', error);
+      logger.error('❌ Server error:', error);
     });
     
   } catch (error) {
-    console.error('❌ Failed to start server:', error);
-    console.error('❌ Error stack:', error.stack);
+    logger.error('❌ Failed to start server:', error);
+    logger.error('❌ Error stack:', error.stack);
     process.exit(1);
   }
 };

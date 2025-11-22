@@ -59,6 +59,7 @@ const Dashboard = () => {
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const [isSmallMobile, setIsSmallMobile] = useState(window.innerWidth <= 480);
   const [availableCells, setAvailableCells] = useState([]);
+  const [cellsLoaded, setCellsLoaded] = useState(false);
   const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [scheduleDuration, setScheduleDuration] = useState(() => {
     const saved = localStorage.getItem('scheduleDuration');
@@ -281,9 +282,12 @@ const Dashboard = () => {
 
   const fetchAvailableCells = async () => {
     try {
+      console.log('📡 Fetching available cells...');
       const response = await api.get('/api/cells/active');
       console.log('✅ Fetched available cells:', response.data);
       setAvailableCells(response.data);
+      setCellsLoaded(true);
+      console.log('✅ Cells loaded and ready for scanning');
       
       // Validate scheduledCells against newly loaded cells
       // Remove any scheduled cell IDs that don't exist in availableCells
@@ -312,6 +316,7 @@ const Dashboard = () => {
       });
     } catch (error) {
       console.error('❌ Failed to fetch cells:', error);
+      setCellsLoaded(false); // Mark as not loaded on error
     }
   };
 
@@ -349,13 +354,18 @@ const Dashboard = () => {
 
   // Helper function to check if a cell number string matches any scheduled cell
   // This supports BOTH old format (just "1") and new format ("Cell - 1", "Quarantine - 1")
-  const isCellNumberScheduled = (cellNumberString) => {
+  // cellsToCheck: optional parameter to pass cells directly (for when state hasn't updated yet)
+  const isCellNumberScheduled = (cellNumberString, cellsToCheck = null) => {
+    // Use passed cells or fall back to state
+    const cells = cellsToCheck || availableCells;
+    
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     console.log('🔍 CELL SCHEDULING CHECK');
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     console.log('📥 Input cell string:', cellNumberString);
-    console.log('📋 Available cells count:', availableCells.length);
-    console.log('📋 Available cells:', availableCells.map(c => ({
+    console.log('📋 Available cells count:', cells.length);
+    console.log('📋 Using cells:', cells === cellsToCheck ? 'PASSED DIRECTLY' : 'FROM STATE');
+    console.log('📋 Available cells:', cells.map(c => ({
       id: c.id, 
       idType: typeof c.id,
       number: c.cell_number, 
@@ -364,8 +374,8 @@ const Dashboard = () => {
     console.log('✅ Scheduled cell IDs:', Array.from(scheduledCells));
     console.log('✅ Scheduled cell ID types:', Array.from(scheduledCells).map(id => ({id, type: typeof id})));
     
-    // Check if availableCells is empty
-    if (!availableCells || availableCells.length === 0) {
+    // Check if cells is empty
+    if (!cells || cells.length === 0) {
       console.error('❌ ERROR: No available cells loaded! Cannot match cell.');
       return false;
     }
@@ -395,7 +405,7 @@ const Dashboard = () => {
     
     // Find ALL cells that match the cell number (there might be multiple with same number but different names)
     // Examples: "Cell - 1" and "Quarantine - 1" both have cell_number = "1"
-    const matchingCells = availableCells.filter(c => {
+    const matchingCells = cells.filter(c => {
       const cellNum = String(c.cell_number).trim();
       
       // Match if the extracted number equals the cell number in database
@@ -427,7 +437,7 @@ const Dashboard = () => {
       console.error(`❌ NO CELL MATCHED!`);
       console.error(`   QR had: "${cellNumberString}"`);
       console.error(`   Extracted: "${extractedCellNumber}"`);
-      console.error(`   Available cell numbers in DB: ${availableCells.map(c => c.cell_number).join(', ')}`);
+      console.error(`   Available cell numbers in DB: ${cells.map(c => c.cell_number).join(', ')}`);
     } else if (!isScheduled) {
       console.warn(`⚠️ Found ${matchingCells.length} cell(s) but NONE are scheduled!`);
       console.warn(`   Matching cells: ${matchingCells.map(c => `ID ${c.id} (${c.cell_name || 'no name'} - ${c.cell_number})`).join(', ')}`);
@@ -538,19 +548,48 @@ const Dashboard = () => {
   }, [qrUploadEnabled]);
 
   const handleScan = async (data) => {
-    console.log('handleScan called with data:', data);
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('🔍 QR SCAN PROCESS STARTED');
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('📥 Raw QR data:', data);
+    
     if (!data) {
-      console.log('No data provided to handleScan');
+      console.log('❌ No data provided to handleScan');
       return;
     }
+    
     if (scanLocked) {
-      console.log('Scan locked, ignoring scan. Current scanLocked state:', scanLocked);
+      console.log('🔒 Scan locked, ignoring scan. Current scanLocked state:', scanLocked);
       return;
     }
 
+    // CRITICAL: Ensure cells are loaded before processing scan
+    // This is why file upload works (cells are loaded by then) but camera scan might fail
+    let cellsToUse = availableCells;
+    if (!cellsLoaded || !availableCells || availableCells.length === 0) {
+      console.warn('⚠️ Cells not loaded yet, fetching now...');
+      console.warn('   This is why camera scan might fail - cells need to be loaded first!');
+      
+      // Fetch cells directly and use the response
+      try {
+        const response = await api.get('/api/cells/active');
+        cellsToUse = response.data;
+        console.log('✅ Fetched cells directly:', cellsToUse.length, 'cells');
+        
+        // Update state for future scans
+        setAvailableCells(cellsToUse);
+        setCellsLoaded(true);
+      } catch (error) {
+        console.error('❌ Failed to fetch cells:', error);
+        showToast('System not ready. Please try again in a moment.', 'error');
+        return;
+      }
+    }
+
+    // STEP 1: Parse QR code data
     const regex = /\[(.*?)\]/g;
     const matches = [...data.matchAll(regex)].map(match => match[1]);
-    console.log('Parsed matches from QR code:', matches);
+    console.log('📋 Parsed matches from QR code:', matches);
 
     let visitorName = '', pdlName = '', cell = '', relationship = '', contactNumber = '';
 
@@ -562,30 +601,42 @@ const Dashboard = () => {
       else if (part.startsWith('Contact:')) contactNumber = part.replace('Contact:', '').trim();
     });
 
-    console.log('Extracted data:', { visitorName, pdlName, cell, relationship, contactNumber });
+    console.log('✅ Extracted data:', { visitorName, pdlName, cell, relationship, contactNumber });
 
     if (!visitorName || !pdlName || !cell) {
-      console.log('Invalid QR format - missing required fields');
+      console.error('❌ Invalid QR format - missing required fields');
       showToast('Invalid QR code format', 'error');
       return;
     }
 
-    // Check if the cell is scheduled for visits
-    if (!isCellNumberScheduled(cell)) {
+    // STEP 2: Check if the cell is scheduled for visits today
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('📅 STEP 2: Checking if cell is scheduled...');
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log(`   Cells loaded: ${cellsLoaded}`);
+    console.log(`   Available cells count: ${cellsToUse.length}`);
+    console.log(`   Using cells: ${cellsToUse === availableCells ? 'FROM STATE' : 'FRESH FETCH'}`);
+    
+    // Pass cells directly to avoid state update timing issues
+    const isScheduled = isCellNumberScheduled(cell, cellsToUse);
+    
+    if (!isScheduled) {
       console.error('❌ Cell not scheduled - stopping scan process');
-      // Show cell value without adding "Cell" prefix (it might already be in the format "Cell - 1")
+      console.error(`   Cell from QR: "${cell}"`);
+      console.error(`   Available cells: ${availableCells.length}`);
+      console.error(`   Scheduled cell IDs: ${Array.from(scheduledCells).join(', ')}`);
       showToast(`${cell} is not scheduled for visits today. Please contact the administrator.`, 'error');
       // IMPORTANT: Don't lock the scanner on scheduling error - allow retry
       return;
     }
     
-    console.log('✅ Cell is scheduled, proceeding with scan...');
+    console.log('✅ Cell is scheduled, proceeding to next step...');
 
     // Debounce same QR contents for a short window
     const sig = `${visitorName}|${pdlName}|${cell}`;
     const nowMs = Date.now();
     if (lastScanSig === sig && nowMs - lastScanAt < 5000) {
-      console.log('Duplicate scan within 5 seconds, ignoring');
+      console.log('⚠️ Duplicate scan within 5 seconds, ignoring');
       return; // ignore duplicate immediately after previous scan
     }
     setLastScanSig(sig);
@@ -593,9 +644,13 @@ const Dashboard = () => {
 
     // Lock scanning IMMEDIATELY to prevent double fires from the same QR frame
     setScanLocked(true);
-    console.log('Scan locked');
+    console.log('🔒 Scan locked to prevent duplicate processing');
 
-    // Preflight: ask backend if this is a time_in or time_out
+    // STEP 3: Check if visitor has existing record in system (preflight check)
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('🔍 STEP 3: Checking if visitor has existing record...');
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    
     try {
       const preflight = await api.post('/api/scanned_visitors', {
         visitor_name: visitorName,
@@ -607,8 +662,14 @@ const Dashboard = () => {
       });
 
       const planned = preflight?.data?.action;
+      console.log('📊 Preflight response:', { action: planned });
+      
       if (planned === 'time_out') {
-        // Directly execute time_out without purpose modal
+        // STEP 5: Time out - visitor already has time_in, directly execute time_out
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.log('⏰ STEP 5: Executing TIME OUT (visitor already has time_in)');
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        
         const scanData = {
           visitor_name: visitorName,
           pdl_name: pdlName,
@@ -616,17 +677,26 @@ const Dashboard = () => {
           relationship,
           contact_number: contactNumber
         };
+        
         await api.post('/api/scanned_visitors', {
           ...scanData,
           device_time: new Date().toISOString()
         });
+        
+        console.log('✅ Time out successful!');
         showToast('Successful time out!', 'success');
         await fetchVisitors();
         setTimeout(() => setScanLocked(false), 1200);
         return;
       }
 
-      // Otherwise show modal for purpose selection (time in)
+      // STEP 4: Time in - show purpose modal (normal or conjugal)
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.log('📝 STEP 4: Showing purpose selection modal (TIME IN)');
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.log('   Visitor has no existing record or already timed out');
+      console.log('   Action needed: Select visit purpose (normal/conjugal)');
+      
       setPendingScanData({
         visitor_name: visitorName,
         pdl_name: pdlName,
@@ -635,19 +705,29 @@ const Dashboard = () => {
         contact_number: contactNumber
       });
       setShowPurposeModal(true);
+      console.log('✅ Purpose modal opened');
     } catch (e) {
-      console.error('Preflight scan error:', e);
+      console.error('❌ Preflight scan error:', e);
       showToast('Scan preflight failed', 'error');
       setTimeout(() => setScanLocked(false), 800);
     }
   };
 
   const handlePurposeSelection = async (purpose) => {
-    if (!pendingScanData) return;
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('📝 PURPOSE SELECTED:', purpose);
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    
+    if (!pendingScanData) {
+      console.error('❌ No pending scan data!');
+      return;
+    }
 
     setShowPurposeModal(false);
+    console.log('✅ Purpose modal closed');
 
     try {
+      console.log('📤 Sending time_in request to backend...');
       const response = await api.post('/api/scanned_visitors', {
         ...pendingScanData,
         device_time: new Date().toISOString(),
@@ -655,25 +735,35 @@ const Dashboard = () => {
       });
 
       const action = response?.data?.action;
+      console.log('📥 Backend response:', { action });
+      
       if (action === 'time_out') {
+        console.log('✅ Time out successful!');
         showToast('Successful time out!', 'success');
       } else if (action === 'time_in') {
+        console.log('✅ Time in successful!');
         showToast('Successful time in!', 'success');
       } else if (action === 'already_timed_out') {
+        console.warn('⚠️ Visitor already timed out');
         showToast('This visitor has already timed out.', 'error');
       } else {
+        console.log('✅ Scan recorded!');
         showToast('Scan recorded!', 'success');
       }
 
-      fetchVisitors();
+      await fetchVisitors();
+      console.log('✅ Visitor list refreshed');
     } catch (error) {
-      console.error('Error adding scanned visitor:', error);
+      console.error('❌ Error adding scanned visitor:', error);
       showToast('Error adding scanned visitor', 'error');
     }
 
     setPendingScanData(null);
     // Unlock scanning after a short cooldown to avoid immediate re-trigger
-    setTimeout(() => setScanLocked(false), 2000);
+    setTimeout(() => {
+      setScanLocked(false);
+      console.log('🔓 Scan unlocked after cooldown');
+    }, 2000);
   };
 
   const handleRowClick = (id) => {
