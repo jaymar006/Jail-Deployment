@@ -307,6 +307,7 @@ const Dashboard = () => {
   };
 
   // Helper function to check if a cell number string matches any scheduled cell
+  // This supports BOTH old format (just "1") and new format ("Cell - 1", "Quarantine - 1")
   const isCellNumberScheduled = (cellNumberString) => {
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     console.log('🔍 CELL SCHEDULING CHECK');
@@ -322,54 +323,61 @@ const Dashboard = () => {
       return false;
     }
     
-    // Extract just the cell number from formats like "Cell - 1", "Cell Name - 1", or "1"
+    // UNIVERSAL CELL NUMBER EXTRACTOR
+    // Handles: "1", "Cell - 1", "Quarantine - 1", "Cell Name - 1", etc.
     const extractCellNumber = (str) => {
       if (!str) return '';
       const strTrimmed = str.trim();
       
-      // If format is "Something - Number", extract the number
+      // If format contains " - ", extract the number after the last " - "
+      // Examples: "Cell - 1" → "1", "Quarantine - 1" → "1", "Some Name - 5" → "5"
       if (strTrimmed.includes(' - ')) {
         const parts = strTrimmed.split(' - ');
         const lastPart = parts[parts.length - 1].trim();
-        console.log(`  Extracting from "${strTrimmed}" → parts: [${parts.join(', ')}] → last: "${lastPart}"`);
+        console.log(`  📤 Extracting from "${strTrimmed}" → "${lastPart}"`);
         return lastPart;
       }
+      
+      // Otherwise, it's just the number (old format)
+      console.log(`  📤 Using as-is: "${strTrimmed}"`);
       return strTrimmed;
     };
     
     const extractedCellNumber = extractCellNumber(cellNumberString);
     console.log('🔢 Extracted cell number:', `"${extractedCellNumber}"`);
     
-    // Find the cell by matching the cell number
+    // Find the cell by matching ONLY the cell number (ignoring names)
+    // This makes it compatible with both old QR codes (just "1") 
+    // and new QR codes ("Cell - 1", "Quarantine - 1")
     const cell = availableCells.find(c => {
-      const cellDisplay = c.cell_name ? `${c.cell_name} - ${c.cell_number}` : c.cell_number;
       const cellNum = String(c.cell_number).trim();
       
-      console.log(`  Comparing QR:"${extractedCellNumber}" with DB cell ${c.id}: "${cellNum}" (name: "${c.cell_name || 'none'}")`);
+      // Match if the extracted number equals the cell number in database
+      // Case-insensitive and type-flexible (handles "1" === 1, "1" === "1", etc.)
+      const matches = 
+        cellNum === extractedCellNumber ||
+        cellNum.toLowerCase() === extractedCellNumber.toLowerCase() ||
+        parseInt(cellNum, 10) === parseInt(extractedCellNumber, 10);
       
-      // Try multiple matching strategies
-      const exactMatch = cellNum === extractedCellNumber;
-      const caseInsensitiveMatch = cellNum.toLowerCase() === extractedCellNumber.toLowerCase();
-      const fullDisplayMatch = cellDisplay.toLowerCase() === cellNumberString.toLowerCase();
-      const originalMatch = cellNum.toLowerCase() === cellNumberString.toLowerCase();
+      console.log(`  🔍 Cell ${c.id} (DB:"${cellNum}") vs QR:"${extractedCellNumber}" → ${matches ? '✅ MATCH' : '❌'}`);
       
-      console.log(`    Exact: ${exactMatch}, CaseInsensitive: ${caseInsensitiveMatch}, FullDisplay: ${fullDisplayMatch}, Original: ${originalMatch}`);
-      
-      const matches = exactMatch || caseInsensitiveMatch || fullDisplayMatch || originalMatch;
-      
-      if (matches) {
-        console.log(`  ✅ MATCH FOUND for cell ${c.id}! (${cellNum})`);
-      }
       return matches;
     });
     
     const isScheduled = cell ? scheduledCells.has(cell.id) : false;
-    console.log('🎯 Cell found:', cell);
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('🎯 Cell found:', cell ? `ID ${cell.id} (${cell.cell_number})` : 'undefined');
     console.log('📅 Is scheduled:', isScheduled);
     
     if (!cell) {
-      console.error(`❌ NO CELL MATCHED! QR had "${cellNumberString}", extracted "${extractedCellNumber}"`);
-      console.error('💡 Available cell numbers:', availableCells.map(c => c.cell_number).join(', '));
+      console.error(`❌ NO CELL MATCHED!`);
+      console.error(`   QR had: "${cellNumberString}"`);
+      console.error(`   Extracted: "${extractedCellNumber}"`);
+      console.error(`   Available cell numbers in DB: ${availableCells.map(c => c.cell_number).join(', ')}`);
+    } else if (!isScheduled) {
+      console.warn(`⚠️ Cell ${cell.id} found but NOT scheduled!`);
+    } else {
+      console.log(`✅ SUCCESS! Cell ${cell.id} is scheduled and ready for visits.`);
     }
     
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
@@ -706,7 +714,7 @@ const Dashboard = () => {
           className={`dashboard-toast dashboard-toast-${toast.type}`}
           style={{
             position: 'fixed',
-            top: isMobile ? '80px' : '100px', // Position below navbar (navbar is ~60-80px on mobile, ~80-100px on desktop)
+            top: isMobile ? (isSmallMobile ? '70px' : '90px') : '100px', // Mobile: 90px (or 70px for small), Desktop: 100px
             left: isMobile ? '10px' : '50%',
             right: isMobile ? '10px' : 'auto',
             transform: isMobile ? 'none' : 'translateX(-50%)',

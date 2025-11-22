@@ -297,7 +297,7 @@
   /* Toast mobile responsive */
   .dashboard-toast {
     position: fixed !important;
-    top: 80px !important; /* Position below mobile navbar */
+    top: 90px !important; /* Position below mobile navbar (increased for mobile) */
     left: 10px !important;
     right: 10px !important;
     transform: none !important;
