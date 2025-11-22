@@ -2,6 +2,7 @@ const Visitor = require('../models/visitorModel');
 const ScannedVisitor = require('../models/scannedVisitorModel');
 const Cell = require('../models/cellModel');
 const PDL = require('../models/pdlModel');
+const logger = require('../utils/logger');
 
 const APP_TIMEZONE = process.env.APP_TIMEZONE || 'Asia/Manila';
 
@@ -35,7 +36,7 @@ const formatToAppTimezone = (input) => {
     }
     return `${year}-${month}-${day} ${hour}:${minute}:${second}`;
   } catch (error) {
-    console.error('Failed to format date to application timezone:', error);
+    logger.error('Failed to format date to application timezone:', error);
     return date.toISOString().slice(0, 19).replace('T', ' ');
   }
 };
@@ -68,7 +69,7 @@ const resolveCellDisplayValue = async (rawCell) => {
       }
     }
   } catch (error) {
-    console.error('Failed to resolve cell display value:', error);
+    logger.error('Failed to resolve cell display value:', error);
   }
 
   return trimmed;
@@ -80,7 +81,7 @@ exports.getVisitorsByPdl = async (req, res) => {
     const visitors = await Visitor.getAllByPdlId(pdlId);
     res.json(visitors);
   } catch (err) {
-    console.error('Error in getVisitorsByPdl:', err);
+    logger.error('Error in getVisitorsByPdl:', err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -90,7 +91,7 @@ exports.getAllVisitorsWithPdlNames = async (req, res) => {
     const visitors = await Visitor.getAllWithPdlNames();
     res.json(visitors);
   } catch (err) {
-    console.error('Error in getAllVisitorsWithPdlNames:', err);
+    logger.error('Error in getAllVisitorsWithPdlNames:', err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -102,7 +103,7 @@ exports.getVisitorById = async (req, res) => {
     if (!visitor) return res.status(404).json({ message: 'Visitor not found' });
     res.json(visitor);
   } catch (err) {
-    console.error('Error in getVisitorById:', err);
+    logger.error('Error in getVisitorById:', err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -142,7 +143,7 @@ const newVisitor = {
 const insertResult = await Visitor.add(newVisitor);
 res.status(201).json({ message: 'Visitor added successfully', id: insertResult.insertId });
   } catch (err) {
-    console.error('Error in addVisitor:', err);
+    logger.error('Error in addVisitor:', err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -179,7 +180,7 @@ const updatedVisitor = {
 await Visitor.update(id, updatedVisitor);
 res.json({ message: 'Visitor updated successfully' });
   } catch (err) {
-    console.error('Error in updateVisitor:', err);
+    logger.error('Error in updateVisitor:', err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -193,7 +194,7 @@ exports.deleteVisitor = async (req, res) => {
     }
     res.json({ message: 'Visitor deleted successfully' });
   } catch (err) {
-    console.error('Error in deleteVisitor:', err);
+    logger.error('Error in deleteVisitor:', err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -227,7 +228,7 @@ exports.recordScan = async (req, res) => {
 
     res.json({ message: 'Scan recorded successfully', timeIn, timeOut });
   } catch (err) {
-    console.error('Error in recordScan:', err);
+    logger.error('Error in recordScan:', err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -287,14 +288,14 @@ exports.addScannedVisitor = async (req, res) => {
     // If visitor_id is provided, use new workflow
     if (visitor_id) {
       visitor_id = visitor_id.trim();
-      console.log('addScannedVisitor (NEW WORKFLOW): visitor_id =', visitor_id);
+      logger.debug('addScannedVisitor (NEW WORKFLOW): visitor_id =', visitor_id);
       
       // Look up visitor from database using visitor_id
       // First try by visitor_id (string like "VIS-1001"), then by id (numeric primary key) for backward compatibility
       let visitor = await Visitor.getByVisitorId(visitor_id);
       if (!visitor && /^\d+$/.test(visitor_id)) {
         // If visitor_id is numeric and not found, try looking up by primary key id (backward compatibility)
-        console.log('Visitor not found by visitor_id, trying primary key id lookup...');
+        logger.debug('Visitor not found by visitor_id, trying primary key id lookup...');
         visitor = await Visitor.getById(parseInt(visitor_id, 10));
       }
       if (!visitor) {
@@ -315,7 +316,7 @@ exports.addScannedVisitor = async (req, res) => {
       contact_number = visitor.contact_number;
       const verifiedConjugal = visitor.verified_conjugal === 1 || visitor.verified_conjugal === true;
       
-      console.log('addScannedVisitor: Looked up visitor details:', { 
+      logger.debug('addScannedVisitor: Looked up visitor details:', { 
         visitor_name, pdl_name, cell, relationship, contact_number, verifiedConjugal 
       });
       
@@ -323,7 +324,21 @@ exports.addScannedVisitor = async (req, res) => {
       const formattedCell = await resolveCellDisplayValue(cell);
       
       // Check latest visit log by visitor_id
-      const openScan = await ScannedVisitor.findOpenScanByVisitorId(visitor_id);
+      // Use the actual visitor.visitor_id from database (more reliable than input parameter)
+      // Also try by visitor.id (primary key) and by visitor name as fallbacks
+      logger.debug('Checking for open scan using visitor.visitor_id:', visitor.visitor_id, 'and visitor.id:', visitor.id);
+      let openScan = await ScannedVisitor.findOpenScanByVisitorId(visitor.visitor_id);
+      if (!openScan && visitor.id) {
+        // Fallback: try by primary key id
+        logger.debug('No open scan found by visitor_id, trying by primary key id...');
+        openScan = await ScannedVisitor.findOpenScanByVisitorId(String(visitor.id));
+      }
+      // Also try direct lookup by visitor name as additional fallback (most reliable)
+      if (!openScan) {
+        logger.debug('No open scan found by visitor_id or id, trying by visitor name...');
+        openScan = await ScannedVisitor.findOpenScanByVisitorName(visitor_name);
+      }
+      logger.debug('Final openScan result:', openScan ? `Found open scan ID ${openScan.id}` : 'No open scan found');
       
       if (only_check) {
         if (openScan && !openScan.time_out) {
@@ -420,7 +435,7 @@ exports.addScannedVisitor = async (req, res) => {
     const formattedCell = await resolveCellDisplayValue(trimmedCell);
     const cellCandidates = Array.from(new Set([formattedCell, trimmedCell].filter(Boolean)));
 
-    console.log('addScannedVisitor (LEGACY):', { visitor_name, pdl_name, cell: formattedCell, relationship, contact_number, normalizedPurpose });
+    logger.debug('addScannedVisitor (LEGACY):', { visitor_name, pdl_name, cell: formattedCell, relationship, contact_number, normalizedPurpose });
 
     const findOpenScan = async () => {
       for (const candidate of cellCandidates) {
@@ -442,7 +457,7 @@ exports.addScannedVisitor = async (req, res) => {
         verifiedConjugal = visitorRecord.verified_conjugal === 1 || visitorRecord.verified_conjugal === true;
       }
     } catch (error) {
-      console.error('Error checking verified_conjugal:', error);
+      logger.error('Error checking verified_conjugal:', error);
       // Continue without verified_conjugal check if it fails
     }
 
@@ -459,7 +474,7 @@ exports.addScannedVisitor = async (req, res) => {
       });
     }
 
-    console.log('Found openScan:', openScan);
+    logger.debug('Found openScan:', openScan);
 
     // Use client-provided device time if valid ISO string; fallback to server time
     let referenceDate = device_time ? new Date(device_time) : new Date();
@@ -482,10 +497,10 @@ exports.addScannedVisitor = async (req, res) => {
     } else {
       // CRITICAL: Double-check for openScan before creating new record (race condition fix)
       // This prevents duplicate records when multiple requests come in simultaneously
-      console.log('⚠️ No openScan found on first check - performing double-check to prevent race condition...');
+      logger.debug('⚠️ No openScan found on first check - performing double-check to prevent race condition...');
       const doubleCheckOpenScan = await findOpenScan();
       if (doubleCheckOpenScan) {
-        console.log('✅ Double-check found openScan - another request may have created it. Updating instead of creating new record.');
+        logger.debug('✅ Double-check found openScan - another request may have created it. Updating instead of creating new record.');
         // Another request just created this record, update it instead
         if (!doubleCheckOpenScan.time_out) {
           const localTimeOut = localizedTimestamp;
@@ -500,7 +515,7 @@ exports.addScannedVisitor = async (req, res) => {
       const recentScan = await ScannedVisitor.findRecentScanByVisitorDetails(visitor_name, pdl_name, formattedCell, 5);
       if (recentScan && !recentScan.time_out) {
         // Found a recent open scan - this is likely a time_out request that didn't find the openScan due to race condition
-        console.log('⚠️ Found recent open scan created within last 5 seconds - treating as time_out to prevent duplicate');
+        logger.warn('⚠️ Found recent open scan created within last 5 seconds - treating as time_out to prevent duplicate');
         const localTimeOut = localizedTimestamp;
         await ScannedVisitor.updateTimeOut(recentScan.id, localTimeOut);
         return res.status(200).json({ message: `Visitor "${visitor_name}" scan timed out`, id: recentScan.id, time_out: localTimeOut, action: 'time_out' });
@@ -508,10 +523,10 @@ exports.addScannedVisitor = async (req, res) => {
       
       if (recentScan && recentScan.time_out) {
         // Recent scan already timed out - this is a new time_in, safe to create
-        console.log('✅ Recent scan already timed out - creating new time_in record');
+        logger.debug('✅ Recent scan already timed out - creating new time_in record');
       }
 
-      console.log('✅ All checks passed - safe to create new record');
+      logger.debug('✅ All checks passed - safe to create new record');
 
       // No open scan found, create new record
       const scannedVisitorData = {
@@ -530,7 +545,7 @@ exports.addScannedVisitor = async (req, res) => {
       return res.status(201).json({ message: 'Scanned visitor added', id: result.insertId, time_in: localizedTimestamp, action: 'time_in' });
     }
   } catch (error) {
-    console.error('Error in addScannedVisitor:', error);
+    logger.error('Error in addScannedVisitor:', error);
     res.status(500).json({ error: error.message || 'Failed to add scanned visitor' });
   }
 };
@@ -555,7 +570,7 @@ exports.updateScannedVisitorTimes = async (req, res) => {
 
     res.json({ message: 'Scanned visitor times updated successfully' });
   } catch (error) {
-    console.error('Error in updateScannedVisitorTimes:', error);
+    logger.error('Error in updateScannedVisitorTimes:', error);
     res.status(500).json({ error: error.message || 'Failed to update scanned visitor times' });
   }
 };
@@ -563,15 +578,15 @@ exports.updateScannedVisitorTimes = async (req, res) => {
 exports.deleteScannedVisitor = async (req, res) => {
   try {
     const { id } = req.params;
-    console.log('Deleting scanned visitor with id:', id);
+    logger.debug('Deleting scanned visitor with id:', id);
     const result = await ScannedVisitor.delete(id);
-    console.log('Delete result:', result);
+    logger.debug('Delete result:', result);
     if (result.affectedRows === 0) {
       return res.status(404).json({ error: 'Scanned visitor not found' });
     }
     res.json({ message: 'Scanned visitor deleted successfully' });
   } catch (error) {
-    console.error('Error in deleteScannedVisitor:', error);
+    logger.error('Error in deleteScannedVisitor:', error);
     res.status(500).json({ error: error.message || 'Failed to delete scanned visitor' });
   }
 };
@@ -584,7 +599,7 @@ exports.deleteAllLogs = async (req, res) => {
       deletedCount: result.affectedRows 
     });
   } catch (error) {
-    console.error('Error in deleteAllLogs:', error);
+    logger.error('Error in deleteAllLogs:', error);
     res.status(500).json({ error: error.message || 'Failed to delete all logs' });
   }
 };
@@ -605,7 +620,7 @@ exports.deleteLogsByDateRange = async (req, res) => {
       endDate
     });
   } catch (error) {
-    console.error('Error in deleteLogsByDateRange:', error);
+    logger.error('Error in deleteLogsByDateRange:', error);
     res.status(500).json({ error: error.message || 'Failed to delete logs by date range' });
   }
 };
@@ -625,7 +640,7 @@ exports.deleteLogsByDate = async (req, res) => {
       date
     });
   } catch (error) {
-    console.error('Error in deleteLogsByDate:', error);
+    logger.error('Error in deleteLogsByDate:', error);
     res.status(500).json({ error: error.message || 'Failed to delete logs by date' });
   }
 };

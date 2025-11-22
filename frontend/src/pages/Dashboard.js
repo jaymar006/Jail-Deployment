@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom';
 import QRCodeScanner from '../components/QRCodeScanner';
 import { Html5Qrcode } from 'html5-qrcode';
 import api from '../services/api';
+import logger from '../utils/logger';
 import './Dashboard.css';
 
 const Modal = ({ children, onClose }) => {
@@ -129,7 +130,7 @@ const Dashboard = () => {
         }
       }
     } catch (error) {
-      console.error('Error loading scheduled cells:', error);
+      logger.error('Error loading scheduled cells:', error);
     }
     return new Set();
   });
@@ -185,20 +186,17 @@ const Dashboard = () => {
   const currentDateString = getDateString(new Date().toISOString());
 
   const showToast = useCallback((message, type = 'success') => {
-    console.log('🔔 showToast called:', { message, type, timestamp: new Date().toISOString() });
-    console.log('Current toast state before update:', toast);
+    logger.debug('showToast called:', { message, type, timestamp: new Date().toISOString() });
+    logger.debug('Current toast state before update:', toast);
     
     setToast({ show: true, message, type });
     
-    // TEMPORARY DEBUG: Also use alert for errors to ensure visibility
     if (type === 'error') {
-      console.error('🚨 ERROR TOAST:', message);
-      // Uncomment this line if you still can't see the toast:
-      // alert('ERROR: ' + message);
+      logger.error('ERROR TOAST:', message);
     }
     
     setTimeout(() => {
-      console.log('Toast hiding after 4 seconds');
+      logger.debug('Toast hiding after 4 seconds');
       setToast({ show: false, message: '', type: '' });
     }, 4000); // Increased to 4 seconds for better visibility
   }, [toast]);
@@ -208,7 +206,7 @@ const Dashboard = () => {
       const res = await api.get('/api/scanned_visitors');
       setVisitors(res.data);
     } catch (error) {
-      console.error('Failed to fetch visitors:', error);
+      logger.error('Failed to fetch visitors:', error);
       showToast('Failed to fetch visitors data', 'error');
     }
   }, [showToast]);
@@ -260,7 +258,7 @@ const Dashboard = () => {
             }
           }
         } catch (error) {
-          console.error('Error validating scheduled cells:', error);
+          logger.error('Error validating scheduled cells:', error);
         }
       }
     };
@@ -307,7 +305,7 @@ const Dashboard = () => {
             }
           }
         } catch (error) {
-          console.error('Error validating scheduled cells:', error);
+          logger.error('Error validating scheduled cells:', error);
         }
       }
     }, 500);
@@ -320,12 +318,12 @@ const Dashboard = () => {
 
   const fetchAvailableCells = async () => {
     try {
-      console.log('📡 Fetching available cells...');
+      logger.debug('Fetching available cells...');
       const response = await api.get('/api/cells/active');
-      console.log('✅ Fetched available cells:', response.data);
+      logger.debug('Fetched available cells:', response.data);
       setAvailableCells(response.data);
       setCellsLoaded(true);
-      console.log('✅ Cells loaded and ready for scanning');
+      logger.debug('Cells loaded and ready for scanning');
       
       // Validate scheduledCells against newly loaded cells
       // Remove any scheduled cell IDs that don't exist in availableCells
@@ -334,7 +332,7 @@ const Dashboard = () => {
         const validScheduledIds = Array.from(prev).filter(id => availableCellIds.has(Number(id)));
         
         if (validScheduledIds.length !== prev.size) {
-          console.warn(`⚠️ Removed ${prev.size - validScheduledIds.length} invalid scheduled cell IDs`);
+          logger.warn(`Removed ${prev.size - validScheduledIds.length} invalid scheduled cell IDs`);
           const newSet = new Set(validScheduledIds.map(id => Number(id)));
           
           // Update localStorage
@@ -344,7 +342,7 @@ const Dashboard = () => {
               timestamp: Date.now()
             }));
           } catch (error) {
-            console.error('Error updating scheduled cells:', error);
+            logger.error('Error updating scheduled cells:', error);
           }
           
           return newSet;
@@ -353,7 +351,7 @@ const Dashboard = () => {
         return prev;
       });
     } catch (error) {
-      console.error('❌ Failed to fetch cells:', error);
+      logger.error('Failed to fetch cells:', error);
       setCellsLoaded(false); // Mark as not loaded on error
     }
   };
@@ -377,7 +375,7 @@ const Dashboard = () => {
           timestamp: Date.now()
         }));
       } catch (error) {
-        console.error('Error saving scheduled cells:', error);
+        logger.error('Error saving scheduled cells:', error);
       }
       
       return newSet;
@@ -397,24 +395,24 @@ const Dashboard = () => {
     // Use passed cells or fall back to state
     const cells = cellsToCheck || availableCells;
     
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log('🔍 CELL SCHEDULING CHECK');
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log('📥 Input cell string:', cellNumberString);
-    console.log('📋 Available cells count:', cells.length);
-    console.log('📋 Using cells:', cells === cellsToCheck ? 'PASSED DIRECTLY' : 'FROM STATE');
-    console.log('📋 Available cells:', cells.map(c => ({
+    logger.debug('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    logger.debug('CELL SCHEDULING CHECK');
+    logger.debug('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    logger.debug('Input cell string:', cellNumberString);
+    logger.debug('Available cells count:', cells.length);
+    logger.debug('Using cells:', cells === cellsToCheck ? 'PASSED DIRECTLY' : 'FROM STATE');
+    logger.debug('Available cells:', cells.map(c => ({
       id: c.id, 
       idType: typeof c.id,
       number: c.cell_number, 
       name: c.cell_name
     })));
-    console.log('✅ Scheduled cell IDs:', Array.from(scheduledCells));
-    console.log('✅ Scheduled cell ID types:', Array.from(scheduledCells).map(id => ({id, type: typeof id})));
+    logger.debug('Scheduled cell IDs:', Array.from(scheduledCells));
+    logger.debug('Scheduled cell ID types:', Array.from(scheduledCells).map(id => ({id, type: typeof id})));
     
     // Check if cells is empty
     if (!cells || cells.length === 0) {
-      console.error('❌ ERROR: No available cells loaded! Cannot match cell.');
+      logger.error('ERROR: No available cells loaded! Cannot match cell.');
       return false;
     }
     
@@ -429,17 +427,17 @@ const Dashboard = () => {
       if (strTrimmed.includes(' - ')) {
         const parts = strTrimmed.split(' - ');
         const lastPart = parts[parts.length - 1].trim();
-        console.log(`  📤 Extracting from "${strTrimmed}" → "${lastPart}"`);
+        logger.debug(`Extracting from "${strTrimmed}" → "${lastPart}"`);
         return lastPart;
       }
       
       // Otherwise, it's just the number (old format)
-      console.log(`  📤 Using as-is: "${strTrimmed}"`);
+      logger.debug(`Using as-is: "${strTrimmed}"`);
       return strTrimmed;
     };
     
     const extractedCellNumber = extractCellNumber(cellNumberString);
-    console.log('🔢 Extracted cell number:', `"${extractedCellNumber}"`);
+    logger.debug('Extracted cell number:', `"${extractedCellNumber}"`);
     
     // Find ALL cells that match the cell number (there might be multiple with same number but different names)
     // Examples: "Cell - 1" and "Quarantine - 1" both have cell_number = "1"
@@ -453,41 +451,41 @@ const Dashboard = () => {
         cellNum.toLowerCase() === extractedCellNumber.toLowerCase() ||
         parseInt(cellNum, 10) === parseInt(extractedCellNumber, 10);
       
-      console.log(`  🔍 Cell ${c.id} (${c.cell_name || 'no name'} - ${cellNum}) vs QR:"${extractedCellNumber}" → ${matches ? '✅ MATCH' : '❌'}`);
+      logger.debug(`Cell ${c.id} (${c.cell_name || 'no name'} - ${cellNum}) vs QR:"${extractedCellNumber}" → ${matches ? 'MATCH' : 'NO MATCH'}`);
       
       return matches;
     });
     
-    console.log(`📊 Found ${matchingCells.length} cell(s) with number "${extractedCellNumber}"`);
+    logger.debug(`Found ${matchingCells.length} cell(s) with number "${extractedCellNumber}"`);
     
     // Check if ANY of the matching cells are scheduled
     // Normalize cell.id to number for consistent comparison (Set uses strict equality)
     const scheduledMatchingCells = matchingCells.filter(c => {
       const normalizedId = Number(c.id);
       const isScheduled = scheduledCells.has(normalizedId);
-      console.log(`  📅 Checking if cell ${c.id} (normalized: ${normalizedId}) is scheduled: ${isScheduled}`);
+      logger.debug(`Checking if cell ${c.id} (normalized: ${normalizedId}) is scheduled: ${isScheduled}`);
       return isScheduled;
     });
     const isScheduled = scheduledMatchingCells.length > 0;
     
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    logger.debug('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     if (matchingCells.length === 0) {
-      console.error(`❌ NO CELL MATCHED!`);
-      console.error(`   QR had: "${cellNumberString}"`);
-      console.error(`   Extracted: "${extractedCellNumber}"`);
-      console.error(`   Available cell numbers in DB: ${cells.map(c => c.cell_number).join(', ')}`);
+      logger.error(`NO CELL MATCHED!`);
+      logger.error(`QR had: "${cellNumberString}"`);
+      logger.error(`Extracted: "${extractedCellNumber}"`);
+      logger.error(`Available cell numbers in DB: ${cells.map(c => c.cell_number).join(', ')}`);
     } else if (!isScheduled) {
-      console.warn(`⚠️ Found ${matchingCells.length} cell(s) but NONE are scheduled!`);
-      console.warn(`   Matching cells: ${matchingCells.map(c => `ID ${c.id} (${c.cell_name || 'no name'} - ${c.cell_number})`).join(', ')}`);
-      console.warn(`   Scheduled cell IDs: ${Array.from(scheduledCells).join(', ')}`);
+      logger.warn(`Found ${matchingCells.length} cell(s) but NONE are scheduled!`);
+      logger.warn(`Matching cells: ${matchingCells.map(c => `ID ${c.id} (${c.cell_name || 'no name'} - ${c.cell_number})`).join(', ')}`);
+      logger.warn(`Scheduled cell IDs: ${Array.from(scheduledCells).join(', ')}`);
     } else {
-      console.log(`✅ SUCCESS! Found ${scheduledMatchingCells.length} scheduled cell(s):`);
+      logger.debug(`SUCCESS! Found ${scheduledMatchingCells.length} scheduled cell(s):`);
       scheduledMatchingCells.forEach(c => {
-        console.log(`   ✅ Cell ID ${c.id} (${c.cell_name || 'no name'} - ${c.cell_number}) is scheduled`);
+        logger.debug(`Cell ID ${c.id} (${c.cell_name || 'no name'} - ${c.cell_number}) is scheduled`);
       });
     }
     
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+    logger.debug('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
     
     return isScheduled;
   };
@@ -518,7 +516,7 @@ const Dashboard = () => {
         showToast('No QR code found in the image', 'error');
       }
     } catch (error) {
-      console.error('Error scanning file:', error);
+      logger.error('Error scanning file:', error);
       if (error.message && (error.message.includes('No QR code found') || error.message.includes('QR code parse error'))) {
         showToast('No QR code found in the image. Please try another image.', 'error');
       } else {
@@ -533,7 +531,7 @@ const Dashboard = () => {
         }
       } catch (cleanupError) {
         // Ignore cleanup errors
-        console.log('Cleanup error (ignored):', cleanupError);
+        logger.debug('Cleanup error (ignored):', cleanupError);
       }
       
       setIsScanningFile(false);
@@ -586,13 +584,13 @@ const Dashboard = () => {
   }, [qrUploadEnabled]);
 
   const handleScan = async (data) => {
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log('🔍 QR SCAN PROCESS STARTED');
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log('📥 Raw QR data:', data);
+    logger.debug('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    logger.debug('QR SCAN PROCESS STARTED');
+    logger.debug('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    logger.debug('Raw QR data:', data);
     
     if (!data) {
-      console.log('❌ No data provided to handleScan');
+      logger.warn('No data provided to handleScan');
       return;
     }
     
@@ -601,7 +599,7 @@ const Dashboard = () => {
       const remainingSeconds = Math.ceil((lockoutUntil - Date.now()) / 1000);
       setLockoutMessage(`Please wait ${remainingSeconds} second${remainingSeconds !== 1 ? 's' : ''} before scanning again.`);
       showToast(`Please wait ${remainingSeconds} second${remainingSeconds !== 1 ? 's' : ''} before scanning again.`, 'error');
-      console.log(`🔒 Scanner in lockout period. Remaining: ${remainingSeconds} seconds`);
+      logger.debug(`Scanner in lockout period. Remaining: ${remainingSeconds} seconds`);
       return;
     }
     
@@ -612,7 +610,7 @@ const Dashboard = () => {
     }
     
     if (scanLocked) {
-      console.log('🔒 Scan locked, ignoring scan. Current scanLocked state:', scanLocked);
+      logger.debug('Scan locked, ignoring scan. Current scanLocked state:', scanLocked);
       return;
     }
 
@@ -620,20 +618,20 @@ const Dashboard = () => {
     // This is why file upload works (cells are loaded by then) but camera scan might fail
     let cellsToUse = availableCells;
     if (!cellsLoaded || !availableCells || availableCells.length === 0) {
-      console.warn('⚠️ Cells not loaded yet, fetching now...');
-      console.warn('   This is why camera scan might fail - cells need to be loaded first!');
+      logger.warn('Cells not loaded yet, fetching now...');
+      logger.warn('This is why camera scan might fail - cells need to be loaded first!');
       
       // Fetch cells directly and use the response
       try {
         const response = await api.get('/api/cells/active');
         cellsToUse = response.data;
-        console.log('✅ Fetched cells directly:', cellsToUse.length, 'cells');
+        logger.debug('Fetched cells directly:', cellsToUse.length, 'cells');
         
         // Update state for future scans
         setAvailableCells(cellsToUse);
         setCellsLoaded(true);
       } catch (error) {
-        console.error('❌ Failed to fetch cells:', error);
+        logger.error('Failed to fetch cells:', error);
         showToast('System not ready. Please try again in a moment.', 'error');
         return;
       }
@@ -649,24 +647,24 @@ const Dashboard = () => {
     const visitorIdBracketMatch = bracketMatches.find(part => part.startsWith('visitor_id:'));
     if (visitorIdBracketMatch) {
       visitorId = visitorIdBracketMatch.replace('visitor_id:', '').trim();
-      console.log('📋 Extracted visitor_id from bracket format:', visitorId);
+      logger.debug('Extracted visitor_id from bracket format:', visitorId);
     } else if (data.includes('visitor_id:')) {
       // Try new format: "visitor_id:VIS-1001" or "visitor_id:19" (supports both string and numeric)
       const match = data.match(/visitor_id:([^\s\[\]]+)/i);
       if (match) {
         visitorId = match[1].trim();
-        console.log('📋 Extracted visitor_id from new format:', visitorId);
+        logger.debug('Extracted visitor_id from new format:', visitorId);
       }
     } else if (/^[\w-]+$/.test(data.trim())) {
       // QR code is just the visitor_id (string like "VIS-1001" or numeric like "19")
       visitorId = data.trim();
-      console.log('📋 Extracted visitor_id as plain value:', visitorId);
+      logger.debug('Extracted visitor_id as plain value:', visitorId);
     }
 
-    console.log('📋 Extracted visitor_id from QR code:', visitorId);
+    logger.debug('Extracted visitor_id from QR code:', visitorId);
 
     if (!visitorId) {
-      console.error('❌ Invalid QR format - visitor_id not found');
+      logger.error('Invalid QR format - visitor_id not found');
       showToast('Invalid QR code format. Please use a valid visitor QR code.', 'error');
       return;
     }
@@ -676,7 +674,7 @@ const Dashboard = () => {
     const nowMs = Date.now();
     // Extended debounce window: 8 seconds to prevent immediate re-scanning after time-out
     if (lastScanSig === sig && nowMs - lastScanAt < 8000) {
-      console.log('⚠️ Duplicate scan within 8 seconds, ignoring');
+      logger.debug('Duplicate scan within 8 seconds, ignoring');
       return; // ignore duplicate immediately after previous scan
     }
     setLastScanSig(sig);
@@ -684,13 +682,13 @@ const Dashboard = () => {
 
     // Lock scanning IMMEDIATELY to prevent double fires from the same QR frame
     setScanLocked(true);
-    console.log('🔒 Scan locked to prevent duplicate processing');
+    logger.debug('Scan locked to prevent duplicate processing');
 
     // STEP 2: Check if visitor has existing record in system (preflight check)
     // Backend will look up visitor details and check latest log
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log('🔍 STEP 2: Checking visitor status (backend-side validation)...');
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    logger.debug('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    logger.debug('STEP 2: Checking visitor status (backend-side validation)...');
+    logger.debug('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     
     try {
       const preflight = await api.post('/api/scanned_visitors', {
@@ -704,7 +702,7 @@ const Dashboard = () => {
       const pdlName = preflight?.data?.pdl_name;
       const cell = preflight?.data?.cell;
       
-      console.log('📊 Preflight response:', { 
+      logger.debug('Preflight response:', { 
         action: planned, 
         verified_conjugal: conjugalVerified,
         visitor_name: visitorName,
@@ -717,16 +715,16 @@ const Dashboard = () => {
       
       if (planned === 'time_out') {
         // STEP 3: Time out - visitor already has time_in, directly execute time_out
-        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        console.log('⏰ STEP 3: Executing TIME OUT (visitor already has time_in)');
-        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        logger.debug('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        logger.debug('STEP 3: Executing TIME OUT (visitor already has time_in)');
+        logger.debug('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
         
         const timeOutResponse = await api.post('/api/scanned_visitors', {
           visitor_id: visitorId,
           device_time: new Date().toISOString()
         });
         
-        console.log('✅ Time out successful!');
+        logger.debug('Time out successful!');
         await fetchVisitors();
         
         // Get visitor details from response (or use from preflight)
@@ -750,10 +748,10 @@ const Dashboard = () => {
       }
 
       // STEP 3: Time in - show purpose modal with exact message
-      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      console.log('📝 STEP 3: Showing purpose selection modal (TIME IN)');
-      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      console.log('   Visitor has no active session - showing visit type selection');
+      logger.debug('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      logger.debug('STEP 3: Showing purpose selection modal (TIME IN)');
+      logger.debug('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      logger.debug('Visitor has no active session - showing visit type selection');
       
       setPendingScanData({
         visitor_id: visitorId,
@@ -762,29 +760,29 @@ const Dashboard = () => {
         cell: cell
       });
       setShowPurposeModal(true);
-      console.log('✅ Purpose modal opened');
+      logger.debug('Purpose modal opened');
     } catch (e) {
-      console.error('❌ Preflight scan error:', e);
+      logger.error('Preflight scan error:', e);
       showToast('Scan preflight failed', 'error');
       setTimeout(() => setScanLocked(false), 800);
     }
   };
 
   const handlePurposeSelection = async (purpose) => {
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log('📝 PURPOSE SELECTED:', purpose);
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    logger.debug('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    logger.debug('PURPOSE SELECTED:', purpose);
+    logger.debug('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     
     if (!pendingScanData) {
-      console.error('❌ No pending scan data!');
+      logger.error('No pending scan data!');
       return;
     }
 
     setShowPurposeModal(false);
-    console.log('✅ Purpose modal closed');
+    logger.debug('Purpose modal closed');
 
     try {
-      console.log('📤 Sending time_in request to backend...');
+      logger.debug('Sending time_in request to backend...');
       const response = await api.post('/api/scanned_visitors', {
         visitor_id: pendingScanData?.visitor_id,
         device_time: new Date().toISOString(),
@@ -792,12 +790,12 @@ const Dashboard = () => {
       });
 
       const action = response?.data?.action;
-      console.log('📥 Backend response:', { action });
+      logger.debug('Backend response:', { action });
       
       if (action === 'time_out') {
-        console.log('✅ Time out successful!');
+        logger.debug('Time out successful!');
         await fetchVisitors();
-        console.log('✅ Visitor list refreshed');
+        logger.debug('Visitor list refreshed');
         
         // Get visitor details from response
         const responseVisitorName = response?.data?.visitor_name || pendingScanData?.visitor_name;
@@ -821,9 +819,9 @@ const Dashboard = () => {
         // Keep scanner locked until user clicks OK
         return; // Return early to prevent unlocking immediately
       } else if (action === 'time_in') {
-        console.log('✅ Time in successful!');
+        logger.debug('Time in successful!');
         await fetchVisitors();
-        console.log('✅ Visitor list refreshed');
+        logger.debug('Visitor list refreshed');
         
         // Get visitor details from response
         const responseVisitorName = response?.data?.visitor_name || pendingScanData?.visitor_name;
@@ -848,38 +846,38 @@ const Dashboard = () => {
         // Keep scanner locked until user clicks OK
         return; // Return early to prevent unlocking immediately
       } else if (action === 'already_timed_out') {
-        console.warn('⚠️ Visitor already timed out');
+        logger.warn('Visitor already timed out');
         showToast('This visitor has already timed out.', 'error');
         setPendingScanData(null);
         setVerifiedConjugal(false);
         // Unlock after error
         setTimeout(() => {
           setScanLocked(false);
-          console.log('🔓 Scan unlocked after error');
+          logger.debug('Scan unlocked after error');
         }, 1000);
       } else {
-        console.log('✅ Scan recorded!');
+        logger.debug('Scan recorded!');
         showToast('Scan recorded!', 'success');
         await fetchVisitors();
-        console.log('✅ Visitor list refreshed');
+        logger.debug('Visitor list refreshed');
         
         setPendingScanData(null);
         setVerifiedConjugal(false);
         // Unlock scanning after a short cooldown for other actions
         setTimeout(() => {
           setScanLocked(false);
-          console.log('🔓 Scan unlocked after cooldown');
+          logger.debug('Scan unlocked after cooldown');
         }, 2000);
       }
     } catch (error) {
-      console.error('❌ Error adding scanned visitor:', error);
+      logger.error('Error adding scanned visitor:', error);
       showToast('Error adding scanned visitor', 'error');
       setPendingScanData(null);
       setVerifiedConjugal(false);
       // Unlock after error
       setTimeout(() => {
         setScanLocked(false);
-        console.log('🔓 Scan unlocked after error');
+        logger.debug('Scan unlocked after error');
       }, 1000);
     }
   };
@@ -916,7 +914,7 @@ const Dashboard = () => {
       fetchVisitors();
       window.dispatchEvent(new Event('visitorTimesUpdated'));
     } catch (error) {
-      console.error('Failed to update visitor times:', error);
+      logger.error('Failed to update visitor times:', error);
       alert('Failed to update visitor times.');
     }
   };
@@ -960,7 +958,7 @@ const Dashboard = () => {
       setSelectedVisitorId(null);
       await fetchVisitors();
     } catch (error) {
-      console.error('Failed to delete visitors:', error);
+      logger.error('Failed to delete visitors:', error);
       alert('Failed to delete some visitors.');
     }
   };
@@ -968,9 +966,9 @@ const Dashboard = () => {
   // Debug: Log toast state changes
   React.useEffect(() => {
     if (toast.show) {
-      console.log('Toast is now visible:', toast);
+      logger.debug('Toast is now visible:', toast);
     } else {
-      console.log('Toast is now hidden');
+      logger.debug('Toast is now hidden');
     }
   }, [toast.show, toast.message, toast.type]);
 
@@ -1254,7 +1252,7 @@ const Dashboard = () => {
             setPendingScanData(null);
             setVerifiedConjugal(false);
             setScanLocked(false);
-            console.log('Purpose modal closed, scan unlocked');
+            logger.debug('Purpose modal closed, scan unlocked');
           }}>
             <div className="purpose-modal" style={{ 
               maxWidth: isMobile ? '95%' : '600px',
@@ -1735,12 +1733,16 @@ const Dashboard = () => {
                     // Show lockout message
                     showToast('Please wait 5 seconds before scanning again.', 'error');
                     
+                    // Clear last scan signature to allow new scans after lockout
+                    setLastScanSig(null);
+                    setLastScanAt(0);
+                    
                     // Unlock scanner after lockout period
                     setTimeout(() => {
                       setLockoutUntil(null);
                       setLockoutMessage('');
                       setScanLocked(false);
-                      console.log('🔓 Scanner lockout expired - scanning enabled again');
+                      logger.debug('Scanner lockout expired - scanning enabled again');
                     }, lockoutDuration);
                   } else {
                     // For time-in, just unlock after a short delay
@@ -1752,7 +1754,7 @@ const Dashboard = () => {
                     // Add cooldown after user confirms (2 seconds) to prevent immediate re-scan
                     setTimeout(() => {
                       setScanLocked(false);
-                      console.log('🔓 Scan unlocked after user confirmed success (2-second cooldown)');
+                      logger.debug('Scan unlocked after user confirmed success (2-second cooldown)');
                     }, 2000);
                   }
                 }}
@@ -1906,7 +1908,7 @@ const Dashboard = () => {
                       try {
                         localStorage.removeItem('scheduledCells');
                       } catch (error) {
-                        console.error('Error clearing scheduled cells:', error);
+                        logger.error('Error clearing scheduled cells:', error);
                       }
                     }}
                     style={{
@@ -1936,7 +1938,7 @@ const Dashboard = () => {
                           timestamp: Date.now()
                         }));
                       } catch (error) {
-                        console.error('Error saving scheduled cells:', error);
+                        logger.error('Error saving scheduled cells:', error);
                       }
                     }}
                     style={{

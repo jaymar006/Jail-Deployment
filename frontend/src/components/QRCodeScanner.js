@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
+import logger from '../utils/logger';
 
 const QRCodeScanner = ({ onScan, resetTrigger, scanLocked = false }) => {
   const qrCodeRegionId = 'html5qr-code-full-region';
@@ -15,7 +16,7 @@ const QRCodeScanner = ({ onScan, resetTrigger, scanLocked = false }) => {
   const startScanner = useCallback(async (isRetry = false) => {
     // Prevent multiple simultaneous start attempts
     if (startAttemptRef.current) {
-      console.log('QRScanner: Start attempt already in progress, skipping');
+      logger.debug('QRScanner: Start attempt already in progress, skipping');
       return;
     }
     
@@ -36,11 +37,11 @@ const QRCodeScanner = ({ onScan, resetTrigger, scanLocked = false }) => {
             element.innerHTML = '';
           }
         } catch (e) {
-          console.log('QRScanner: Error clearing element:', e);
+          logger.debug('QRScanner: Error clearing element:', e);
         }
       }
       html5QrcodeScannerRef.current = new Html5Qrcode(qrCodeRegionId);
-      console.log('QRScanner: Created new Html5Qrcode instance');
+      logger.debug('QRScanner: Created new Html5Qrcode instance');
     }
 
     // Check if scanner is already running or in transition
@@ -49,7 +50,7 @@ const QRCodeScanner = ({ onScan, resetTrigger, scanLocked = false }) => {
         const state = html5QrcodeScannerRef.current.getState();
         // Don't start if already started or in transition
         if (state === Html5Qrcode.STATE.STARTED || state === Html5Qrcode.STATE.SCANNING) {
-          console.log('QRScanner: Already running or scanning');
+          logger.debug('QRScanner: Already running or scanning');
           isScannerRunningRef.current = true;
           setIsRunning(true);
           setError(null);
@@ -58,13 +59,13 @@ const QRCodeScanner = ({ onScan, resetTrigger, scanLocked = false }) => {
         }
         // Wait if in transition
         if (state === Html5Qrcode.STATE.PAUSED) {
-          console.log('QRScanner: In transition, waiting...');
+          logger.debug('QRScanner: In transition, waiting...');
           startAttemptRef.current = false;
           return;
         }
       } catch (e) {
         // If we can't check state, continue with starting
-        console.log('QRScanner: Could not check state, continuing');
+        logger.debug('QRScanner: Could not check state, continuing');
       }
     }
 
@@ -95,21 +96,30 @@ const QRCodeScanner = ({ onScan, resetTrigger, scanLocked = false }) => {
         return;
       }
 
-      console.log('QRScanner: Starting camera...');
+      logger.debug('QRScanner: Available cameras:', cameras.length);
+      
+      // Determine camera constraints based on device type
+      // On mobile, prefer back camera (environment), on desktop use any available camera
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      const cameraConfig = isMobile 
+        ? { facingMode: 'environment' } // Back camera on mobile
+        : { facingMode: 'user' }; // Front camera on desktop (or let browser choose)
+      
+      logger.debug('QRScanner: Using camera config:', cameraConfig, 'isMobile:', isMobile);
       
       await html5QrcodeScannerRef.current.start(
-        { facingMode: 'environment' },
+        cameraConfig,
         config,
         (decodedText) => {
           // Only process scan if scanner is running and not locked
           if (!isScannerRunningRef.current) {
-            console.log('QRScanner: QR detected but scanner is not running, ignoring');
+            logger.debug('QRScanner: QR detected but scanner is not running, ignoring');
             return;
           }
           
           // Check if scanning is locked (passed from parent)
           if (scanLocked) {
-            console.log('QRScanner: QR detected but scanning is locked, ignoring');
+            logger.debug('QRScanner: QR detected but scanning is locked, ignoring');
             return;
           }
           
@@ -117,7 +127,7 @@ const QRCodeScanner = ({ onScan, resetTrigger, scanLocked = false }) => {
           const now = Date.now();
           if (lastScannedTextRef.current?.text === decodedText && 
               now - lastScannedTextRef.current?.timestamp < 2000) {
-            console.log('QRScanner: Duplicate QR code detected within 2 seconds, ignoring');
+            logger.debug('QRScanner: Duplicate QR code detected within 2 seconds, ignoring');
             return;
           }
           
@@ -127,8 +137,8 @@ const QRCodeScanner = ({ onScan, resetTrigger, scanLocked = false }) => {
             timestamp: now
           };
           
-          console.log('QRScanner: QR detected! Full text:', decodedText);
-          console.log('QRScanner: Calling onScan callback...');
+          logger.debug('QRScanner: QR detected! Full text:', decodedText);
+          logger.debug('QRScanner: Calling onScan callback...');
           onScan(decodedText);
         },
         (errorMessage) => {
@@ -144,9 +154,9 @@ const QRCodeScanner = ({ onScan, resetTrigger, scanLocked = false }) => {
       setRetryCount(0);
       setIsRetrying(false);
       startAttemptRef.current = false;
-      console.log('QRScanner: Camera started successfully');
+      logger.debug('QRScanner: Camera started successfully');
     } catch (err) {
-      console.error('QRScanner: Start error:', err);
+      logger.error('QRScanner: Start error:', err);
       
       // Only show error if it's not a scanner already running error
       if (err.message && err.message.includes('Scanner is already running')) {
@@ -155,7 +165,7 @@ const QRCodeScanner = ({ onScan, resetTrigger, scanLocked = false }) => {
         setIsRunning(true);
         setError(null);
         startAttemptRef.current = false;
-        console.log('QRScanner: Already running (caught in error)');
+        logger.debug('QRScanner: Already running (caught in error)');
         return;
       }
       
@@ -211,9 +221,9 @@ const QRCodeScanner = ({ onScan, resetTrigger, scanLocked = false }) => {
         }
         
         if (isRunning) {
-          console.log('QRScanner: Stopping camera...');
+          logger.debug('QRScanner: Stopping camera...');
           await html5QrcodeScannerRef.current.stop();
-          console.log('QRScanner: Camera stopped');
+          logger.debug('QRScanner: Camera stopped');
         }
         isScannerRunningRef.current = false;
         setIsRunning(false);
@@ -225,7 +235,7 @@ const QRCodeScanner = ({ onScan, resetTrigger, scanLocked = false }) => {
       } catch (err) {
         // Only log error if it's not the common "scanner not running" error
         if (!err.message || !err.message.includes('Cannot stop, scanner is not running')) {
-          console.error('QRScanner: Stop error:', err);
+          logger.error('QRScanner: Stop error:', err);
         }
         // Always reset the running state even if stop fails
         isScannerRunningRef.current = false;
@@ -242,11 +252,11 @@ const QRCodeScanner = ({ onScan, resetTrigger, scanLocked = false }) => {
 
   const retryCamera = useCallback(async () => {
     if (isRetrying) {
-      console.log('QRScanner: Retry already in progress, skipping');
+      logger.debug('QRScanner: Retry already in progress, skipping');
       return;
     }
     
-    console.log('QRScanner: Starting camera retry...');
+    logger.debug('QRScanner: Starting camera retry...');
     setIsRetrying(true);
     setError(null);
     
@@ -265,7 +275,7 @@ const QRCodeScanner = ({ onScan, resetTrigger, scanLocked = false }) => {
             }
           }
         } catch (stopErr) {
-          console.log('QRScanner: Error during stop (may already be stopped):', stopErr.message);
+          logger.debug('QRScanner: Error during stop (may already be stopped):', stopErr.message);
         }
         
         // Clear the scanner instance
@@ -286,21 +296,21 @@ const QRCodeScanner = ({ onScan, resetTrigger, scanLocked = false }) => {
       // Wait longer on mobile to ensure camera is fully released (3 seconds for mobile)
       // Mobile devices need more time to release camera resources
       const waitTime = 3000;
-      console.log(`QRScanner: Waiting ${waitTime}ms before retrying (mobile-friendly delay)...`);
+      logger.debug(`QRScanner: Waiting ${waitTime}ms before retrying (mobile-friendly delay)...`);
       
       await new Promise(resolve => setTimeout(resolve, waitTime));
       
       // Verify element still exists before starting
       const elementAfterWait = document.getElementById(qrCodeRegionId);
       if (!elementAfterWait) {
-        console.error('QRScanner: Element not found after wait, cannot retry');
+        logger.error('QRScanner: Element not found after wait, cannot retry');
         setError('Scanner element not found. Please refresh the page.');
         setIsRetrying(false);
         return;
       }
       
       // Now start fresh with a new instance
-      console.log('QRScanner: Attempting to start scanner after retry wait...');
+      logger.debug('QRScanner: Attempting to start scanner after retry wait...');
       
       // Reset start attempt flag to allow new start
       startAttemptRef.current = false;
@@ -311,22 +321,22 @@ const QRCodeScanner = ({ onScan, resetTrigger, scanLocked = false }) => {
         // Reset retry flag after successful start
         setTimeout(() => {
           setIsRetrying(false);
-          console.log('QRScanner: Retry process completed successfully');
+          logger.debug('QRScanner: Retry process completed successfully');
         }, 500);
       } catch (startError) {
-        console.error('QRScanner: Failed to start after retry:', startError);
+        logger.error('QRScanner: Failed to start after retry:', startError);
         setError(startError.message || 'Failed to start camera after retry. Please try again.');
         setIsRetrying(false);
       }
     } catch (retryError) {
-      console.error('QRScanner: Retry error:', retryError);
+      logger.error('QRScanner: Retry error:', retryError);
       setError(retryError.message || 'Failed to retry camera. Please refresh the page.');
       setIsRetrying(false);
     }
   }, [isRetrying, stopScanner, startScanner]);
 
   useEffect(() => {
-    console.log('QRScanner: Component mounted, starting scanner');
+    logger.debug('QRScanner: Component mounted, starting scanner');
     let mounted = true;
     
     const initScanner = async () => {
@@ -338,7 +348,7 @@ const QRCodeScanner = ({ onScan, resetTrigger, scanLocked = false }) => {
     initScanner();
 
     return () => {
-      console.log('QRScanner: Component unmounting, stopping scanner');
+      logger.debug('QRScanner: Component unmounting, stopping scanner');
       mounted = false;
       stopScanner();
     };
@@ -346,7 +356,7 @@ const QRCodeScanner = ({ onScan, resetTrigger, scanLocked = false }) => {
 
   useEffect(() => {
     if (resetTrigger !== null && resetTrigger !== undefined) {
-      console.log('QRScanner: Reset trigger activated');
+      logger.debug('QRScanner: Reset trigger activated');
       (async () => {
         await stopScanner();
         // Wait a bit before restarting to ensure camera is released

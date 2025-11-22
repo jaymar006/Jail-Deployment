@@ -1,4 +1,5 @@
 const db = require('../config/db');
+const logger = require('../utils/logger');
 
 const ScannedVisitor = {
   getAll: async () => {
@@ -20,10 +21,12 @@ const ScannedVisitor = {
 
   // Find open scan by visitor_id (from visitors table)
   // Since scanned_visitors stores visitor_name, we need to join with visitors table
+  // Supports both visitor_id (string) and id (numeric primary key) lookups
   findOpenScanByVisitorId: async (visitor_id) => {
-    console.log('findOpenScanByVisitorId called with:', visitor_id);
-    // Join with visitors table to match by visitor_id, then match scanned_visitors by visitor_name
-    const [results] = await db.query(
+    logger.debug('findOpenScanByVisitorId called with:', visitor_id);
+    
+    // Try to find by visitor_id first (string like "VIS-1001")
+    let [results] = await db.query(
       `SELECT sv.* 
        FROM scanned_visitors sv
        INNER JOIN visitors v ON LOWER(TRIM(sv.visitor_name)) = LOWER(TRIM(v.name))
@@ -33,12 +36,29 @@ const ScannedVisitor = {
        LIMIT 1`,
       [visitor_id]
     );
-    console.log('findOpenScanByVisitorId results:', results);
+    
+    // If not found and visitor_id is numeric, try looking up by primary key id
+    if (results.length === 0 && /^\d+$/.test(String(visitor_id).trim())) {
+      logger.debug('No match by visitor_id, trying primary key id lookup...');
+      const numericId = parseInt(visitor_id, 10);
+      [results] = await db.query(
+        `SELECT sv.* 
+         FROM scanned_visitors sv
+         INNER JOIN visitors v ON LOWER(TRIM(sv.visitor_name)) = LOWER(TRIM(v.name))
+         WHERE v.id = ? 
+           AND sv.time_out IS NULL 
+         ORDER BY sv.scan_date DESC 
+         LIMIT 1`,
+        [numericId]
+      );
+    }
+    
+    logger.debug('findOpenScanByVisitorId results:', results);
     return results.length > 0 ? results[0] : null;
   },
 
   findOpenScanByVisitorDetails: async (visitor_name, pdl_name, cell) => {
-    console.log('findOpenScanByVisitorDetails called with:', visitor_name, pdl_name, cell);
+    logger.debug('findOpenScanByVisitorDetails called with:', visitor_name, pdl_name, cell);
     const [results] = await db.query(
       `SELECT * FROM scanned_visitors 
        WHERE LOWER(visitor_name) = LOWER(?) 
@@ -49,13 +69,13 @@ const ScannedVisitor = {
        LIMIT 1`,
       [visitor_name, pdl_name, cell]
     );
-    console.log('findOpenScanByVisitorDetails results:', results);
+    logger.debug('findOpenScanByVisitorDetails results:', results);
     return results.length > 0 ? results[0] : null;
   },
 
   // Find recently created record (within last N seconds) - additional safeguard against race conditions
   findRecentScanByVisitorDetails: async (visitor_name, pdl_name, cell, secondsAgo = 10) => {
-    console.log('findRecentScanByVisitorDetails called with:', visitor_name, pdl_name, cell, `within ${secondsAgo} seconds`);
+    logger.debug('findRecentScanByVisitorDetails called with:', visitor_name, pdl_name, cell, `within ${secondsAgo} seconds`);
     
     // Calculate the cutoff time
     const now = new Date();
@@ -75,17 +95,17 @@ const ScannedVisitor = {
        LIMIT 1`,
       [visitor_name, pdl_name, cell, cutoffTimeStr]
     );
-    console.log('findRecentScanByVisitorDetails results:', results);
+    logger.debug('findRecentScanByVisitorDetails results:', results);
     return results.length > 0 ? results[0] : null;
   },
 
   updateTimeOut: async (id, time_out) => {
-    console.log('updateTimeOut called with:', id, time_out);
+    logger.debug('updateTimeOut called with:', id, time_out);
     const [result] = await db.query(
       `UPDATE scanned_visitors SET time_out = ? WHERE id = ?`,
       [time_out, id]
     );
-    console.log('updateTimeOut result:', result);
+    logger.debug('updateTimeOut result:', result);
     return result;
   },
 
@@ -112,49 +132,49 @@ const ScannedVisitor = {
   },
 
   updateTimes: async (id, time_in, time_out) => {
-    console.log('updateTimes called with:', id, time_in, time_out);
+    logger.debug('updateTimes called with:', id, time_in, time_out);
     const [result] = await db.query(
       `UPDATE scanned_visitors SET time_in = ?, time_out = ? WHERE id = ?`,
       [time_in, time_out, id]
     );
-    console.log('updateTimes result:', result);
+    logger.debug('updateTimes result:', result);
     return result;
   },
 
   delete: async (id) => {
-    console.log('delete called with id:', id);
+    logger.debug('delete called with id:', id);
     const [result] = await db.query(
       `DELETE FROM scanned_visitors WHERE id = ?`,
       [id]
     );
-    console.log('delete result:', result);
+    logger.debug('delete result:', result);
     return result;
   },
 
   deleteAll: async () => {
-    console.log('deleteAll called');
+    logger.debug('deleteAll called');
     const [result] = await db.query('DELETE FROM scanned_visitors');
-    console.log('deleteAll result:', result);
+    logger.debug('deleteAll result:', result);
     return result;
   },
 
   deleteByDateRange: async (startDate, endDate) => {
-    console.log('deleteByDateRange called with:', startDate, endDate);
+    logger.debug('deleteByDateRange called with:', startDate, endDate);
     const [result] = await db.query(
       `DELETE FROM scanned_visitors WHERE scan_date >= ? AND scan_date <= ?`,
       [startDate, endDate]
     );
-    console.log('deleteByDateRange result:', result);
+    logger.debug('deleteByDateRange result:', result);
     return result;
   },
 
   deleteByDate: async (date) => {
-    console.log('deleteByDate called with:', date);
+    logger.debug('deleteByDate called with:', date);
     const [result] = await db.query(
       `DELETE FROM scanned_visitors WHERE DATE(scan_date) = ?`,
       [date]
     );
-    console.log('deleteByDate result:', result);
+    logger.debug('deleteByDate result:', result);
     return result;
   }
 };
