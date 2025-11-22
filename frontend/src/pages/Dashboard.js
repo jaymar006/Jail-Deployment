@@ -1668,11 +1668,16 @@ const Dashboard = () => {
                 onClick={() => {
                   setShowSuccessModal(false);
                   setSuccessModalData({ type: '', message: '', visitorData: null });
-                  // Unlock scanner after user confirms
+                  
+                  // Clear last scan signature to prevent immediate re-scanning of the same QR
+                  setLastScanSig(null);
+                  setLastScanAt(0);
+                  
+                  // Add longer cooldown after user confirms (3 seconds) to prevent immediate re-scan
                   setTimeout(() => {
                     setScanLocked(false);
-                    console.log('🔓 Scan unlocked after user confirmed success');
-                  }, 500);
+                    console.log('🔓 Scan unlocked after user confirmed success (3-second cooldown)');
+                  }, 3000);
                 }}
                 style={{
                   background: 'linear-gradient(135deg, #4b5563 0%, #374151 100%)',
