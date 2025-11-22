@@ -152,14 +152,15 @@ const {
   address,
   valid_id,
   date_of_application,
-  contact_number
+  contact_number,
+  verified_conjugal
 } = data;
 
 const [result] = await db.query(
   `UPDATE visitors SET
-    name = ?, relationship = ?, age = ?, address = ?, valid_id = ?, date_of_application = ?, contact_number = ?
+    name = ?, relationship = ?, age = ?, address = ?, valid_id = ?, date_of_application = ?, contact_number = ?, verified_conjugal = ?
   WHERE id = ?`,
-  [name, relationship, age, address, valid_id, date_of_application, contact_number, id]
+  [name, relationship, age, address, valid_id, date_of_application, contact_number, verified_conjugal !== undefined ? verified_conjugal : 0, id]
 );
 return result;
   },

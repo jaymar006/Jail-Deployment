@@ -157,7 +157,8 @@ const {
   address,
   valid_id,
   date_of_application,
-  contact_number
+  contact_number,
+  verified_conjugal
 } = req.body;
 
 if (!name || !relationship || age === undefined || !address || !valid_id || !date_of_application || !contact_number) {
@@ -171,7 +172,8 @@ const updatedVisitor = {
   address,
   valid_id,
   date_of_application,
-  contact_number
+  contact_number,
+  verified_conjugal: verified_conjugal === true || verified_conjugal === 1 || verified_conjugal === 'true' || verified_conjugal === '1' ? 1 : 0
 };
 
 await Visitor.update(id, updatedVisitor);
@@ -288,7 +290,13 @@ exports.addScannedVisitor = async (req, res) => {
       console.log('addScannedVisitor (NEW WORKFLOW): visitor_id =', visitor_id);
       
       // Look up visitor from database using visitor_id
-      const visitor = await Visitor.getByVisitorId(visitor_id);
+      // First try by visitor_id (string like "VIS-1001"), then by id (numeric primary key) for backward compatibility
+      let visitor = await Visitor.getByVisitorId(visitor_id);
+      if (!visitor && /^\d+$/.test(visitor_id)) {
+        // If visitor_id is numeric and not found, try looking up by primary key id (backward compatibility)
+        console.log('Visitor not found by visitor_id, trying primary key id lookup...');
+        visitor = await Visitor.getById(parseInt(visitor_id, 10));
+      }
       if (!visitor) {
         return res.status(404).json({ error: 'Visitor not found' });
       }

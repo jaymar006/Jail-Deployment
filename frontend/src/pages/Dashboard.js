@@ -639,26 +639,28 @@ const Dashboard = () => {
       }
     }
 
-    // STEP 1: Extract visitor_id from QR code (NEW WORKFLOW: Only visitor_id in QR)
+    // STEP 1: Extract visitor_id from QR code
+    // Supports both old format: [visitor_id:19][Visitor: ...] and new format: visitor_id:VIS-1001
     let visitorId = null;
     
-    // Try new format first: "visitor_id:19" or just "19"
-    if (data.includes('visitor_id:')) {
-      const match = data.match(/visitor_id:(\d+)/i);
+    // Try to extract from bracket format first (old format): [visitor_id:19][Visitor: ...]
+    const bracketRegex = /\[(.*?)\]/g;
+    const bracketMatches = [...data.matchAll(bracketRegex)].map(match => match[1]);
+    const visitorIdBracketMatch = bracketMatches.find(part => part.startsWith('visitor_id:'));
+    if (visitorIdBracketMatch) {
+      visitorId = visitorIdBracketMatch.replace('visitor_id:', '').trim();
+      console.log('📋 Extracted visitor_id from bracket format:', visitorId);
+    } else if (data.includes('visitor_id:')) {
+      // Try new format: "visitor_id:VIS-1001" or "visitor_id:19" (supports both string and numeric)
+      const match = data.match(/visitor_id:([^\s\[\]]+)/i);
       if (match) {
-        visitorId = match[1];
+        visitorId = match[1].trim();
+        console.log('📋 Extracted visitor_id from new format:', visitorId);
       }
-    } else if (/^\d+$/.test(data.trim())) {
-      // QR code is just a number (visitor_id)
+    } else if (/^[\w-]+$/.test(data.trim())) {
+      // QR code is just the visitor_id (string like "VIS-1001" or numeric like "19")
       visitorId = data.trim();
-    } else {
-      // Legacy format: try to extract from old format for backward compatibility
-      const regex = /\[(.*?)\]/g;
-      const matches = [...data.matchAll(regex)].map(match => match[1]);
-      const visitorIdMatch = matches.find(part => part.startsWith('visitor_id:'));
-      if (visitorIdMatch) {
-        visitorId = visitorIdMatch.replace('visitor_id:', '').trim();
-      }
+      console.log('📋 Extracted visitor_id as plain value:', visitorId);
     }
 
     console.log('📋 Extracted visitor_id from QR code:', visitorId);
