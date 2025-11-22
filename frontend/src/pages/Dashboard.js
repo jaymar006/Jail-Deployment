@@ -93,6 +93,7 @@ const Dashboard = () => {
   }, [lockoutUntil]);
   const [lastScanSig, setLastScanSig] = useState(null);
   const [lastScanAt, setLastScanAt] = useState(0);
+  const isProcessingScanRef = useRef(false); // Synchronous ref to prevent concurrent scans
   const [selectedDeleteIds, setSelectedDeleteIds] = useState([]);
   const [selectAll, setSelectAll] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '', type: '' });
@@ -614,6 +615,12 @@ const Dashboard = () => {
       logger.debug('Scan locked, ignoring scan. Current scanLocked state:', scanLocked);
       return;
     }
+    
+    // CRITICAL: Check if we're already processing a scan (synchronous ref check)
+    if (isProcessingScanRef.current) {
+      logger.debug('Scan already being processed, ignoring duplicate scan');
+      return;
+    }
 
     // CRITICAL: Ensure cells are loaded before processing scan
     // This is why file upload works (cells are loaded by then) but camera scan might fail
@@ -700,12 +707,12 @@ const Dashboard = () => {
       return;
     }
     
+    // CRITICAL: Mark that we're processing this scan NOW (synchronous, prevents race conditions)
+    isProcessingScanRef.current = true;
     setLastScanSig(sig);
     setLastScanAt(nowMs);
-
-    // Lock scanning IMMEDIATELY to prevent double fires from the same QR frame
     setScanLocked(true);
-    logger.debug('Scan locked to prevent duplicate processing');
+    logger.debug('Scan locked and processing flag set to prevent duplicate processing');
 
     // STEP 2: Check if visitor has existing record in system (preflight check)
     // Backend will look up visitor details and check latest log
@@ -778,6 +785,7 @@ const Dashboard = () => {
         });
         setShowSuccessModal(true);
         // Keep scanner locked until user clicks OK
+        // Don't reset isProcessingScanRef here - let OK button handle it
         return;
       }
 
@@ -833,15 +841,18 @@ const Dashboard = () => {
             });
             setShowSuccessModal(true);
             // Keep scanner locked until user clicks OK
+            // Don't reset isProcessingScanRef here - let OK button handle it
             return;
           } else {
             logger.warn('Unexpected action from backend:', action);
             showToast('Unexpected response from server', 'error');
+            isProcessingScanRef.current = false; // Reset processing flag on error
             setTimeout(() => setScanLocked(false), 1000);
           }
         } catch (error) {
           logger.error('Error adding scanned visitor (auto normal):', error);
           showToast('Error adding scanned visitor', 'error');
+          isProcessingScanRef.current = false; // Reset processing flag on error
           setTimeout(() => setScanLocked(false), 1000);
         }
         return; // Exit early - don't show purpose modal
@@ -871,6 +882,7 @@ const Dashboard = () => {
     } catch (e) {
       logger.error('Preflight scan error:', e);
       showToast('Scan preflight failed', 'error');
+      isProcessingScanRef.current = false; // Reset processing flag on error
       setTimeout(() => setScanLocked(false), 800);
     }
   };
@@ -935,6 +947,7 @@ const Dashboard = () => {
         });
         setShowSuccessModal(true);
         // Keep scanner locked until user clicks OK
+        // Don't reset isProcessingScanRef here - let OK button handle it
         return; // Return early to prevent unlocking immediately
       } else if (action === 'time_in') {
         logger.debug('Time in successful!');
@@ -962,12 +975,14 @@ const Dashboard = () => {
         });
         setShowSuccessModal(true);
         // Keep scanner locked until user clicks OK
+        // Don't reset isProcessingScanRef here - let OK button handle it
         return; // Return early to prevent unlocking immediately
       } else if (action === 'already_timed_out') {
         logger.warn('Visitor already timed out');
         showToast('This visitor has already timed out.', 'error');
         setPendingScanData(null);
         setVerifiedConjugal(false);
+        isProcessingScanRef.current = false; // Reset processing flag on error
         // Unlock after error
         setTimeout(() => {
           setScanLocked(false);
@@ -981,6 +996,7 @@ const Dashboard = () => {
         
         setPendingScanData(null);
         setVerifiedConjugal(false);
+        isProcessingScanRef.current = false; // Reset processing flag
         // Unlock scanning after a short cooldown for other actions
         setTimeout(() => {
           setScanLocked(false);
@@ -992,6 +1008,7 @@ const Dashboard = () => {
       showToast('Error adding scanned visitor', 'error');
       setPendingScanData(null);
       setVerifiedConjugal(false);
+      isProcessingScanRef.current = false; // Reset processing flag on error
       // Unlock after error
       setTimeout(() => {
         setScanLocked(false);
