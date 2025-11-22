@@ -397,14 +397,19 @@ const Dashboard = () => {
   }, [qrUploadEnabled]);
 
   const handleScan = async (data) => {
-    if (!data) return;
+    console.log('handleScan called with data:', data);
+    if (!data) {
+      console.log('No data provided to handleScan');
+      return;
+    }
     if (scanLocked) {
-      console.log('Scan locked, ignoring scan');
+      console.log('Scan locked, ignoring scan. Current scanLocked state:', scanLocked);
       return;
     }
 
     const regex = /\[(.*?)\]/g;
     const matches = [...data.matchAll(regex)].map(match => match[1]);
+    console.log('Parsed matches from QR code:', matches);
 
     let visitorName = '', pdlName = '', cell = '', relationship = '', contactNumber = '';
 
@@ -416,7 +421,10 @@ const Dashboard = () => {
       else if (part.startsWith('Contact:')) contactNumber = part.replace('Contact:', '').trim();
     });
 
+    console.log('Extracted data:', { visitorName, pdlName, cell, relationship, contactNumber });
+
     if (!visitorName || !pdlName || !cell) {
+      console.log('Invalid QR format - missing required fields');
       showToast('Invalid QR code format', 'error');
       return;
     }
@@ -607,56 +615,34 @@ const Dashboard = () => {
     <div>
       {/* Toast Notification */}
       {toast.show && (
-        <div
-          style={{
-            position: 'fixed',
-            top: isMobile ? '20px' : '20px',
-            bottom: isMobile ? 'auto' : undefined,
-            left: '50%',
-            right: isMobile ? undefined : undefined,
-            transform: 'translateX(-50%)',
-            zIndex: 9999,
-            background: toast.type === 'success' 
-              ? 'linear-gradient(135deg, #059669 0%, #047857 100%)' 
-              : 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)',
-            color: 'white',
-            padding: isSmallMobile ? '10px 16px' : '12px 24px',
-            borderRadius: '8px',
-            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            fontSize: isSmallMobile ? '13px' : '14px',
-            fontWeight: '500',
-            animation: isMobile ? 'slideInTop 0.3s ease-out' : 'slideDown 0.3s ease-out',
-            maxWidth: isMobile ? 'calc(100% - 40px)' : '400px',
-            width: isMobile ? 'auto' : 'auto',
-            textAlign: 'center'
-          }}
-        >
-          <svg 
-            width="20" 
-            height="20" 
-            viewBox="0 0 24 24" 
-            fill="none" 
-            stroke="currentColor" 
-            strokeWidth="2" 
-            strokeLinecap="round" 
-            strokeLinejoin="round"
-          >
-            {toast.type === 'success' ? (
-              <>
-                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-                <path d="M22 4 12 14.01l-3-3"/>
-              </>
-            ) : (
-              <>
-                <path d="M18 6 6 18"/>
-                <path d="M6 6l12 12"/>
-              </>
-            )}
-          </svg>
-          {toast.message}
+        <div className={`dashboard-toast dashboard-toast-${toast.type}`}>
+          <div className="dashboard-toast-content">
+            <div className="dashboard-toast-icon">
+              <svg 
+                width="20" 
+                height="20" 
+                viewBox="0 0 24 24" 
+                fill="none" 
+                stroke="currentColor" 
+                strokeWidth="2" 
+                strokeLinecap="round" 
+                strokeLinejoin="round"
+              >
+                {toast.type === 'success' ? (
+                  <>
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                    <path d="M22 4 12 14.01l-3-3"/>
+                  </>
+                ) : (
+                  <>
+                    <path d="M18 6 6 18"/>
+                    <path d="M6 6l12 12"/>
+                  </>
+                )}
+              </svg>
+            </div>
+            <span className="dashboard-toast-message">{toast.message}</span>
+          </div>
         </div>
       )}
       

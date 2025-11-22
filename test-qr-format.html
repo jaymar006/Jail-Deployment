@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Code Format Tester</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        textarea {
+            width: 100%;
+            min-height: 150px;
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 14px;
+            margin-bottom: 20px;
+            box-sizing: border-box;
+        }
+        button {
+            background: linear-gradient(135deg, #4b5563 0%, #374151 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        .result {
+            margin-top: 20px;
+            padding: 20px;
+            border-radius: 5px;
+            background: #f9fafb;
+            border: 2px solid #e5e7eb;
+        }
+        .result.success {
+            background: #f0fdf4;
+            border-color: #10b981;
+        }
+        .result.error {
+            background: #fef2f2;
+            border-color: #ef4444;
+        }
+        .data-item {
+            padding: 8px;
+            margin: 5px 0;
+            background: white;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+        .label {
+            font-weight: bold;
+            color: #4b5563;
+        }
+        .value {
+            color: #111827;
+        }
+        .example {
+            background: #fffbeb;
+            border: 2px solid #fbbf24;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .example h3 {
+            margin-top: 0;
+            color: #92400e;
+        }
+        .example code {
+            background: white;
+            padding: 10px;
+            display: block;
+            border-radius: 4px;
+            font-size: 12px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 QR Code Format Tester</h1>
+        
+        <div class="example">
+            <h3>Expected QR Code Format:</h3>
+            <code>[Visitor:John Doe][PDL:Jane Smith][Cell:5][Relationship:Brother][Contact:09123456789]</code>
+        </div>
+
+        <p>Paste your QR code text below to test if it matches the expected format:</p>
+        
+        <textarea id="qrInput" placeholder="Paste your QR code text here..."></textarea>
+        
+        <button onclick="testQRFormat()">Test QR Format</button>
+        
+        <div id="result"></div>
+    </div>
+
+    <script>
+        function testQRFormat() {
+            const data = document.getElementById('qrInput').value;
+            const resultDiv = document.getElementById('result');
+            
+            if (!data) {
+                resultDiv.innerHTML = '<div class="result error">Please paste some QR code text first!</div>';
+                return;
+            }
+
+            const regex = /\[(.*?)\]/g;
+            const matches = [...data.matchAll(regex)].map(match => match[1]);
+            
+            let visitorName = '', pdlName = '', cell = '', relationship = '', contactNumber = '';
+
+            matches.forEach(part => {
+                if (part.startsWith('Visitor:')) visitorName = part.replace('Visitor:', '').trim();
+                else if (part.startsWith('PDL:')) pdlName = part.replace('PDL:', '').trim();
+                else if (part.startsWith('Cell:')) cell = part.replace('Cell:', '').trim();
+                else if (part.startsWith('Relationship:')) relationship = part.replace('Relationship:', '').trim();
+                else if (part.startsWith('Contact:')) contactNumber = part.replace('Contact:', '').trim();
+            });
+
+            const isValid = visitorName && pdlName && cell;
+            
+            let html = `<div class="result ${isValid ? 'success' : 'error'}">`;
+            
+            if (isValid) {
+                html += '<h3 style="color: #10b981; margin-top: 0;">✅ Valid QR Code Format!</h3>';
+            } else {
+                html += '<h3 style="color: #ef4444; margin-top: 0;">❌ Invalid QR Code Format</h3>';
+                html += '<p>Missing required fields: Visitor, PDL, and Cell are all required.</p>';
+            }
+            
+            html += '<h4>Extracted Data:</h4>';
+            html += `<div class="data-item"><span class="label">Visitor Name:</span> <span class="value">${visitorName || '(missing)'}</span></div>`;
+            html += `<div class="data-item"><span class="label">PDL Name:</span> <span class="value">${pdlName || '(missing)'}</span></div>`;
+            html += `<div class="data-item"><span class="label">Cell:</span> <span class="value">${cell || '(missing)'}</span></div>`;
+            html += `<div class="data-item"><span class="label">Relationship:</span> <span class="value">${relationship || '(optional)'}</span></div>`;
+            html += `<div class="data-item"><span class="label">Contact Number:</span> <span class="value">${contactNumber || '(optional)'}</span></div>`;
+            
+            html += '<h4>Raw Matches Found:</h4>';
+            if (matches.length > 0) {
+                matches.forEach((match, index) => {
+                    html += `<div class="data-item">${index + 1}. ${match}</div>`;
+                });
+            } else {
+                html += '<div class="data-item" style="color: #ef4444;">No matches found! Make sure text is in format: [Field:Value]</div>';
+            }
+            
+            html += '</div>';
+            
+            resultDiv.innerHTML = html;
+        }
+    </script>
+</body>
+</html>
+

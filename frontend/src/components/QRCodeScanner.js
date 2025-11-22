@@ -50,8 +50,17 @@ const QRCodeScanner = ({ onScan, resetTrigger }) => {
     // Optimize config for mobile devices
     const config = { 
       fps: 10, 
-      qrbox: { width: 250, height: 250 }, // Add qrbox for better mobile focus
-      aspectRatio: 1.0 // Square aspect ratio works better on mobile
+      qrbox: function(viewfinderWidth, viewfinderHeight) {
+        // Make qrbox responsive to the viewfinder size
+        const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
+        const qrboxSize = Math.floor(minEdge * 0.7); // 70% of the smaller dimension
+        return {
+          width: qrboxSize,
+          height: qrboxSize
+        };
+      },
+      aspectRatio: 1.0, // Square aspect ratio works better on mobile
+      disableFlip: false // Allow flipping to try both orientations
     };
 
     try {
@@ -71,8 +80,11 @@ const QRCodeScanner = ({ onScan, resetTrigger }) => {
         (decodedText) => {
           // Only process scan if scanner is running and we haven't recently processed this QR
           if (isScannerRunningRef.current) {
-            console.log('QRScanner: QR detected:', decodedText.substring(0, 50) + '...');
+            console.log('QRScanner: QR detected! Full text:', decodedText);
+            console.log('QRScanner: Calling onScan callback...');
             onScan(decodedText);
+          } else {
+            console.log('QRScanner: QR detected but scanner is not running, ignoring');
           }
         },
         (errorMessage) => {
