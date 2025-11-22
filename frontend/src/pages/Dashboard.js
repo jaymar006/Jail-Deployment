@@ -57,6 +57,7 @@ const Dashboard = () => {
   const [successModalData, setSuccessModalData] = useState({ type: '', message: '', visitorData: null });
   const [lockoutUntil, setLockoutUntil] = useState(null); // Timestamp when lockout expires
   const [lockoutMessage, setLockoutMessage] = useState('');
+  const [lastTimeOutAt, setLastTimeOutAt] = useState(null); // Track when last time-out occurred to prevent immediate re-scans
 
   // Prevent body scroll when success modal is open
   useEffect(() => {
@@ -672,6 +673,14 @@ const Dashboard = () => {
     // Debounce same visitor_id for a short window
     const sig = `visitor_id:${visitorId}`;
     const nowMs = Date.now();
+    
+    // Check if we just timed out this visitor recently (within 10 seconds)
+    // This prevents the modal from showing if user accidentally scans again right after time-out
+    if (lastTimeOutAt && nowMs - lastTimeOutAt < 10000) {
+      logger.debug('Recent time-out detected, ignoring scan to prevent duplicate modal');
+      return; // Ignore scan if we just timed out recently
+    }
+    
     // Extended debounce window: 8 seconds to prevent immediate re-scanning after time-out
     if (lastScanSig === sig && nowMs - lastScanAt < 8000) {
       logger.debug('Duplicate scan within 8 seconds, ignoring');
@@ -726,6 +735,9 @@ const Dashboard = () => {
         
         logger.debug('Time out successful!');
         await fetchVisitors();
+        
+        // Track that we just timed out to prevent immediate re-scans
+        setLastTimeOutAt(Date.now());
         
         // Get visitor details from response (or use from preflight)
         const finalVisitorName = timeOutResponse?.data?.visitor_name || visitorName;
@@ -796,6 +808,9 @@ const Dashboard = () => {
         logger.debug('Time out successful!');
         await fetchVisitors();
         logger.debug('Visitor list refreshed');
+        
+        // Track that we just timed out to prevent immediate re-scans
+        setLastTimeOutAt(Date.now());
         
         // Get visitor details from response
         const responseVisitorName = response?.data?.visitor_name || pendingScanData?.visitor_name;
@@ -1733,9 +1748,9 @@ const Dashboard = () => {
                     // Show lockout message
                     showToast('Please wait 5 seconds before scanning again.', 'error');
                     
-                    // Clear last scan signature to allow new scans after lockout
-                    setLastScanSig(null);
-                    setLastScanAt(0);
+                    // Keep lastTimeOutAt set to prevent modals from showing during lockout
+                    // Don't clear lastScanSig - keep it to prevent duplicate scans
+                    // The lastTimeOutAt will naturally expire after 10 seconds
                     
                     // Unlock scanner after lockout period
                     setTimeout(() => {
