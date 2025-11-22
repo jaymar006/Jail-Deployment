@@ -25,6 +25,72 @@ const Visitor = {
     return results[0];
   },
 
+  // Find visitor by name and PDL name (for checking verified_conjugal during QR scan)
+  // PDL name can be in format "Last, First Middle" or "Last First Middle"
+  findByVisitorAndPdlName: async (visitorName, pdlName) => {
+    // Normalize PDL name - remove extra spaces and handle comma format
+    const normalizedPdlName = pdlName.trim().replace(/\s+/g, ' ');
+    
+    // Try to parse PDL name - could be "Last, First Middle" or "Last First Middle"
+    let pdlLast = '';
+    let pdlFirst = '';
+    let pdlMiddle = '';
+    
+    if (normalizedPdlName.includes(',')) {
+      // Format: "Last, First Middle"
+      const parts = normalizedPdlName.split(',');
+      if (parts.length === 2) {
+        pdlLast = parts[0].trim();
+        const nameParts = parts[1].trim().split(' ');
+        pdlFirst = nameParts[0] || '';
+        pdlMiddle = nameParts.slice(1).join(' ') || '';
+      }
+    } else {
+      // Format: "Last First Middle" - assume first word is last name, rest is first+middle
+      const nameParts = normalizedPdlName.split(' ');
+      if (nameParts.length >= 2) {
+        pdlLast = nameParts[0];
+        pdlFirst = nameParts[1];
+        pdlMiddle = nameParts.slice(2).join(' ') || '';
+      }
+    }
+    
+    // Build query based on whether middle name is provided
+    let query, params;
+    if (pdlMiddle && pdlMiddle.trim()) {
+      // Match with middle name
+      query = `SELECT v.*, 
+                      p.last_name AS pdl_last_name,
+                      p.first_name AS pdl_first_name,
+                      p.middle_name AS pdl_middle_name
+               FROM visitors v
+               INNER JOIN pdls p ON v.pdl_id = p.id
+               WHERE LOWER(v.name) = LOWER(?)
+                 AND LOWER(p.last_name) = LOWER(?)
+                 AND LOWER(p.first_name) = LOWER(?)
+                 AND (LOWER(COALESCE(p.middle_name, '')) = LOWER(?) OR (p.middle_name IS NULL AND ? = ''))
+               LIMIT 1`;
+      params = [visitorName, pdlLast, pdlFirst, pdlMiddle.trim(), pdlMiddle.trim()];
+    } else {
+      // Match without middle name (middle name should be NULL or empty)
+      query = `SELECT v.*, 
+                      p.last_name AS pdl_last_name,
+                      p.first_name AS pdl_first_name,
+                      p.middle_name AS pdl_middle_name
+               FROM visitors v
+               INNER JOIN pdls p ON v.pdl_id = p.id
+               WHERE LOWER(v.name) = LOWER(?)
+                 AND LOWER(p.last_name) = LOWER(?)
+                 AND LOWER(p.first_name) = LOWER(?)
+                 AND (p.middle_name IS NULL OR p.middle_name = '' OR TRIM(p.middle_name) = '')
+               LIMIT 1`;
+      params = [visitorName, pdlLast, pdlFirst];
+    }
+    
+    const [results] = await db.query(query, params);
+    return results.length > 0 ? results[0] : null;
+  },
+
   countByPdlId: async (pdlId) => {
     const [results] = await db.query('SELECT COUNT(*) AS count FROM visitors WHERE pdl_id = ?', [pdlId]);
     return results[0].count;

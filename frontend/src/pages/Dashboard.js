@@ -50,6 +50,7 @@ const Dashboard = () => {
   const [editTimeOut, setEditTimeOut] = useState('');
   const [showPurposeModal, setShowPurposeModal] = useState(false);
   const [pendingScanData, setPendingScanData] = useState(null);
+  const [verifiedConjugal, setVerifiedConjugal] = useState(false);
   const [scanLocked, setScanLocked] = useState(false);
   const [lastScanSig, setLastScanSig] = useState(null);
   const [lastScanAt, setLastScanAt] = useState(0);
@@ -662,7 +663,11 @@ const Dashboard = () => {
       });
 
       const planned = preflight?.data?.action;
-      console.log('📊 Preflight response:', { action: planned });
+      const conjugalVerified = preflight?.data?.verified_conjugal === true;
+      console.log('📊 Preflight response:', { action: planned, verified_conjugal: conjugalVerified });
+      
+      // Store verified_conjugal status
+      setVerifiedConjugal(conjugalVerified);
       
       if (planned === 'time_out') {
         // STEP 5: Time out - visitor already has time_in, directly execute time_out
@@ -759,6 +764,7 @@ const Dashboard = () => {
     }
 
     setPendingScanData(null);
+    setVerifiedConjugal(false);
     // Unlock scanning after a short cooldown to avoid immediate re-trigger
     setTimeout(() => {
       setScanLocked(false);
@@ -1112,6 +1118,7 @@ const Dashboard = () => {
           <Modal onClose={() => {
             setShowPurposeModal(false);
             setPendingScanData(null);
+            setVerifiedConjugal(false);
             setScanLocked(false);
             console.log('Purpose modal closed, scan unlocked');
           }}>
@@ -1198,24 +1205,28 @@ const Dashboard = () => {
               }}>
                 <button 
                   className="purpose-button conjugal" 
-                  onClick={() => handlePurposeSelection('conjugal')}
+                  onClick={() => verifiedConjugal && handlePurposeSelection('conjugal')}
+                  disabled={!verifiedConjugal}
                   style={{ 
-                    background: 'linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)',
-                    color: '#991b1b',
+                    background: verifiedConjugal 
+                      ? 'linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)' 
+                      : 'linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%)',
+                    color: verifiedConjugal ? '#991b1b' : '#9ca3af',
                     padding: isMobile ? '20px 16px' : '24px 20px',
                     borderRadius: '16px',
                     textAlign: 'center',
-                    cursor: 'pointer',
+                    cursor: verifiedConjugal ? 'pointer' : 'not-allowed',
                     transition: 'all 0.3s ease',
-                    border: '2px solid #fecaca',
-                    boxShadow: '0 2px 8px rgba(220, 38, 38, 0.08)',
+                    border: verifiedConjugal ? '2px solid #fecaca' : '2px solid #d1d5db',
+                    boxShadow: verifiedConjugal ? '0 2px 8px rgba(220, 38, 38, 0.08)' : '0 1px 3px rgba(0, 0, 0, 0.1)',
                     position: 'relative',
                     overflow: 'hidden',
                     minHeight: isMobile ? '140px' : 'auto',
-                    width: '100%'
+                    width: '100%',
+                    opacity: verifiedConjugal ? 1 : 0.6
                   }}
                   onMouseEnter={(e) => {
-                    if (!isMobile) {
+                    if (!isMobile && verifiedConjugal) {
                       e.currentTarget.style.transform = 'translateY(-4px)';
                       e.currentTarget.style.boxShadow = '0 8px 16px rgba(220, 38, 38, 0.15)';
                       e.currentTarget.style.borderColor = '#fca5a5';
@@ -1225,13 +1236,15 @@ const Dashboard = () => {
                   onMouseLeave={(e) => {
                     if (!isMobile) {
                       e.currentTarget.style.transform = 'translateY(0)';
-                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(220, 38, 38, 0.08)';
-                      e.currentTarget.style.borderColor = '#fecaca';
-                      e.currentTarget.style.background = 'linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)';
+                      e.currentTarget.style.boxShadow = verifiedConjugal ? '0 2px 8px rgba(220, 38, 38, 0.08)' : '0 1px 3px rgba(0, 0, 0, 0.1)';
+                      e.currentTarget.style.borderColor = verifiedConjugal ? '#fecaca' : '#d1d5db';
+                      e.currentTarget.style.background = verifiedConjugal 
+                        ? 'linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)' 
+                        : 'linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%)';
                     }
                   }}
                   onTouchStart={(e) => {
-                    if (isMobile) {
+                    if (isMobile && verifiedConjugal) {
                       e.currentTarget.style.background = 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)';
                       e.currentTarget.style.borderColor = '#fca5a5';
                     }
@@ -1239,14 +1252,18 @@ const Dashboard = () => {
                   onTouchEnd={(e) => {
                     if (isMobile) {
                       setTimeout(() => {
-                        e.currentTarget.style.background = 'linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)';
-                        e.currentTarget.style.borderColor = '#fecaca';
+                        e.currentTarget.style.background = verifiedConjugal 
+                          ? 'linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)' 
+                          : 'linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%)';
+                        e.currentTarget.style.borderColor = verifiedConjugal ? '#fecaca' : '#d1d5db';
                       }, 150);
                     }
                   }}
                 >
                   <div style={{ 
-                    background: 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)',
+                    background: verifiedConjugal 
+                      ? 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)' 
+                      : 'linear-gradient(135deg, #9ca3af 0%, #6b7280 100%)',
                     borderRadius: '12px', 
                     width: isMobile ? '48px' : '56px', 
                     height: isMobile ? '48px' : '56px', 
@@ -1254,7 +1271,7 @@ const Dashboard = () => {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    boxShadow: '0 4px 8px rgba(220, 38, 38, 0.2)'
+                    boxShadow: verifiedConjugal ? '0 4px 8px rgba(220, 38, 38, 0.2)' : '0 2px 4px rgba(0, 0, 0, 0.1)'
                   }}>
                     <svg width={isMobile ? "24" : "28"} height={isMobile ? "24" : "28"} viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
@@ -1262,8 +1279,17 @@ const Dashboard = () => {
                       <path d="M12 14l3-3 3 3"/>
                     </svg>
                   </div>
-                  <h4 style={{ margin: '0 0 6px 0', fontSize: isMobile ? '15px' : '16px', fontWeight: '600', color: '#991b1b' }}>Conjugal Visit</h4>
-                  <p style={{ margin: '0', fontSize: isMobile ? '12px' : '13px', color: '#7f1d1d', opacity: '0.8' }}>Private family visit</p>
+                  <h4 style={{ margin: '0 0 6px 0', fontSize: isMobile ? '15px' : '16px', fontWeight: '600', color: verifiedConjugal ? '#991b1b' : '#9ca3af' }}>
+                    Conjugal Visit
+                    {!verifiedConjugal && (
+                      <span style={{ display: 'block', fontSize: isMobile ? '10px' : '11px', fontWeight: '400', marginTop: '4px', color: '#ef4444' }}>
+                        (Not verified)
+                      </span>
+                    )}
+                  </h4>
+                  <p style={{ margin: '0', fontSize: isMobile ? '12px' : '13px', color: verifiedConjugal ? '#7f1d1d' : '#6b7280', opacity: '0.8' }}>
+                    {verifiedConjugal ? 'Private family visit' : 'Conjugal visit not verified'}
+                  </p>
                 </button>
                 
                 <button 
@@ -1345,6 +1371,7 @@ const Dashboard = () => {
                   onClick={() => {
                     setShowPurposeModal(false);
                     setPendingScanData(null);
+                    setVerifiedConjugal(false);
                     setTimeout(() => setScanLocked(false), 500);
                   }}
                   style={{

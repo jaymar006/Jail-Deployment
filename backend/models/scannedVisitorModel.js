@@ -34,6 +34,32 @@ const ScannedVisitor = {
     return results.length > 0 ? results[0] : null;
   },
 
+  // Find recently created record (within last N seconds) - additional safeguard against race conditions
+  findRecentScanByVisitorDetails: async (visitor_name, pdl_name, cell, secondsAgo = 10) => {
+    console.log('findRecentScanByVisitorDetails called with:', visitor_name, pdl_name, cell, `within ${secondsAgo} seconds`);
+    
+    // Calculate the cutoff time
+    const now = new Date();
+    const cutoffTime = new Date(now.getTime() - (secondsAgo * 1000));
+    
+    // Format for database (works for both SQLite and PostgreSQL)
+    // SQLite stores as TEXT, PostgreSQL as TIMESTAMP
+    const cutoffTimeStr = cutoffTime.toISOString().slice(0, 19).replace('T', ' ');
+    
+    const [results] = await db.query(
+      `SELECT * FROM scanned_visitors 
+       WHERE LOWER(visitor_name) = LOWER(?) 
+         AND LOWER(pdl_name) = LOWER(?) 
+         AND LOWER(cell) = LOWER(?)
+         AND scan_date >= ?
+       ORDER BY scan_date DESC 
+       LIMIT 1`,
+      [visitor_name, pdl_name, cell, cutoffTimeStr]
+    );
+    console.log('findRecentScanByVisitorDetails results:', results);
+    return results.length > 0 ? results[0] : null;
+  },
+
   updateTimeOut: async (id, time_out) => {
     console.log('updateTimeOut called with:', id, time_out);
     const [result] = await db.query(

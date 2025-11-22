@@ -252,12 +252,19 @@ const QRCodeScanner = ({ onScan, resetTrigger }) => {
   }, [resetTrigger]); // Only depend on resetTrigger to avoid infinite loops
 
   return (
-    <div style={{ width: '100%', maxWidth: '320px', margin: '0 auto' }}>
-      <div id={qrCodeRegionId} style={{ width: '100%', maxWidth: '320px', height: '240px', minHeight: '200px' }} />
+    <>
+      {/* Camera Scanner Container */}
+      <div style={{ width: '100%', maxWidth: '320px', margin: '0 auto' }}>
+        <div id={qrCodeRegionId} style={{ width: '100%', maxWidth: '320px', height: '240px', minHeight: '200px' }} />
+      </div>
+      
+      {/* Error/Retry Message - Separated into its own container */}
       {/* Only show error/retry button if there's an error AND scanner is NOT running */}
       {error && !isRunning && (
         <div style={{ 
-          marginTop: '12px', 
+          width: '100%',
+          maxWidth: '320px',
+          margin: '12px auto 0',
           textAlign: 'center',
           padding: '12px',
           background: '#fef2f2',
@@ -321,7 +328,7 @@ const QRCodeScanner = ({ onScan, resetTrigger }) => {
           )}
         </div>
       )}
-    </div>
+    </>
   );
 };
 

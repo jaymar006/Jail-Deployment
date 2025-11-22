@@ -304,11 +304,29 @@ exports.addScannedVisitor = async (req, res) => {
 
     const openScan = await findOpenScan();
 
+    // Check verified_conjugal status from visitors table
+    let verifiedConjugal = false;
+    try {
+      const visitorRecord = await Visitor.findByVisitorAndPdlName(visitor_name, pdl_name);
+      if (visitorRecord) {
+        verifiedConjugal = visitorRecord.verified_conjugal === 1 || visitorRecord.verified_conjugal === true;
+      }
+    } catch (error) {
+      console.error('Error checking verified_conjugal:', error);
+      // Continue without verified_conjugal check if it fails
+    }
+
     if (only_check) {
       if (openScan && !openScan.time_out) {
-        return res.status(200).json({ action: 'time_out' });
+        return res.status(200).json({ 
+          action: 'time_out',
+          verified_conjugal: verifiedConjugal 
+        });
       }
-      return res.status(200).json({ action: 'time_in_pending' });
+      return res.status(200).json({ 
+        action: 'time_in_pending',
+        verified_conjugal: verifiedConjugal 
+      });
     }
 
     console.log('Found openScan:', openScan);
@@ -332,6 +350,40 @@ exports.addScannedVisitor = async (req, res) => {
         return res.status(200).json({ message: `Visitor "${visitor_name}" has already timed out`, id: openScan.id, time_out: openScan.time_out, action: 'already_timed_out' });
       }
     } else {
+      // CRITICAL: Double-check for openScan before creating new record (race condition fix)
+      // This prevents duplicate records when multiple requests come in simultaneously
+      console.log('⚠️ No openScan found on first check - performing double-check to prevent race condition...');
+      const doubleCheckOpenScan = await findOpenScan();
+      if (doubleCheckOpenScan) {
+        console.log('✅ Double-check found openScan - another request may have created it. Updating instead of creating new record.');
+        // Another request just created this record, update it instead
+        if (!doubleCheckOpenScan.time_out) {
+          const localTimeOut = localizedTimestamp;
+          await ScannedVisitor.updateTimeOut(doubleCheckOpenScan.id, localTimeOut);
+          return res.status(200).json({ message: `Visitor "${visitor_name}" scan timed out`, id: doubleCheckOpenScan.id, time_out: localTimeOut, action: 'time_out' });
+        } else {
+          return res.status(200).json({ message: `Visitor "${visitor_name}" has already timed out`, id: doubleCheckOpenScan.id, time_out: doubleCheckOpenScan.time_out, action: 'already_timed_out' });
+        }
+      }
+      // Additional safeguard: Check for very recently created records (within last 5 seconds)
+      // This catches race conditions where a record was just created but not yet visible in the first check
+      const recentScan = await ScannedVisitor.findRecentScanByVisitorDetails(visitor_name, pdl_name, formattedCell, 5);
+      if (recentScan && !recentScan.time_out) {
+        // Found a recent open scan - this is likely a time_out request that didn't find the openScan due to race condition
+        console.log('⚠️ Found recent open scan created within last 5 seconds - treating as time_out to prevent duplicate');
+        const localTimeOut = localizedTimestamp;
+        await ScannedVisitor.updateTimeOut(recentScan.id, localTimeOut);
+        return res.status(200).json({ message: `Visitor "${visitor_name}" scan timed out`, id: recentScan.id, time_out: localTimeOut, action: 'time_out' });
+      }
+      
+      if (recentScan && recentScan.time_out) {
+        // Recent scan already timed out - this is a new time_in, safe to create
+        console.log('✅ Recent scan already timed out - creating new time_in record');
+      }
+
+      console.log('✅ All checks passed - safe to create new record');
+
+      // No open scan found, create new record
       const scannedVisitorData = {
         visitor_name,
         pdl_name,
