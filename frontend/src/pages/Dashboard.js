@@ -1314,7 +1314,7 @@ const Dashboard = () => {
               </thead>
               <tbody>
                 {filteredVisitors.length === 0 ? (
-                  <tr><td colSpan="7">No records</td></tr>
+                  <tr><td colSpan="6" style={{ textAlign: 'center', padding: '20px', fontStyle: 'italic', color: '#6b7280' }}>No records found</td></tr>
                 ) : (
                   filteredVisitors.map(v => (
                     <tr

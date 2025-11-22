@@ -26,46 +26,203 @@
 }
 
 @media print {
+  @page {
+    size: A4 landscape;
+    margin: 0.5cm;
+  }
+
   body * {
     visibility: hidden;
   }
+  
   .print-section, .print-section * {
     visibility: visible;
   }
+  
   .no-print {
     display: none !important;
+    visibility: hidden !important;
   }
+  
   .print-section {
     position: absolute;
     left: 0;
     top: 0;
     width: 100%;
+    padding: 0;
+    margin: 0;
   }
-  .print-section h1 {
-    text-align: center;
-    margin-bottom: 20px;
-    font-size: 24px;
-    font-weight: bold;
-  }
-  .print-section div.print-only {
+  
+  /* Header Section */
+  .print-section .print-only {
     display: block;
     text-align: center;
-    margin-bottom: 10px;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 3px solid #1f2937;
   }
-  .print-section div.print-only img {
-    height: 60px;
-    margin-right: 10px;
+  
+  .print-section .print-only img {
+    height: 50px;
+    margin: 0 8px;
+    vertical-align: middle;
+  }
+  
+  .print-section h1 {
+    text-align: center;
+    margin: 10px 0 5px 0;
+    font-size: 18px;
+    font-weight: 700;
+    color: #111827;
+    letter-spacing: 0.5px;
+  }
+  
+  .print-section b {
+    display: block;
+    text-align: center;
+    margin: 8px 0 12px 0;
+    font-size: 14px;
+    color: #374151;
+    font-weight: 600;
+  }
+  
+  .print-section h2 {
+    text-align: center;
+    margin: 0 0 15px 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: #111827;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  /* Table Styling for Print */
+  .print-section .common-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 9px;
+    page-break-inside: auto;
+    margin: 0;
+    border: 2px solid #1f2937;
+  }
+  
+  .print-section .common-table thead {
+    background: #1f2937 !important;
+    color: white !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  
+  .print-section .common-table thead th {
+    padding: 8px 6px !important;
+    border: 1px solid #374151 !important;
+    text-align: center !important;
+    font-weight: 700 !important;
+    font-size: 9px !important;
+    color: white !important;
+    background: #1f2937 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    vertical-align: middle;
+    word-wrap: break-word;
+  }
+  
+  .print-section .common-table tbody tr {
+    page-break-inside: avoid;
+    page-break-after: auto;
+    border-bottom: 1px solid #d1d5db;
+  }
+  
+  .print-section .common-table tbody tr:nth-child(even) {
+    background-color: #f9fafb !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  
+  .print-section .common-table tbody tr:nth-child(odd) {
+    background-color: white !important;
+  }
+  
+  .print-section .common-table tbody td {
+    padding: 6px 5px !important;
+    border: 1px solid #e5e7eb !important;
+    text-align: center !important;
+    font-size: 8.5px !important;
+    color: #111827 !important;
+    vertical-align: middle;
+    word-wrap: break-word;
+    line-height: 1.3;
+  }
+  
+  /* Ensure all columns are visible in print */
+  .print-section .common-table thead th,
+  .print-section .common-table tbody td {
+    display: table-cell !important;
+  }
+  
+  /* Hide only no-print columns */
+  .print-section .common-table .no-print {
+    display: none !important;
+  }
+  
+  /* Column widths for better fit */
+  .print-section .common-table thead th:nth-child(2),
+  .print-section .common-table tbody td:nth-child(2) {
+    width: 18%;
+    min-width: 80px;
+  }
+  
+  .print-section .common-table thead th:nth-child(3),
+  .print-section .common-table tbody td:nth-child(3) {
+    width: 18%;
+    min-width: 80px;
+  }
+  
+  .print-section .common-table thead th:nth-child(4),
+  .print-section .common-table tbody td:nth-child(4) {
+    width: 12%;
+    min-width: 60px;
+  }
+  
+  .print-section .common-table thead th:nth-child(5),
+  .print-section .common-table tbody td:nth-child(5) {
+    width: 12%;
+    min-width: 60px;
+  }
+  
+  .print-section .common-table thead th:nth-child(6),
+  .print-section .common-table tbody td:nth-child(6) {
+    width: 10%;
+    min-width: 50px;
+  }
+  
+  .print-section .common-table thead th:nth-child(7),
+  .print-section .common-table tbody td:nth-child(7) {
+    width: 10%;
+    min-width: 50px;
   }
 
   /* Hide Manual Edit and Delete buttons in print */
   #printable-dashboard > button.common-button,
-  #printable-dashboard > button.common-button.delete {
-    display: none;
+  #printable-dashboard > button.common-button.delete,
+  .print-section button,
+  .print-section .action-buttons-row {
+    display: none !important;
+    visibility: hidden !important;
   }
 
-  /* Hide checkbox column and other no-print elements */
-  .no-print {
-    display: none !important;
+  /* Ensure proper page breaks */
+  .print-section .common-table tbody tr {
+    break-inside: avoid;
+  }
+  
+  /* Footer for page numbers (if needed) */
+  @page {
+    @bottom-right {
+      content: "Page " counter(page) " of " counter(pages);
+      font-size: 8px;
+      color: #6b7280;
+    }
   }
 }
 
