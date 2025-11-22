@@ -674,10 +674,11 @@ const Dashboard = () => {
     const sig = `visitor_id:${visitorId}`;
     const nowMs = Date.now();
     
-    // Check if we just timed out this visitor recently (within 10 seconds)
+    // Check if we just timed out this visitor recently (within 5 seconds)
     // This prevents the modal from showing if user accidentally scans again right after time-out
-    if (lastTimeOutAt && nowMs - lastTimeOutAt < 10000) {
-      logger.debug('Recent time-out detected, ignoring scan to prevent duplicate modal');
+    if (lastTimeOutAt && nowMs - lastTimeOutAt < 5000) {
+      logger.debug('Recent time-out detected (within 5 seconds), ignoring scan to prevent duplicate modal');
+      showToast('Please wait 5 seconds before scanning again after time-out.', 'error');
       return; // Ignore scan if we just timed out recently
     }
     
@@ -686,6 +687,19 @@ const Dashboard = () => {
       logger.debug('Duplicate scan within 8 seconds, ignoring');
       return; // ignore duplicate immediately after previous scan
     }
+    
+    // CRITICAL: Check if purpose modal is already open - prevent duplicate modals
+    if (showPurposeModal) {
+      logger.debug('Purpose modal already open, ignoring duplicate scan');
+      return;
+    }
+    
+    // CRITICAL: Check if success modal is already open - prevent duplicate modals
+    if (showSuccessModal) {
+      logger.debug('Success modal already open, ignoring duplicate scan');
+      return;
+    }
+    
     setLastScanSig(sig);
     setLastScanAt(nowMs);
 
@@ -737,7 +751,15 @@ const Dashboard = () => {
         await fetchVisitors();
         
         // Track that we just timed out to prevent immediate re-scans
-        setLastTimeOutAt(Date.now());
+        const timeOutTimestamp = Date.now();
+        setLastTimeOutAt(timeOutTimestamp);
+        
+        // Set lockout period immediately (5 seconds) - don't wait for OK button
+        const lockoutDuration = 5000; // 5 seconds
+        const lockoutExpiry = timeOutTimestamp + lockoutDuration;
+        setLockoutUntil(lockoutExpiry);
+        setLockoutMessage('Please wait 5 seconds before scanning again.');
+        logger.debug('Lockout period set for 5 seconds after time-out');
         
         // Get visitor details from response (or use from preflight)
         const finalVisitorName = timeOutResponse?.data?.visitor_name || visitorName;
@@ -760,12 +782,19 @@ const Dashboard = () => {
       }
 
       // STEP 3: Time in - show purpose modal with exact message
-      // BUT: Don't show if we just timed out recently (within 10 seconds)
+      // BUT: Don't show if we just timed out recently (within 5 seconds)
       // This prevents the modal from appearing immediately after time-out
-      const nowMs = Date.now();
-      if (lastTimeOutAt && nowMs - lastTimeOutAt < 10000) {
-        logger.debug('Recent time-out detected, preventing purpose modal from showing');
-        showToast('Please wait before scanning again after time-out.', 'error');
+      const checkTimeMs = Date.now();
+      if (lastTimeOutAt && checkTimeMs - lastTimeOutAt < 5000) {
+        logger.debug('Recent time-out detected (within 5 seconds), preventing purpose modal from showing');
+        showToast('Please wait 5 seconds before scanning again after time-out.', 'error');
+        setTimeout(() => setScanLocked(false), 1000);
+        return;
+      }
+      
+      // Double-check: Ensure purpose modal is not already open
+      if (showPurposeModal) {
+        logger.debug('Purpose modal already open, preventing duplicate');
         setTimeout(() => setScanLocked(false), 1000);
         return;
       }
@@ -820,7 +849,15 @@ const Dashboard = () => {
         logger.debug('Visitor list refreshed');
         
         // Track that we just timed out to prevent immediate re-scans
-        setLastTimeOutAt(Date.now());
+        const timeOutTimestamp = Date.now();
+        setLastTimeOutAt(timeOutTimestamp);
+        
+        // Set lockout period immediately (5 seconds) - don't wait for OK button
+        const lockoutDuration = 5000; // 5 seconds
+        const lockoutExpiry = timeOutTimestamp + lockoutDuration;
+        setLockoutUntil(lockoutExpiry);
+        setLockoutMessage('Please wait 5 seconds before scanning again.');
+        logger.debug('Lockout period set for 5 seconds after time-out');
         
         // Get visitor details from response
         const responseVisitorName = response?.data?.visitor_name || pendingScanData?.visitor_name;
@@ -1748,27 +1785,23 @@ const Dashboard = () => {
                   setShowSuccessModal(false);
                   setSuccessModalData({ type: '', message: '', visitorData: null });
                   
-                  // If this was a time-out, implement 5-second lockout
+                  // If this was a time-out, the lockout was already set immediately after time-out
+                  // Just respect the existing lockout and unlock scanner after it expires
                   if (successModalData.type === 'time_out') {
-                    const lockoutDuration = 5000; // 5 seconds
-                    const lockoutExpiry = Date.now() + lockoutDuration;
-                    setLockoutUntil(lockoutExpiry);
-                    setLockoutMessage('Please wait 5 seconds before scanning again.');
-                    
-                    // Show lockout message
-                    showToast('Please wait 5 seconds before scanning again.', 'error');
-                    
-                    // Keep lastTimeOutAt set to prevent modals from showing during lockout
-                    // Don't clear lastScanSig - keep it to prevent duplicate scans
-                    // The lastTimeOutAt will naturally expire after 10 seconds
-                    
-                    // Unlock scanner after lockout period
-                    setTimeout(() => {
-                      setLockoutUntil(null);
-                      setLockoutMessage('');
+                    // Lockout was already set immediately after time-out (5 seconds)
+                    // Just wait for it to expire, then unlock scanner
+                    // Check if lockout is still active
+                    if (lockoutUntil && Date.now() < lockoutUntil) {
+                      const remainingMs = lockoutUntil - Date.now();
+                      setTimeout(() => {
+                        setScanLocked(false);
+                        logger.debug('Scanner unlocked after lockout period expired');
+                      }, remainingMs);
+                    } else {
+                      // Lockout already expired, unlock immediately
                       setScanLocked(false);
-                      logger.debug('Scanner lockout expired - scanning enabled again');
-                    }, lockoutDuration);
+                      logger.debug('Scanner unlocked (lockout already expired)');
+                    }
                   } else {
                     // For time-in, just unlock after a short delay
                     // DON'T clear last scan signature - keep it to prevent immediate re-scanning
