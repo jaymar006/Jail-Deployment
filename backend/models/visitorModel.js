@@ -25,29 +25,48 @@ const Visitor = {
     return results[0];
   },
 
-  // Find visitor by exact full name (case-insensitive, trimmed)
+  // Find visitor by exact full name (case-insensitive, trimmed, normalized whitespace)
   // Optionally match by PDL name if provided for more accuracy
   findByExactName: async (visitorName, pdlName = null) => {
-    const normalizedVisitorName = visitorName.trim();
+    // Normalize visitor name: trim and replace multiple spaces with single space
+    const normalizedVisitorName = visitorName.trim().replace(/\s+/g, ' ');
     
     if (pdlName) {
       // If PDL name is provided, use the existing method that matches both
       return await Visitor.findByVisitorAndPdlName(normalizedVisitorName, pdlName);
     } else {
       // If only visitor name is provided, search by exact name match
-      const [results] = await db.query(
+      // First try a simple case-insensitive match
+      let [results] = await db.query(
         'SELECT * FROM visitors WHERE LOWER(TRIM(name)) = LOWER(?)',
         [normalizedVisitorName]
       );
       
+      // If no results, try matching with normalized whitespace (multiple spaces to single)
+      if (results.length === 0) {
+        // Get all visitors and filter in JavaScript to handle whitespace normalization
+        const [allVisitors] = await db.query('SELECT * FROM visitors');
+        results = allVisitors.filter(v => {
+          const dbName = v.name.trim().replace(/\s+/g, ' ');
+          return dbName.toLowerCase() === normalizedVisitorName.toLowerCase();
+        });
+      }
+      
+      // Filter results to ensure exact match after normalization
+      const exactMatches = results.filter(v => {
+        const dbName = v.name.trim().replace(/\s+/g, ' ');
+        return dbName.toLowerCase() === normalizedVisitorName.toLowerCase();
+      });
+      
       // If multiple visitors with same name, return null (ambiguous)
       // If exactly one match, return it
-      if (results.length === 1) {
-        return results[0];
-      } else if (results.length > 1) {
+      if (exactMatches.length === 1) {
+        return exactMatches[0];
+      } else if (exactMatches.length > 1) {
         // Multiple visitors with same name - ambiguous, return null
         return null;
       }
+      
       return null;
     }
   },

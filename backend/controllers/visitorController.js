@@ -291,6 +291,14 @@ exports.addScannedVisitor = async (req, res) => {
     // Support legacy format for backward compatibility during transition
     let { visitor_name, pdl_name, cell, relationship, contact_number } = req.body;
     
+    // Log incoming request for debugging
+    logger.debug('addScannedVisitor request received:', {
+      visitor_id: visitor_id || 'not provided',
+      visitor_name: visitor_name || 'not provided',
+      pdl_name: pdl_name || 'not provided',
+      only_check: only_check || false
+    });
+    
     // If visitor_id is provided, use new workflow
     if (visitor_id) {
       visitor_id = visitor_id.trim();
@@ -314,21 +322,43 @@ exports.addScannedVisitor = async (req, res) => {
       
       if (!visitor) {
         logger.debug('Visitor lookup failed for visitor_id:', visitor_id);
+        logger.debug('Available fallback data - visitor_name:', visitor_name, 'pdl_name:', pdl_name);
         
         // Fallback: If visitor_id not found but visitor_name is available, try to find by exact name
         if (visitor_name && visitor_name.trim()) {
           logger.debug('Attempting fallback lookup by exact visitor name:', visitor_name);
           
+          // Normalize visitor name (trim and normalize whitespace)
+          const normalizedVisitorName = visitor_name.trim().replace(/\s+/g, ' ');
+          logger.debug('Normalized visitor name for search:', normalizedVisitorName);
+          
           // Try to find visitor by exact name (with optional PDL name for better matching)
-          visitor = await Visitor.findByExactName(visitor_name.trim(), pdl_name || null);
+          visitor = await Visitor.findByExactName(normalizedVisitorName, pdl_name ? pdl_name.trim() : null);
           
           if (visitor) {
-            logger.debug('Found visitor by exact name fallback:', visitor_name);
+            logger.debug('✅ Found visitor by exact name fallback!', {
+              found_visitor_id: visitor.visitor_id,
+              found_visitor_name: visitor.name,
+              searched_name: normalizedVisitorName
+            });
           } else {
-            logger.debug('Visitor not found by exact name either:', visitor_name);
-            return res.status(404).json({ error: `Visitor not found: ${visitor_id}. Also tried searching by name "${visitor_name}" but no match found. Please check the QR code.` });
+            logger.debug('❌ Visitor not found by exact name either:', {
+              searched_name: normalizedVisitorName,
+              pdl_name: pdl_name || 'not provided'
+            });
+            
+            // Try to get some sample visitor names from database for debugging
+            try {
+              const [sampleVisitors] = await db.query('SELECT name FROM visitors LIMIT 5');
+              logger.debug('Sample visitor names in database:', sampleVisitors.map(v => v.name));
+            } catch (err) {
+              logger.debug('Could not fetch sample visitors for debugging');
+            }
+            
+            return res.status(404).json({ error: `Visitor not found: ${visitor_id}. Also tried searching by name "${normalizedVisitorName}" but no match found. Please check the QR code.` });
           }
         } else {
+          logger.debug('No visitor_name available for fallback lookup');
           return res.status(404).json({ error: `Visitor not found: ${visitor_id}. Please check the QR code.` });
         }
       }
