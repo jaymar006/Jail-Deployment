@@ -1035,11 +1035,25 @@ const Dashboard = () => {
 
     try {
       logger.debug('Sending time_in request to backend...');
-      const response = await api.post('/api/scanned_visitors', {
-        visitor_id: pendingScanData?.visitor_id,
+      const purposePayload = {
         device_time: new Date().toISOString(),
         purpose
-      });
+      };
+      
+      if (pendingScanData?.visitor_id) {
+        purposePayload.visitor_id = pendingScanData.visitor_id;
+      }
+      if (pendingScanData?.visitor_name) {
+        purposePayload.visitor_name = pendingScanData.visitor_name;
+      }
+      if (pendingScanData?.pdl_name) {
+        purposePayload.pdl_name = pendingScanData.pdl_name;
+      }
+      if (pendingScanData?.cell) {
+        purposePayload.cell = pendingScanData.cell;
+      }
+      
+      const response = await api.post('/api/scanned_visitors', purposePayload);
 
       const action = response?.data?.action;
       logger.debug('Backend response:', { action });

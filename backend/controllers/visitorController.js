@@ -314,7 +314,23 @@ exports.addScannedVisitor = async (req, res) => {
       
       if (!visitor) {
         logger.debug('Visitor lookup failed for visitor_id:', visitor_id);
-        return res.status(404).json({ error: `Visitor not found: ${visitor_id}. Please check the QR code.` });
+        
+        // Fallback: If visitor_id not found but visitor_name is available, try to find by exact name
+        if (visitor_name && visitor_name.trim()) {
+          logger.debug('Attempting fallback lookup by exact visitor name:', visitor_name);
+          
+          // Try to find visitor by exact name (with optional PDL name for better matching)
+          visitor = await Visitor.findByExactName(visitor_name.trim(), pdl_name || null);
+          
+          if (visitor) {
+            logger.debug('Found visitor by exact name fallback:', visitor_name);
+          } else {
+            logger.debug('Visitor not found by exact name either:', visitor_name);
+            return res.status(404).json({ error: `Visitor not found: ${visitor_id}. Also tried searching by name "${visitor_name}" but no match found. Please check the QR code.` });
+          }
+        } else {
+          return res.status(404).json({ error: `Visitor not found: ${visitor_id}. Please check the QR code.` });
+        }
       }
       
       // Get PDL information from visitor's pdl_id

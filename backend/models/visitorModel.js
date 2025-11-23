@@ -25,6 +25,33 @@ const Visitor = {
     return results[0];
   },
 
+  // Find visitor by exact full name (case-insensitive, trimmed)
+  // Optionally match by PDL name if provided for more accuracy
+  findByExactName: async (visitorName, pdlName = null) => {
+    const normalizedVisitorName = visitorName.trim();
+    
+    if (pdlName) {
+      // If PDL name is provided, use the existing method that matches both
+      return await Visitor.findByVisitorAndPdlName(normalizedVisitorName, pdlName);
+    } else {
+      // If only visitor name is provided, search by exact name match
+      const [results] = await db.query(
+        'SELECT * FROM visitors WHERE LOWER(TRIM(name)) = LOWER(?)',
+        [normalizedVisitorName]
+      );
+      
+      // If multiple visitors with same name, return null (ambiguous)
+      // If exactly one match, return it
+      if (results.length === 1) {
+        return results[0];
+      } else if (results.length > 1) {
+        // Multiple visitors with same name - ambiguous, return null
+        return null;
+      }
+      return null;
+    }
+  },
+
   // Find visitor by name and PDL name (for checking verified_conjugal during QR scan)
   // PDL name can be in format "Last, First Middle" or "Last First Middle"
   findByVisitorAndPdlName: async (visitorName, pdlName) => {
