@@ -269,6 +269,7 @@ const Datas = () => {
             'PDL First Name': pdl.first_name || '',
             'PDL Middle Name': pdl.middle_name || '',
             'Cell Number': cellDisplay,
+            'Visitor ID': '',
             'Visitor Name': '',
             'Relationship': '',
             'Age': '',
@@ -292,6 +293,7 @@ const Datas = () => {
               'PDL First Name': index === 0 ? (pdl.first_name || '') : '',
               'PDL Middle Name': index === 0 ? (pdl.middle_name || '') : '',
               'Cell Number': index === 0 ? cellDisplay : '',
+              'Visitor ID': visitor.visitor_id || '',
               'Visitor Name': visitor.name || '',
               'Relationship': visitor.relationship || '',
               'Age': visitor.age || '',
@@ -312,6 +314,7 @@ const Datas = () => {
         { wch: 18 }, // PDL First Name
         { wch: 18 }, // PDL Middle Name
         { wch: 20 }, // Cell Number
+        { wch: 18 }, // Visitor ID
         { wch: 20 }, // Visitor Name
         { wch: 15 }, // Relationship
         { wch: 10 }, // Age
@@ -872,18 +875,81 @@ const Datas = () => {
         // Perfect match: both last name and first name match exactly
         const pdl = firstNameMatches[0];
         
+        // If visitor_id is provided, search globally for visitor with that ID first
+        if (visitorData.visitor_id) {
+          try {
+            // Search globally for visitor by visitor_id
+            const allVisitorsRes = await axios.get('/api/visitors');
+            const allVisitors = allVisitorsRes.data || [];
+            const existingVisitorGlobal = allVisitors.find(v => 
+              v.visitor_id && v.visitor_id.toLowerCase() === visitorData.visitor_id.toLowerCase()
+            );
+            
+            if (existingVisitorGlobal) {
+              // Visitor found globally by visitor_id - update it
+              console.log(`Found existing visitor globally by visitor_id (${visitorData.visitor_id}) for row ${rowIndex}, updating...`);
+              try {
+                await axios.put(`/api/visitors/${existingVisitorGlobal.id}`, visitorData);
+                console.log(`Updated visitor by visitor_id: ${visitorData.name} (${visitorData.visitor_id})`);
+                return { type: 'success', visitor: visitorData.name, pdl: `${pdlLast}, ${pdlFirst} ${pdlMiddle}`, action: 'updated' };
+              } catch (err) {
+                console.error(`Failed to update visitor for row ${rowIndex}:`, err);
+                return { type: 'error', visitor: visitorData.name, pdl: `${pdlLast}, ${pdlFirst} ${pdlMiddle}`, error: err.message };
+              }
+            }
+          } catch (err) {
+            console.error(`Error searching for visitor by visitor_id:`, err);
+            // Continue with normal flow if search fails
+          }
+        }
+        
         // Check if visitor already exists in this PDL
         try {
           const existingVisitorsRes = await axios.get(`/api/pdls/${pdl.id}/visitors`);
           const existingVisitors = existingVisitorsRes.data || [];
           
-          const visitorExists = existingVisitors.some(existingVisitor => 
+          // If visitor_id is provided, try to match by visitor_id within this PDL
+          let existingVisitor = null;
+          if (visitorData.visitor_id) {
+            existingVisitor = existingVisitors.find(v => 
+              v.visitor_id && v.visitor_id.toLowerCase() === visitorData.visitor_id.toLowerCase()
+            );
+            
+            if (existingVisitor) {
+              // Visitor found by visitor_id - update it
+              console.log(`Found existing visitor by visitor_id (${visitorData.visitor_id}) in PDL for row ${rowIndex}, updating...`);
+              try {
+                await axios.put(`/api/visitors/${existingVisitor.id}`, visitorData);
+                console.log(`Updated visitor by visitor_id: ${visitorData.name} (${visitorData.visitor_id})`);
+                return { type: 'success', visitor: visitorData.name, pdl: `${pdlLast}, ${pdlFirst} ${pdlMiddle}`, action: 'updated' };
+              } catch (err) {
+                console.error(`Failed to update visitor for row ${rowIndex}:`, err);
+                return { type: 'error', visitor: visitorData.name, pdl: `${pdlLast}, ${pdlFirst} ${pdlMiddle}`, error: err.message };
+              }
+            }
+          }
+          
+          // If no match by visitor_id, check by name
+          existingVisitor = existingVisitors.find(existingVisitor => 
             existingVisitor.name.toLowerCase() === visitorData.name.toLowerCase()
           );
           
-          if (visitorExists) {
-            console.log(`Skipped duplicate visitor for row ${rowIndex}: ${visitorData.name}`);
-            return { type: 'skipped', reason: 'already_exists', visitor: visitorData.name, pdl: `${pdlLast}, ${pdlFirst} ${pdlMiddle}` };
+          if (existingVisitor) {
+            // If visitor_id is provided but doesn't match, update the existing visitor
+            if (visitorData.visitor_id) {
+              console.log(`Found existing visitor by name, updating with visitor_id for row ${rowIndex}: ${visitorData.name}`);
+              try {
+                await axios.put(`/api/visitors/${existingVisitor.id}`, visitorData);
+                console.log(`Updated visitor with visitor_id: ${visitorData.name} (${visitorData.visitor_id})`);
+                return { type: 'success', visitor: visitorData.name, pdl: `${pdlLast}, ${pdlFirst} ${pdlMiddle}`, action: 'updated' };
+              } catch (err) {
+                console.error(`Failed to update visitor for row ${rowIndex}:`, err);
+                return { type: 'error', visitor: visitorData.name, pdl: `${pdlLast}, ${pdlFirst} ${pdlMiddle}`, error: err.message };
+              }
+            } else {
+              console.log(`Skipped duplicate visitor for row ${rowIndex}: ${visitorData.name}`);
+              return { type: 'skipped', reason: 'already_exists', visitor: visitorData.name, pdl: `${pdlLast}, ${pdlFirst} ${pdlMiddle}` };
+            }
           }
           
           // Check if PDL has no visitors - automatically add without prompting
@@ -894,7 +960,7 @@ const Datas = () => {
           
           await axios.post(`/api/pdls/${pdl.id}/visitors`, visitorData);
           console.log(`Added visitor to exact match PDL: ${pdlLast}, ${pdlFirst} ${pdlMiddle}`);
-          return { type: 'success', visitor: visitorData.name, pdl: `${pdlLast}, ${pdlFirst} ${pdlMiddle}` };
+          return { type: 'success', visitor: visitorData.name, pdl: `${pdlLast}, ${pdlFirst} ${pdlMiddle}`, action: 'created' };
         } catch (err) {
           console.error(`Failed to add visitor to PDL for row ${rowIndex}:`, err);
           return { type: 'error', visitor: visitorData.name, pdl: `${pdlLast}, ${pdlFirst} ${pdlMiddle}`, error: err.message };
@@ -991,6 +1057,7 @@ const Datas = () => {
         // Update lastPdlData for forward-filling
         lastPdlData = { last_name: pdlLast, first_name: pdlFirst, middle_name: pdlMiddle };
 
+        const visitorId = normalizeSpaces(row['Visitor ID'] || '');
         const visitorName = normalizeSpaces(row['Visitor Name']);
         const relationship = normalizeSpaces(row['Relationship']);
         const ageVal = row['Age'];
@@ -1016,6 +1083,11 @@ const Datas = () => {
           contact_number,
           verified_conjugal: false
         };
+        
+        // Include visitor_id if present in the import file
+        if (visitorId) {
+          visitorData.visitor_id = visitorId;
+        }
 
         // Add to import queue for processing
         importQueue.push({

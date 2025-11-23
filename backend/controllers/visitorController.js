@@ -119,7 +119,8 @@ const {
   valid_id,
   date_of_application,
   contact_number,
-  verified_conjugal
+  verified_conjugal,
+  visitor_id
 } = req.body;
 
 if (!name || !relationship || age === undefined || !address || !valid_id || !date_of_application || !contact_number) {
@@ -139,6 +140,11 @@ const newVisitor = {
   contact_number,
   verified_conjugal
 };
+
+// Include visitor_id if provided (e.g., during import)
+if (visitor_id) {
+  newVisitor.visitor_id = visitor_id.trim();
+}
 
 const insertResult = await Visitor.add(newVisitor);
 res.status(201).json({ message: 'Visitor added successfully', id: insertResult.insertId });
