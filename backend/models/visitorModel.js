@@ -36,26 +36,17 @@ const Visitor = {
       return await Visitor.findByVisitorAndPdlName(normalizedVisitorName, pdlName);
     } else {
       // If only visitor name is provided, search by exact name match
-      // First try a simple case-insensitive match
-      let [results] = await db.query(
-        'SELECT * FROM visitors WHERE LOWER(TRIM(name)) = LOWER(?)',
-        [normalizedVisitorName]
-      );
+      // Get all visitors and filter in JavaScript to handle case-insensitive and whitespace normalization
+      const [allVisitors] = await db.query('SELECT * FROM visitors');
       
-      // If no results, try matching with normalized whitespace (multiple spaces to single)
-      if (results.length === 0) {
-        // Get all visitors and filter in JavaScript to handle whitespace normalization
-        const [allVisitors] = await db.query('SELECT * FROM visitors');
-        results = allVisitors.filter(v => {
-          const dbName = v.name.trim().replace(/\s+/g, ' ');
-          return dbName.toLowerCase() === normalizedVisitorName.toLowerCase();
-        });
-      }
+      // Normalize search term: lowercase, trim, normalize whitespace
+      const searchTerm = normalizedVisitorName.toLowerCase();
       
-      // Filter results to ensure exact match after normalization
-      const exactMatches = results.filter(v => {
-        const dbName = v.name.trim().replace(/\s+/g, ' ');
-        return dbName.toLowerCase() === normalizedVisitorName.toLowerCase();
+      // Filter results with case-insensitive and whitespace-normalized matching
+      const exactMatches = allVisitors.filter(v => {
+        // Normalize database name: lowercase, trim, normalize whitespace (multiple spaces to single)
+        const dbName = (v.name || '').trim().replace(/\s+/g, ' ').toLowerCase();
+        return dbName === searchTerm;
       });
       
       // If multiple visitors with same name, return null (ambiguous)
@@ -74,6 +65,9 @@ const Visitor = {
   // Find visitor by name and PDL name (for checking verified_conjugal during QR scan)
   // PDL name can be in format "Last, First Middle" or "Last First Middle"
   findByVisitorAndPdlName: async (visitorName, pdlName) => {
+    // Normalize visitor name - trim and normalize whitespace
+    const normalizedVisitorName = visitorName.trim().replace(/\s+/g, ' ');
+    
     // Normalize PDL name - remove extra spaces and handle comma format
     const normalizedPdlName = pdlName.trim().replace(/\s+/g, ' ');
     
@@ -86,14 +80,14 @@ const Visitor = {
       // Format: "Last, First Middle"
       const parts = normalizedPdlName.split(',');
       if (parts.length === 2) {
-        pdlLast = parts[0].trim();
-        const nameParts = parts[1].trim().split(' ');
+        pdlLast = parts[0].trim().replace(/\s+/g, ' ');
+        const nameParts = parts[1].trim().replace(/\s+/g, ' ').split(' ');
         pdlFirst = nameParts[0] || '';
         pdlMiddle = nameParts.slice(1).join(' ') || '';
       }
     } else {
       // Format: "Last First Middle" - assume first word is last name, rest is first+middle
-      const nameParts = normalizedPdlName.split(' ');
+      const nameParts = normalizedPdlName.split(' ').filter(p => p.trim());
       if (nameParts.length >= 2) {
         pdlLast = nameParts[0];
         pdlFirst = nameParts[1];
@@ -101,40 +95,53 @@ const Visitor = {
       }
     }
     
-    // Build query based on whether middle name is provided
-    let query, params;
-    if (pdlMiddle && pdlMiddle.trim()) {
-      // Match with middle name
-      query = `SELECT v.*, 
-                      p.last_name AS pdl_last_name,
-                      p.first_name AS pdl_first_name,
-                      p.middle_name AS pdl_middle_name
-               FROM visitors v
-               INNER JOIN pdls p ON v.pdl_id = p.id
-               WHERE LOWER(v.name) = LOWER(?)
-                 AND LOWER(p.last_name) = LOWER(?)
-                 AND LOWER(p.first_name) = LOWER(?)
-                 AND (LOWER(COALESCE(p.middle_name, '')) = LOWER(?) OR (p.middle_name IS NULL AND ? = ''))
-               LIMIT 1`;
-      params = [visitorName, pdlLast, pdlFirst, pdlMiddle.trim(), pdlMiddle.trim()];
-    } else {
-      // Match without middle name (middle name should be NULL or empty)
-      query = `SELECT v.*, 
-                      p.last_name AS pdl_last_name,
-                      p.first_name AS pdl_first_name,
-                      p.middle_name AS pdl_middle_name
-               FROM visitors v
-               INNER JOIN pdls p ON v.pdl_id = p.id
-               WHERE LOWER(v.name) = LOWER(?)
-                 AND LOWER(p.last_name) = LOWER(?)
-                 AND LOWER(p.first_name) = LOWER(?)
-                 AND (p.middle_name IS NULL OR p.middle_name = '' OR TRIM(p.middle_name) = '')
-               LIMIT 1`;
-      params = [visitorName, pdlLast, pdlFirst];
+    if (!pdlLast || !pdlFirst) {
+      // Invalid PDL name format
+      return null;
     }
     
-    const [results] = await db.query(query, params);
-    return results.length > 0 ? results[0] : null;
+    // Normalize search terms: lowercase and normalize whitespace
+    const searchVisitorName = normalizedVisitorName.toLowerCase();
+    const searchPdlLast = pdlLast.toLowerCase();
+    const searchPdlFirst = pdlFirst.toLowerCase();
+    const searchPdlMiddle = pdlMiddle ? pdlMiddle.toLowerCase() : '';
+    
+    // Get all visitors with their PDLs and filter in JavaScript for case-insensitive and whitespace-normalized matching
+    const [allResults] = await db.query(`
+      SELECT v.*, 
+             p.last_name AS pdl_last_name,
+             p.first_name AS pdl_first_name,
+             p.middle_name AS pdl_middle_name
+      FROM visitors v
+      INNER JOIN pdls p ON v.pdl_id = p.id
+    `);
+    
+    // Filter with case-insensitive and whitespace-normalized matching
+    const exactMatches = allResults.filter(v => {
+      // Normalize visitor name: lowercase, trim, normalize whitespace
+      const dbVisitorName = (v.name || '').trim().replace(/\s+/g, ' ').toLowerCase();
+      const dbPdlLast = (v.pdl_last_name || '').trim().replace(/\s+/g, ' ').toLowerCase();
+      const dbPdlFirst = (v.pdl_first_name || '').trim().replace(/\s+/g, ' ').toLowerCase();
+      const dbPdlMiddle = (v.pdl_middle_name || '').trim().replace(/\s+/g, ' ').toLowerCase();
+      
+      // Match visitor name and PDL last/first name
+      const visitorNameMatch = dbVisitorName === searchVisitorName;
+      const pdlLastMatch = dbPdlLast === searchPdlLast;
+      const pdlFirstMatch = dbPdlFirst === searchPdlFirst;
+      
+      // Match middle name if provided, otherwise check it's empty/null
+      let pdlMiddleMatch = true;
+      if (searchPdlMiddle) {
+        pdlMiddleMatch = dbPdlMiddle === searchPdlMiddle;
+      } else {
+        // If no middle name in search, database should also have no middle name
+        pdlMiddleMatch = !dbPdlMiddle || dbPdlMiddle === '';
+      }
+      
+      return visitorNameMatch && pdlLastMatch && pdlFirstMatch && pdlMiddleMatch;
+    });
+    
+    return exactMatches.length > 0 ? exactMatches[0] : null;
   },
 
   countByPdlId: async (pdlId) => {

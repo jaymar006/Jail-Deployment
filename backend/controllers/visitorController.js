@@ -324,16 +324,49 @@ exports.addScannedVisitor = async (req, res) => {
         logger.debug('Visitor lookup failed for visitor_id:', visitor_id);
         logger.debug('Available fallback data - visitor_name:', visitor_name, 'pdl_name:', pdl_name);
         
-        // Fallback: If visitor_id not found but visitor_name is available, try to find by exact name
-        if (visitor_name && visitor_name.trim()) {
-          logger.debug('Attempting fallback lookup by exact visitor name:', visitor_name);
+        // Fallback: If visitor_id not found, try to find by PDL name + visitor name (most accurate)
+        if (visitor_name && visitor_name.trim() && pdl_name && pdl_name.trim()) {
+          logger.debug('Attempting fallback lookup by PDL name + visitor name (most accurate method)');
           
-          // Normalize visitor name (trim and normalize whitespace)
+          // Normalize names (trim and normalize whitespace - case-insensitive matching handled in model)
           const normalizedVisitorName = visitor_name.trim().replace(/\s+/g, ' ');
-          logger.debug('Normalized visitor name for search:', normalizedVisitorName);
+          const normalizedPdlName = pdl_name.trim().replace(/\s+/g, ' ');
           
-          // Try to find visitor by exact name (with optional PDL name for better matching)
-          visitor = await Visitor.findByExactName(normalizedVisitorName, pdl_name ? pdl_name.trim() : null);
+          logger.debug('Normalized names for search (case-insensitive, whitespace-normalized):', {
+            visitor_name: normalizedVisitorName,
+            pdl_name: normalizedPdlName,
+            original_visitor_name: visitor_name,
+            original_pdl_name: pdl_name
+          });
+          
+          // Try to find visitor by PDL name + visitor name (most accurate, case-insensitive)
+          visitor = await Visitor.findByVisitorAndPdlName(normalizedVisitorName, normalizedPdlName);
+          
+          if (visitor) {
+            logger.debug('✅ Found visitor by PDL name + visitor name fallback!', {
+              found_visitor_id: visitor.visitor_id,
+              found_visitor_name: visitor.name,
+              searched_visitor_name: normalizedVisitorName,
+              searched_pdl_name: normalizedPdlName
+            });
+          } else {
+            logger.debug('❌ Visitor not found by PDL name + visitor name');
+          }
+        }
+        
+        // If still not found and visitor_name is available, try visitor name alone (less accurate)
+        if (!visitor && visitor_name && visitor_name.trim()) {
+          logger.debug('Attempting fallback lookup by visitor name alone (less accurate, case-insensitive)');
+          
+          // Normalize visitor name (trim and normalize whitespace - case-insensitive matching handled in model)
+          const normalizedVisitorName = visitor_name.trim().replace(/\s+/g, ' ');
+          logger.debug('Normalized visitor name for search (case-insensitive, whitespace-normalized):', {
+            normalized: normalizedVisitorName,
+            original: visitor_name
+          });
+          
+          // Try to find visitor by exact name only (case-insensitive)
+          visitor = await Visitor.findByExactName(normalizedVisitorName, null);
           
           if (visitor) {
             logger.debug('✅ Found visitor by exact name fallback!', {
@@ -355,9 +388,13 @@ exports.addScannedVisitor = async (req, res) => {
               logger.debug('Could not fetch sample visitors for debugging');
             }
             
-            return res.status(404).json({ error: `Visitor not found: ${visitor_id}. Also tried searching by name "${normalizedVisitorName}" but no match found. Please check the QR code.` });
+            return res.status(404).json({ 
+              error: `Visitor not found: ${visitor_id}. Also tried searching by name "${normalizedVisitorName}"${pdl_name ? ` with PDL "${pdl_name}"` : ''} but no match found. Please check the QR code.` 
+            });
           }
-        } else {
+        }
+        
+        if (!visitor) {
           logger.debug('No visitor_name available for fallback lookup');
           return res.status(404).json({ error: `Visitor not found: ${visitor_id}. Please check the QR code.` });
         }

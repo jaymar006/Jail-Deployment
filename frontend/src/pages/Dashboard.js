@@ -779,11 +779,12 @@ const Dashboard = () => {
       }
       
       // Include extracted information from old QR format if available
+      // Normalize names: trim and normalize whitespace (case-insensitive matching handled by backend)
       if (visitorName) {
-        preflightPayload.visitor_name = visitorName;
+        preflightPayload.visitor_name = visitorName.trim().replace(/\s+/g, ' ');
       }
       if (pdlName) {
-        preflightPayload.pdl_name = pdlName;
+        preflightPayload.pdl_name = pdlName.trim().replace(/\s+/g, ' ');
       }
       if (cell) {
         preflightPayload.cell = cell;
