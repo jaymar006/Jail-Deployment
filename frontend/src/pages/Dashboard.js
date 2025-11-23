@@ -645,21 +645,51 @@ const Dashboard = () => {
       }
     }
 
-    // STEP 1: Extract visitor_id from QR code
+    // STEP 1: Extract information from QR code
     // Supports multiple formats:
-    // - Old bracket format: [visitor_id:19][Visitor: ...]
+    // - Old bracket format: [Visitor:John Doe][PDL:Jane Smith][Cell:5][Relationship:Brother][Contact:09123456789]
+    // - Old bracket format with ID: [visitor_id:19][Visitor:John Doe][PDL:Jane Smith][Cell:5]
     // - New format: visitor_id:VIS-1001 or visitor_id:19
     // - Plain numeric (old ID): 19, 1001, etc.
     // - Plain string (new ID): VIS-1001, etc.
     let visitorId = null;
+    let visitorName = null;
+    let pdlName = null;
+    let cell = null;
+    let relationship = null;
+    let contactNumber = null;
     
-    // Try to extract from bracket format first (old format): [visitor_id:19][Visitor: ...]
+    // Check if QR code uses bracket format (old format)
     const bracketRegex = /\[(.*?)\]/g;
     const bracketMatches = [...data.matchAll(bracketRegex)].map(match => match[1]);
-    const visitorIdBracketMatch = bracketMatches.find(part => part.startsWith('visitor_id:'));
-    if (visitorIdBracketMatch) {
-      visitorId = visitorIdBracketMatch.replace('visitor_id:', '').trim();
-      logger.debug('Extracted visitor_id from bracket format:', visitorId);
+    
+    if (bracketMatches.length > 0) {
+      // Old bracket format detected - extract all information
+      logger.debug('Old bracket format detected, extracting information...');
+      bracketMatches.forEach(part => {
+        if (part.startsWith('visitor_id:')) {
+          visitorId = part.replace('visitor_id:', '').trim();
+        } else if (part.startsWith('Visitor:')) {
+          visitorName = part.replace('Visitor:', '').trim();
+        } else if (part.startsWith('PDL:')) {
+          pdlName = part.replace('PDL:', '').trim();
+        } else if (part.startsWith('Cell:')) {
+          cell = part.replace('Cell:', '').trim();
+        } else if (part.startsWith('Relationship:')) {
+          relationship = part.replace('Relationship:', '').trim();
+        } else if (part.startsWith('Contact:')) {
+          contactNumber = part.replace('Contact:', '').trim();
+        }
+      });
+      
+      logger.debug('Extracted from bracket format:', {
+        visitorId,
+        visitorName,
+        pdlName,
+        cell,
+        relationship,
+        contactNumber
+      });
     } else if (data.includes('visitor_id:')) {
       // Try new format: "visitor_id:VIS-1001" or "visitor_id:19" (supports both string and numeric)
       const match = data.match(/visitor_id:([^\s\[\]]+)/i);
@@ -677,16 +707,25 @@ const Dashboard = () => {
       }
     }
 
-    logger.debug('Extracted visitor_id from QR code:', visitorId);
+    logger.debug('Extracted information from QR code:', {
+      visitorId,
+      visitorName,
+      pdlName,
+      cell,
+      relationship,
+      contactNumber
+    });
 
-    if (!visitorId) {
-      logger.error('Invalid QR format - visitor_id not found');
+    // If no visitor_id but we have visitor name and PDL name, we can still proceed (old format lookup)
+    if (!visitorId && (!visitorName || !pdlName)) {
+      logger.error('Invalid QR format - need either visitor_id or (visitor_name and pdl_name)');
       showToast('Invalid QR code format. Please use a valid visitor QR code.', 'error');
       return;
     }
 
-    // Debounce same visitor_id for a short window
-    const sig = `visitor_id:${visitorId}`;
+    // Debounce same visitor for a short window
+    // Use visitor_id if available, otherwise use visitor_name + pdl_name combination
+    const sig = visitorId ? `visitor_id:${visitorId}` : `visitor:${visitorName || ''}_pdl:${pdlName || ''}`;
     const nowMs = Date.now();
     
     // Check if we just timed out this visitor recently (within 5 seconds)
@@ -730,23 +769,48 @@ const Dashboard = () => {
     logger.debug('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     
     try {
-      const preflight = await api.post('/api/scanned_visitors', {
-        visitor_id: visitorId,
+      // Build request payload - include visitor_id if available, or visitor_name + pdl_name for old format
+      const preflightPayload = {
         only_check: true
-      });
+      };
+      
+      if (visitorId) {
+        preflightPayload.visitor_id = visitorId;
+      }
+      
+      // Include extracted information from old QR format if available
+      if (visitorName) {
+        preflightPayload.visitor_name = visitorName;
+      }
+      if (pdlName) {
+        preflightPayload.pdl_name = pdlName;
+      }
+      if (cell) {
+        preflightPayload.cell = cell;
+      }
+      if (relationship) {
+        preflightPayload.relationship = relationship;
+      }
+      if (contactNumber) {
+        preflightPayload.contact_number = contactNumber;
+      }
+      
+      logger.debug('Sending preflight request with payload:', preflightPayload);
+      
+      const preflight = await api.post('/api/scanned_visitors', preflightPayload);
 
       const planned = preflight?.data?.action;
       const conjugalVerified = preflight?.data?.verified_conjugal === true;
-      const visitorName = preflight?.data?.visitor_name;
-      const pdlName = preflight?.data?.pdl_name;
-      const cell = preflight?.data?.cell;
+      const responseVisitorName = preflight?.data?.visitor_name;
+      const responsePdlName = preflight?.data?.pdl_name;
+      const responseCell = preflight?.data?.cell;
       
       logger.debug('Preflight response:', { 
         action: planned, 
         verified_conjugal: conjugalVerified,
-        visitor_name: visitorName,
-        pdl_name: pdlName,
-        cell: cell
+        visitor_name: responseVisitorName,
+        pdl_name: responsePdlName,
+        cell: responseCell
       });
       
       // Store verified_conjugal status and visitor details
@@ -758,10 +822,23 @@ const Dashboard = () => {
         logger.debug('STEP 3: Executing TIME OUT (visitor already has time_in)');
         logger.debug('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
         
-        const timeOutResponse = await api.post('/api/scanned_visitors', {
-          visitor_id: visitorId,
+        const timeOutPayload = {
           device_time: new Date().toISOString()
-        });
+        };
+        if (visitorId) {
+          timeOutPayload.visitor_id = visitorId;
+        }
+        if (responseVisitorName) {
+          timeOutPayload.visitor_name = responseVisitorName;
+        }
+        if (responsePdlName) {
+          timeOutPayload.pdl_name = responsePdlName;
+        }
+        if (responseCell) {
+          timeOutPayload.cell = responseCell;
+        }
+        
+        const timeOutResponse = await api.post('/api/scanned_visitors', timeOutPayload);
         
         logger.debug('Time out successful!');
         await fetchVisitors();
@@ -778,9 +855,9 @@ const Dashboard = () => {
         logger.debug('Lockout period set for 5 seconds after time-out');
         
         // Get visitor details from response (or use from preflight)
-        const finalVisitorName = timeOutResponse?.data?.visitor_name || visitorName;
-        const finalPdlName = timeOutResponse?.data?.pdl_name || pdlName;
-        const finalCell = timeOutResponse?.data?.cell || cell;
+        const finalVisitorName = timeOutResponse?.data?.visitor_name || responseVisitorName;
+        const finalPdlName = timeOutResponse?.data?.pdl_name || responsePdlName;
+        const finalCell = timeOutResponse?.data?.cell || responseCell;
         
         // Show success modal with exact message
         setSuccessModalData({
@@ -818,11 +895,24 @@ const Dashboard = () => {
         // Automatically proceed with "normal" purpose without showing modal
         try {
           logger.debug('Sending time_in request to backend with "normal" purpose...');
-          const response = await api.post('/api/scanned_visitors', {
-            visitor_id: visitorId,
+          const timeInPayload = {
             device_time: new Date().toISOString(),
             purpose: 'normal'
-          });
+          };
+          if (visitorId) {
+            timeInPayload.visitor_id = visitorId;
+          }
+          if (responseVisitorName) {
+            timeInPayload.visitor_name = responseVisitorName;
+          }
+          if (responsePdlName) {
+            timeInPayload.pdl_name = responsePdlName;
+          }
+          if (responseCell) {
+            timeInPayload.cell = responseCell;
+          }
+          
+          const response = await api.post('/api/scanned_visitors', timeInPayload);
 
           const action = response?.data?.action;
           logger.debug('Backend response:', { action });
@@ -833,18 +923,18 @@ const Dashboard = () => {
             logger.debug('Visitor list refreshed');
             
             // Get visitor details from response
-            const responseVisitorName = response?.data?.visitor_name || visitorName;
-            const responsePdlName = response?.data?.pdl_name || pdlName;
-            const responseCell = response?.data?.cell || cell;
+            const finalVisitorName = response?.data?.visitor_name || responseVisitorName;
+            const finalPdlName = response?.data?.pdl_name || responsePdlName;
+            const finalCell = response?.data?.cell || responseCell;
             
             // Show success modal with exact message
             setSuccessModalData({
               type: 'time_in',
               message: 'You have successfully timed in.',
               visitorData: {
-                visitor_name: responseVisitorName,
-                pdl_name: responsePdlName,
-                cell: responseCell,
+                visitor_name: finalVisitorName,
+                pdl_name: finalPdlName,
+                cell: finalCell,
                 purpose: 'normal'
               }
             });
@@ -882,9 +972,9 @@ const Dashboard = () => {
       
       setPendingScanData({
         visitor_id: visitorId,
-        visitor_name: visitorName,
-        pdl_name: pdlName,
-        cell: cell
+        visitor_name: responseVisitorName,
+        pdl_name: responsePdlName,
+        cell: responseCell
       });
       setShowPurposeModal(true);
       logger.debug('Purpose modal opened (conjugal verified visitor)');
