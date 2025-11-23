@@ -646,7 +646,11 @@ const Dashboard = () => {
     }
 
     // STEP 1: Extract visitor_id from QR code
-    // Supports both old format: [visitor_id:19][Visitor: ...] and new format: visitor_id:VIS-1001
+    // Supports multiple formats:
+    // - Old bracket format: [visitor_id:19][Visitor: ...]
+    // - New format: visitor_id:VIS-1001 or visitor_id:19
+    // - Plain numeric (old ID): 19, 1001, etc.
+    // - Plain string (new ID): VIS-1001, etc.
     let visitorId = null;
     
     // Try to extract from bracket format first (old format): [visitor_id:19][Visitor: ...]
@@ -663,10 +667,14 @@ const Dashboard = () => {
         visitorId = match[1].trim();
         logger.debug('Extracted visitor_id from new format:', visitorId);
       }
-    } else if (/^[\w-]+$/.test(data.trim())) {
-      // QR code is just the visitor_id (string like "VIS-1001" or numeric like "19")
-      visitorId = data.trim();
-      logger.debug('Extracted visitor_id as plain value:', visitorId);
+    } else {
+      // QR code might be just the visitor_id (plain value)
+      const trimmedData = data.trim();
+      // Accept alphanumeric with hyphens (for new format like "VIS-1001") or pure numeric (for old IDs like "19")
+      if (/^[\w-]+$/.test(trimmedData) || /^\d+$/.test(trimmedData)) {
+        visitorId = trimmedData;
+        logger.debug('Extracted visitor_id as plain value (supports old numeric IDs):', visitorId);
+      }
     }
 
     logger.debug('Extracted visitor_id from QR code:', visitorId);
@@ -882,7 +890,41 @@ const Dashboard = () => {
       logger.debug('Purpose modal opened (conjugal verified visitor)');
     } catch (e) {
       logger.error('Preflight scan error:', e);
-      showToast('Scan preflight failed', 'error');
+      logger.error('Error details:', {
+        message: e?.message,
+        response: e?.response?.data,
+        status: e?.response?.status,
+        visitorId: visitorId
+      });
+      
+      // Extract error message from response if available
+      let errorMessage = 'Scan preflight failed';
+      
+      if (e?.response?.data?.error) {
+        // Backend returned an error message
+        errorMessage = e.response.data.error;
+      } else if (e?.response?.status === 404) {
+        // 404 Not Found
+        errorMessage = `Visitor not found: ${visitorId || 'unknown'}. Please check the QR code.`;
+      } else if (e?.response?.status === 500) {
+        // 500 Server Error
+        errorMessage = 'Server error. Please try again or contact support.';
+      } else if (e?.message) {
+        // Network or other error
+        if (e.message.includes('Network Error') || e.message.includes('Failed to fetch')) {
+          errorMessage = 'Network error. Please check your connection and try again.';
+        } else {
+          errorMessage = e.message;
+        }
+      }
+      
+      // Show more specific error message
+      if (errorMessage.includes('not found') || errorMessage.includes('Visitor not found')) {
+        showToast(errorMessage, 'error');
+      } else {
+        showToast(errorMessage, 'error');
+      }
+      
       isProcessingScanRef.current = false; // Reset processing flag on error
       setTimeout(() => setScanLocked(false), 800);
     }

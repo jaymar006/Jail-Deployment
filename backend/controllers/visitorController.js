@@ -291,15 +291,24 @@ exports.addScannedVisitor = async (req, res) => {
       logger.debug('addScannedVisitor (NEW WORKFLOW): visitor_id =', visitor_id);
       
       // Look up visitor from database using visitor_id
-      // First try by visitor_id (string like "VIS-1001"), then by id (numeric primary key) for backward compatibility
+      // Supports both new format (VIS-XX-XXXXXX) and old format (numeric primary key id)
+      // First try by visitor_id column (for new format like "VIS-1001")
       let visitor = await Visitor.getByVisitorId(visitor_id);
+      
+      // If not found and visitor_id is numeric, try looking up by primary key id (for old IDs)
+      // This ensures backward compatibility with old QR codes that used numeric IDs
       if (!visitor && /^\d+$/.test(visitor_id)) {
-        // If visitor_id is numeric and not found, try looking up by primary key id (backward compatibility)
-        logger.debug('Visitor not found by visitor_id, trying primary key id lookup...');
-        visitor = await Visitor.getById(parseInt(visitor_id, 10));
+        logger.debug('Visitor not found by visitor_id, trying primary key id lookup (old ID format)...');
+        const numericId = parseInt(visitor_id, 10);
+        visitor = await Visitor.getById(numericId);
+        if (visitor) {
+          logger.debug('Found visitor using old ID format (primary key id):', numericId);
+        }
       }
+      
       if (!visitor) {
-        return res.status(404).json({ error: 'Visitor not found' });
+        logger.debug('Visitor lookup failed for visitor_id:', visitor_id);
+        return res.status(404).json({ error: `Visitor not found: ${visitor_id}. Please check the QR code.` });
       }
       
       // Get PDL information from visitor's pdl_id
