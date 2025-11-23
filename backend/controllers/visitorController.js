@@ -165,7 +165,8 @@ const {
   valid_id,
   date_of_application,
   contact_number,
-  verified_conjugal
+  verified_conjugal,
+  visitor_id
 } = req.body;
 
 if (!name || !relationship || age === undefined || !address || !valid_id || !date_of_application || !contact_number) {
@@ -183,10 +184,19 @@ const updatedVisitor = {
   verified_conjugal: verified_conjugal === true || verified_conjugal === 1 || verified_conjugal === 'true' || verified_conjugal === '1' ? 1 : 0
 };
 
+// Include visitor_id if provided (for import/update scenarios)
+if (visitor_id !== undefined && visitor_id !== null && visitor_id !== '') {
+  updatedVisitor.visitor_id = visitor_id.trim();
+}
+
 await Visitor.update(id, updatedVisitor);
 res.json({ message: 'Visitor updated successfully' });
   } catch (err) {
     logger.error('Error in updateVisitor:', err);
+    // Check if error is due to duplicate visitor_id
+    if (err && (err.code === 'ER_DUP_ENTRY' || /duplicate/i.test(err.message))) {
+      return res.status(400).json({ error: `Visitor ID ${visitor_id} already exists. Please use a different ID.` });
+    }
     res.status(500).json({ error: err.message });
   }
 };

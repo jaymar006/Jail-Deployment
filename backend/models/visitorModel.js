@@ -25,6 +25,12 @@ const Visitor = {
     return results[0];
   },
 
+  // Check if visitor_id already exists
+  visitorIdExists: async (visitorId) => {
+    const [results] = await db.query('SELECT id FROM visitors WHERE visitor_id = ?', [visitorId]);
+    return results.length > 0;
+  },
+
   // Find visitor by exact full name (case-insensitive, trimmed, normalized whitespace)
   // Optionally match by PDL name if provided for more accuracy
   findByExactName: async (visitorName, pdlName = null) => {
@@ -171,13 +177,27 @@ if (!visitorId) {
   // Generate visitor_id in the form VIS-YY-XXXXXX (YY=last two digits of year, X=digit)
   const generateCandidateVisitorId = () => {
     const yearTwoDigits = String(new Date().getFullYear()).slice(2);
-    const numericPart = String(Math.floor(Math.random() * 1000000)).padStart(6, '0');
+    // Use timestamp + random to ensure better uniqueness
+    const timestamp = Date.now().toString().slice(-6); // Last 6 digits of timestamp
+    const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+    const numericPart = (timestamp + random).slice(-6); // Combine and take last 6 digits
     return `VIS-${yearTwoDigits}-${numericPart}`;
   };
 
+  // Try to generate a unique visitor_id
   let lastError = null;
-  for (let attempt = 0; attempt < 10; attempt++) {
+  const maxAttempts = 20; // Increased attempts for better uniqueness
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
     visitorId = generateCandidateVisitorId();
+    
+    // Check if visitor_id already exists before attempting insert
+    const exists = await Visitor.visitorIdExists(visitorId);
+    if (exists) {
+      // If exists, generate a new one and continue
+      continue;
+    }
+    
+    // visitor_id doesn't exist, safe to insert
     try {
       const [result] = await db.query(
         `INSERT INTO visitors (
@@ -188,7 +208,7 @@ if (!visitorId) {
       );
       return result;
     } catch (err) {
-      // If duplicate key on visitor_id, retry with a new id; otherwise, rethrow
+      // If duplicate key on visitor_id (race condition), retry with a new id; otherwise, rethrow
       if (err && (err.code === 'ER_DUP_ENTRY' || /duplicate/i.test(err.message))) {
         lastError = err;
         continue;
@@ -197,21 +217,27 @@ if (!visitorId) {
     }
   }
 
-  // If we somehow exhaust retries, throw the last duplicate error
-  throw lastError || new Error('Failed to generate unique visitor_id');
+  // If we somehow exhaust retries, throw error
+  throw lastError || new Error('Failed to generate unique visitor_id after multiple attempts');
 } else {
   // Use provided visitor_id (e.g., from import)
+  // First check if it already exists to prevent duplication
+  const exists = await Visitor.visitorIdExists(visitorId.trim());
+  if (exists) {
+    throw new Error(`Visitor ID ${visitorId} already exists. Please use a different ID or update the existing visitor.`);
+  }
+  
   try {
     const [result] = await db.query(
       `INSERT INTO visitors (
         pdl_id, visitor_id, name, relationship, age, address, valid_id, date_of_application, contact_number, verified_conjugal
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     ,
-      [pdl_id, visitorId, name, relationship, age, address, valid_id, date_of_application, contact_number, verified_conjugal ? 1 : 0]
+      [pdl_id, visitorId.trim(), name, relationship, age, address, valid_id, date_of_application, contact_number, verified_conjugal ? 1 : 0]
     );
     return result;
   } catch (err) {
-    // If duplicate key on visitor_id, throw error (don't auto-generate, user provided it)
+    // If duplicate key on visitor_id (race condition), throw error
     if (err && (err.code === 'ER_DUP_ENTRY' || /duplicate/i.test(err.message))) {
       throw new Error(`Visitor ID ${visitorId} already exists. Please use a different ID or update the existing visitor.`);
     }
@@ -230,15 +256,41 @@ const {
   valid_id,
   date_of_application,
   contact_number,
-  verified_conjugal
+  verified_conjugal,
+  visitor_id
 } = data;
 
-const [result] = await db.query(
-  `UPDATE visitors SET
+// Build update query - include visitor_id if provided
+let query, params;
+if (visitor_id !== undefined && visitor_id !== null && visitor_id !== '') {
+  // Check if the new visitor_id already exists for a different visitor (prevent duplication)
+  const trimmedVisitorId = visitor_id.trim();
+  const exists = await Visitor.visitorIdExists(trimmedVisitorId);
+  
+  if (exists) {
+    // Check if it belongs to the current visitor being updated
+    const existingVisitor = await Visitor.getByVisitorId(trimmedVisitorId);
+    if (existingVisitor && existingVisitor.id !== parseInt(id, 10)) {
+      // visitor_id exists for a different visitor - prevent duplication
+      throw new Error(`Visitor ID ${trimmedVisitorId} already exists for another visitor. Please use a different ID.`);
+    }
+    // If it belongs to the same visitor, it's okay to update (no change)
+  }
+  
+  // Update including visitor_id
+  query = `UPDATE visitors SET
+    visitor_id = ?, name = ?, relationship = ?, age = ?, address = ?, valid_id = ?, date_of_application = ?, contact_number = ?, verified_conjugal = ?
+  WHERE id = ?`;
+  params = [trimmedVisitorId, name, relationship, age, address, valid_id, date_of_application, contact_number, verified_conjugal !== undefined ? verified_conjugal : 0, id];
+} else {
+  // Update without changing visitor_id
+  query = `UPDATE visitors SET
     name = ?, relationship = ?, age = ?, address = ?, valid_id = ?, date_of_application = ?, contact_number = ?, verified_conjugal = ?
-  WHERE id = ?`,
-  [name, relationship, age, address, valid_id, date_of_application, contact_number, verified_conjugal !== undefined ? verified_conjugal : 0, id]
-);
+  WHERE id = ?`;
+  params = [name, relationship, age, address, valid_id, date_of_application, contact_number, verified_conjugal !== undefined ? verified_conjugal : 0, id];
+}
+
+const [result] = await db.query(query, params);
 return result;
   },
 
