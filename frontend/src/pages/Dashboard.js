@@ -99,6 +99,10 @@ const Dashboard = () => {
   const [toast, setToast] = useState({ show: false, message: '', type: '' });
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const [isSmallMobile, setIsSmallMobile] = useState(window.innerWidth <= 480);
+  const [useMilitaryTime, setUseMilitaryTime] = useState(() => {
+    const saved = localStorage.getItem('useMilitaryTime');
+    return saved !== null ? saved === 'true' : true;
+  });
   const [availableCells, setAvailableCells] = useState([]);
   const [cellsLoaded, setCellsLoaded] = useState(false);
   const [showScheduleModal, setShowScheduleModal] = useState(false);
@@ -147,20 +151,37 @@ const Dashboard = () => {
   const formatTime = (timestamp) => {
     if (!timestamp) return '';
     
-    // Backend sends timestamps in 'YYYY-MM-DD HH:MM:SS' format (Asia/Manila timezone)
-    // Simply extract and display the time portion
     const dateStr = String(timestamp).trim();
+    let timePortion = '';
     
-    // Extract time portion (HH:MM:SS) from 'YYYY-MM-DD HH:MM:SS' format
     if (dateStr.includes(' ')) {
       const parts = dateStr.split(' ');
       if (parts.length >= 2) {
-        return parts[1].substring(0, 8); // Return HH:MM:SS
+        timePortion = parts[1].split('.')[0]; // strip fractional seconds if present
       }
     }
     
-    // Fallback: if timestamp is in different format
-    return dateStr;
+    if (!timePortion) {
+      timePortion = dateStr;
+    }
+
+    if (useMilitaryTime) {
+      return timePortion.substring(0, 8);
+    }
+
+    const [hourStr = '00', minuteStr = '00', secondStr = '00'] = timePortion.split(':');
+    const hourNum = parseInt(hourStr, 10);
+    if (Number.isNaN(hourNum)) {
+      return timePortion;
+    }
+
+    const period = hourNum >= 12 ? 'PM' : 'AM';
+    const normalizedHour = (hourNum % 12) || 12;
+    const paddedHour = String(normalizedHour).padStart(2, '0');
+    const paddedMinute = minuteStr.padStart(2, '0');
+    const paddedSecond = secondStr ? secondStr.padStart(2, '0') : '00';
+
+    return `${paddedHour}:${paddedMinute}:${paddedSecond} ${period}`;
   };
 
 
@@ -584,6 +605,10 @@ const Dashboard = () => {
   useEffect(() => {
     localStorage.setItem('qrUploadEnabled', qrUploadEnabled.toString());
   }, [qrUploadEnabled]);
+
+  useEffect(() => {
+    localStorage.setItem('useMilitaryTime', useMilitaryTime.toString());
+  }, [useMilitaryTime]);
 
   const handleScan = async (data) => {
     logger.debug('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
@@ -1439,6 +1464,25 @@ const Dashboard = () => {
             </b>
             <h2 style={{ textAlign: 'center' }}>Allowed Visitors</h2>
 
+            <div className="time-format-toggle">
+              <span>Time format:</span>
+              <button
+                type="button"
+                className={`time-format-button ${useMilitaryTime ? 'active' : ''}`}
+                onClick={() => setUseMilitaryTime(true)}
+                aria-pressed={useMilitaryTime}
+              >
+                24h
+              </button>
+              <button
+                type="button"
+                className={`time-format-button ${!useMilitaryTime ? 'active' : ''}`}
+                onClick={() => setUseMilitaryTime(false)}
+                aria-pressed={!useMilitaryTime}
+              >
+                12h
+              </button>
+            </div>
 
             <table className="common-table">
               <thead>
