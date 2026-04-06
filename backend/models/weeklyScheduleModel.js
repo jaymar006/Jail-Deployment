@@ -76,8 +76,8 @@ const WeeklySchedule = {
       for (const [dayKey, cellIds] of Object.entries(schedule)) {
         for (const cellId of cellIds) {
           await db.query(
-            `INSERT INTO weekly_cell_schedule (day_key, cell_id, updated_at)
-             VALUES (?, ?, datetime('now'))`,
+            `INSERT INTO weekly_cell_schedule (day_key, cell_id)
+             VALUES (?, ?)`,
             [dayKey, cellId]
           );
         }

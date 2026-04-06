@@ -662,9 +662,15 @@ function convertSQLiteFunctions(sql) {
 function addReturningClause(sql) {
   const trimmedSql = sql.trim();
   if (/^\s*insert/i.test(trimmedSql) && !/returning/i.test(trimmedSql)) {
-    // Check if table has an id column (most tables do)
+    // Some tables (e.g. weekly_cell_schedule) do not have an "id" column.
+    // Skip auto-returning for those inserts to avoid SQL errors.
     const tableMatch = trimmedSql.match(/insert\s+into\s+(\w+)/i);
     if (tableMatch) {
+      const tableName = String(tableMatch[1] || '').toLowerCase();
+      const tablesWithoutId = new Set(['weekly_cell_schedule']);
+      if (tablesWithoutId.has(tableName)) {
+        return sql;
+      }
       // Add RETURNING id before semicolon or at end
       if (trimmedSql.endsWith(';')) {
         return trimmedSql.slice(0, -1) + ' RETURNING id;';
