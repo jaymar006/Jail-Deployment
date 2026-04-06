@@ -3,6 +3,27 @@ import ReactDOM from 'react-dom';
 import axios from '../services/api';
 import './Settings.css';
 
+const WEEK_DAYS = [
+  { key: 'monday', label: 'Monday' },
+  { key: 'tuesday', label: 'Tuesday' },
+  { key: 'wednesday', label: 'Wednesday' },
+  { key: 'thursday', label: 'Thursday' },
+  { key: 'friday', label: 'Friday' },
+  { key: 'saturday', label: 'Saturday' },
+  { key: 'sunday', label: 'Sunday' }
+];
+
+const getCurrentWeekDayKey = () => {
+  const keys = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+  return keys[new Date().getDay()];
+};
+
+const createEmptyWeeklySchedule = () =>
+  WEEK_DAYS.reduce((acc, day) => {
+    acc[day.key] = [];
+    return acc;
+  }, {});
+
 const Modal = ({ children, onClose }) => {
   const overlayRef = React.useRef(null);
   
@@ -85,7 +106,7 @@ const Modal = ({ children, onClose }) => {
 };
 
 const Settings = () => {
-  const [modalOpen, setModalOpen] = useState(null); // 'username', 'password', 'telegram', 'cell', 'editCell', 'deleteAllPdls', 'deleteLogs', 'selectLogs', 'registrationCodes', 'systemInfo' or null
+  const [modalOpen, setModalOpen] = useState(null); // 'username', 'password', 'telegram', 'cell', 'editCell', 'deleteAllPdls', 'deleteLogs', 'selectLogs', 'registrationCodes', 'weeklySchedule', 'systemInfo' or null
   const [newUsername, setNewUsername] = useState('');
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -115,11 +136,23 @@ const Settings = () => {
     const saved = localStorage.getItem('qrUploadEnabled');
     return saved !== null ? saved === 'true' : true; // Default to enabled
   });
-  
-  // Schedule duration setting
-  const [scheduleDuration, setScheduleDuration] = useState(() => {
-    const saved = localStorage.getItem('scheduleDuration');
-    return saved !== null ? parseInt(saved, 10) : 12; // Default 12 hours
+  const [selectedScheduleDay, setSelectedScheduleDay] = useState(getCurrentWeekDayKey());
+  const [weeklySchedule, setWeeklySchedule] = useState(() => {
+    try {
+      const saved = localStorage.getItem('weeklyCellSchedule');
+      if (!saved) return createEmptyWeeklySchedule();
+      const parsed = JSON.parse(saved);
+      const normalized = createEmptyWeeklySchedule();
+      WEEK_DAYS.forEach(({ key }) => {
+        normalized[key] = Array.isArray(parsed?.[key])
+          ? parsed[key].map(id => Number(id)).filter(id => !Number.isNaN(id))
+          : [];
+      });
+      return normalized;
+    } catch (error) {
+      console.error('Error loading weekly schedule:', error);
+      return createEmptyWeeklySchedule();
+    }
   });
   
   // Delete confirmation text
@@ -495,13 +528,35 @@ const Settings = () => {
     localStorage.setItem('qrUploadEnabled', newValue.toString());
   };
 
-  // Handle Schedule Duration change
-  const handleScheduleDurationChange = (value) => {
-    const numValue = value === '' ? 12 : parseInt(value, 10);
-    if (!isNaN(numValue) && (numValue === -1 || numValue > 0)) {
-      setScheduleDuration(numValue);
-      localStorage.setItem('scheduleDuration', numValue.toString());
-    }
+  const persistWeeklySchedule = (nextSchedule) => {
+    setWeeklySchedule(nextSchedule);
+    localStorage.setItem('weeklyCellSchedule', JSON.stringify(nextSchedule));
+  };
+
+  const toggleCellForSelectedDay = (cellId) => {
+    const normalizedId = Number(cellId);
+    const current = weeklySchedule[selectedScheduleDay] || [];
+    const hasCell = current.includes(normalizedId);
+    const nextDayCells = hasCell
+      ? current.filter(id => id !== normalizedId)
+      : [...current, normalizedId];
+    persistWeeklySchedule({
+      ...weeklySchedule,
+      [selectedScheduleDay]: nextDayCells
+    });
+  };
+
+  const setAllCellsForSelectedDay = (selectAll) => {
+    const allIds = cells.map(cell => Number(cell.id)).filter(id => !Number.isNaN(id));
+    persistWeeklySchedule({
+      ...weeklySchedule,
+      [selectedScheduleDay]: selectAll ? allIds : []
+    });
+  };
+
+  const isCellScheduledForSelectedDay = (cellId) => {
+    const dayCells = weeklySchedule[selectedScheduleDay] || [];
+    return dayCells.includes(Number(cellId));
   };
 
   // Delete selected logs
@@ -708,17 +763,18 @@ const Settings = () => {
             </div>
           </div>
 
-          <div className="settings-card" onClick={() => openModal('systemInfo')}>
+          <div className="settings-card" onClick={() => openModal('weeklySchedule')}>
             <div className="settings-card-icon" style={{ background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)' }}>
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="10"/>
-                <line x1="12" y1="16" x2="12" y2="12"/>
-                <line x1="12" y1="8" x2="12.01" y2="8"/>
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                <line x1="16" y1="2" x2="16" y2="6"/>
+                <line x1="8" y1="2" x2="8" y2="6"/>
+                <line x1="3" y1="10" x2="21" y2="10"/>
               </svg>
             </div>
             <div className="settings-card-content">
-              <h3>System Information</h3>
-              <p>View app version and system details</p>
+              <h3>Weekly Cell Visit Schedules</h3>
+              <p>Set allowed cells for each day (Monday to Sunday)</p>
             </div>
             <div className="settings-card-arrow">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -797,7 +853,7 @@ const Settings = () => {
           </div>
         </div>
 
-        {/* Schedule Duration Setting */}
+        {/* System Information (moved from card/modal to bottom section) */}
         <div style={{
           marginTop: '24px',
           padding: '20px',
@@ -805,71 +861,165 @@ const Settings = () => {
           borderRadius: '12px',
           border: '1px solid #e5e7eb'
         }}>
-          <div>
-            <h3 style={{ margin: '0 0 8px 0', fontSize: '16px', fontWeight: '600', color: '#111827' }}>
-              Schedule Cell Visits Duration
-            </h3>
-            <p style={{ margin: '0 0 16px 0', fontSize: '14px', color: '#6b7280' }}>
-              How long should scheduled cell visits persist? (in hours)
-            </p>
-            <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
-              <input
-                type="number"
-                min="1"
-                step="1"
-                value={scheduleDuration === -1 ? '' : scheduleDuration}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  if (value === '') {
-                    handleScheduleDurationChange('');
-                  } else {
-                    const numValue = parseInt(value, 10);
-                    if (!isNaN(numValue) && numValue > 0) {
-                      handleScheduleDurationChange(numValue);
-                    }
-                  }
-                }}
-                placeholder="12"
-                style={{
-                  width: '100px',
-                  padding: '8px 12px',
-                  border: '1px solid #d1d5db',
-                  borderRadius: '6px',
-                  fontSize: '14px'
-                }}
-                disabled={scheduleDuration === -1}
-              />
-              <span style={{ fontSize: '14px', color: '#6b7280' }}>hours</span>
-              <label style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                cursor: 'pointer',
-                fontSize: '14px',
-                color: '#374151'
-              }}>
-                <input
-                  type="checkbox"
-                  checked={scheduleDuration === -1}
-                  onChange={(e) => {
-                    if (e.target.checked) {
-                      handleScheduleDurationChange(-1);
-                    } else {
-                      handleScheduleDurationChange(12);
-                    }
-                  }}
-                  style={{ width: '18px', height: '18px', cursor: 'pointer' }}
-                />
-                <span>Indefinitely (never expire)</span>
-              </label>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#f59e0b' }}>
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="12" y1="16" x2="12" y2="12"/>
+              <line x1="12" y1="8" x2="12.01" y2="8"/>
+            </svg>
+            <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '600', color: '#111827' }}>System Information</h3>
+          </div>
+          <div style={{ display: 'grid', gap: '10px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px' }}>
+              <span style={{ fontWeight: '600', color: '#374151' }}>Application:</span>
+              <span style={{ color: '#6b7280', textAlign: 'right' }}>Jail Visitation Management System</span>
             </div>
-            <p style={{ margin: '12px 0 0 0', fontSize: '12px', color: '#6b7280', fontStyle: 'italic' }}>
-              {scheduleDuration === -1 
-                ? 'Scheduled cells will persist until manually cleared.' 
-                : `Scheduled cells will persist for ${scheduleDuration} hour(s) after being set.`}
-            </p>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px' }}>
+              <span style={{ fontWeight: '600', color: '#374151' }}>Environment:</span>
+              <span style={{ color: '#6b7280', textAlign: 'right' }}>{process.env.NODE_ENV === 'production' ? 'Production' : 'Development'}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px' }}>
+              <span style={{ fontWeight: '600', color: '#374151' }}>Current User:</span>
+              <span style={{ color: '#6b7280', textAlign: 'right' }}>{username || 'Not logged in'}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px' }}>
+              <span style={{ fontWeight: '600', color: '#374151' }}>Version:</span>
+              <span style={{ color: '#6b7280', textAlign: 'right' }}>1.0.0</span>
+            </div>
           </div>
         </div>
+        {modalOpen === 'weeklySchedule' && (
+          <Modal onClose={closeModal}>
+            <div style={{ maxWidth: '640px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px', justifyContent: 'center' }}>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#d97706' }}>
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                  <line x1="16" y1="2" x2="16" y2="6"/>
+                  <line x1="8" y1="2" x2="8" y2="6"/>
+                  <line x1="3" y1="10" x2="21" y2="10"/>
+                </svg>
+                <h3 style={{ margin: 0 }}>Weekly Cell Visit Schedules</h3>
+              </div>
+              <p style={{ margin: '0 0 16px 0', fontSize: '14px', color: '#6b7280', textAlign: 'center' }}>
+                Select a day and choose which cells are allowed for scanning.
+              </p>
+              <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', justifyContent: 'center' }}>
+                <select
+                  value={selectedScheduleDay}
+                  onChange={(e) => setSelectedScheduleDay(e.target.value)}
+                  style={{
+                    minWidth: '180px',
+                    padding: '8px 12px',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '6px',
+                    fontSize: '14px'
+                  }}
+                >
+                  {WEEK_DAYS.map((day) => (
+                    <option key={day.key} value={day.key}>
+                      {day.label}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={() => setAllCellsForSelectedDay(true)}
+                  style={{
+                    background: '#10b981',
+                    color: 'white',
+                    border: 'none',
+                    padding: '8px 12px',
+                    borderRadius: '6px',
+                    fontSize: '13px',
+                    fontWeight: '600',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Select All
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAllCellsForSelectedDay(false)}
+                  style={{
+                    background: '#ef4444',
+                    color: 'white',
+                    border: 'none',
+                    padding: '8px 12px',
+                    borderRadius: '6px',
+                    fontSize: '13px',
+                    fontWeight: '600',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Clear Day
+                </button>
+              </div>
+              <div style={{
+                maxHeight: '320px',
+                overflowY: 'auto',
+                border: '1px solid #e5e7eb',
+                borderRadius: '8px',
+                background: 'white',
+                padding: '10px'
+              }}>
+                {cells.length === 0 ? (
+                  <p style={{ margin: '8px 0', fontSize: '13px', color: '#6b7280', textAlign: 'center' }}>
+                    No cells found. Add cells first to configure schedules.
+                  </p>
+                ) : (
+                  <div style={{ display: 'grid', gap: '8px' }}>
+                    {cells.map((cell) => (
+                      <label
+                        key={cell.id}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '10px',
+                          padding: '10px',
+                          borderRadius: '8px',
+                          border: isCellScheduledForSelectedDay(cell.id) ? '2px solid #10b981' : '1px solid #e5e7eb',
+                          background: isCellScheduledForSelectedDay(cell.id) ? '#ecfdf5' : '#fff',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isCellScheduledForSelectedDay(cell.id)}
+                          onChange={() => toggleCellForSelectedDay(cell.id)}
+                          style={{ width: '16px', height: '16px' }}
+                        />
+                        <span style={{ fontSize: '14px', color: '#111827', fontWeight: '500' }}>
+                          {cell.cell_name ? `${cell.cell_name} - ${cell.cell_number}` : cell.cell_number}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <p style={{ margin: '12px 0 0 0', fontSize: '12px', color: '#6b7280', fontStyle: 'italic', textAlign: 'center' }}>
+                {`${(weeklySchedule[selectedScheduleDay] || []).length} cell(s) scheduled for ${WEEK_DAYS.find(d => d.key === selectedScheduleDay)?.label || selectedScheduleDay}.`}
+              </p>
+              <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'center' }}>
+                <button
+                  onClick={closeModal}
+                  style={{
+                    padding: '10px 24px',
+                    background: '#e5e7eb',
+                    color: '#374151',
+                    border: 'none',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Done
+                </button>
+              </div>
+            </div>
+          </Modal>
+        )}
+
 
         {modalOpen === 'username' && (
           <Modal onClose={closeModal}>
@@ -2262,79 +2412,6 @@ const Settings = () => {
           </Modal>
         )}
 
-        {/* System Information Modal */}
-        {modalOpen === 'systemInfo' && (
-          <Modal onClose={closeModal}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px', justifyContent: 'center' }}>
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#f59e0b' }}>
-                <circle cx="12" cy="12" r="10"/>
-                <line x1="12" y1="16" x2="12" y2="12"/>
-                <line x1="12" y1="8" x2="12.01" y2="8"/>
-              </svg>
-              <h3 style={{ margin: 0 }}>System Information</h3>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div style={{ padding: '16px', background: '#f9fafb', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                  <span style={{ fontWeight: '600', color: '#374151' }}>Application Name:</span>
-                  <span style={{ color: '#6b7280' }}>Jail Visitation Management System</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                  <span style={{ fontWeight: '600', color: '#374151' }}>Environment:</span>
-                  <span style={{ color: '#6b7280' }}>{process.env.NODE_ENV === 'production' ? 'Production' : 'Development'}</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                  <span style={{ fontWeight: '600', color: '#374151' }}>Database Type:</span>
-                  <span style={{ color: '#6b7280' }}>SQLite and PostgreSQL (Neon)</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                  <span style={{ fontWeight: '600', color: '#374151' }}>Frontend URL:</span>
-                  <span style={{ color: '#6b7280', fontSize: '0.85em', wordBreak: 'break-all' }}>{process.env.REACT_APP_API_URL || window.location.origin}</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontWeight: '600', color: '#374151' }}>Current User:</span>
-                  <span style={{ color: '#6b7280' }}>{username || 'Not logged in'}</span>
-                </div>
-              </div>
-              <div style={{ padding: '16px', background: '#f9fafb', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                  <span style={{ fontWeight: '600', color: '#374151' }}>Browser:</span>
-                  <span style={{ color: '#6b7280', fontSize: '0.85em' }}>{navigator.userAgent.split(' ').slice(-2).join(' ')}</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                  <span style={{ fontWeight: '600', color: '#374151' }}>Screen Resolution:</span>
-                  <span style={{ color: '#6b7280' }}>{window.screen.width} × {window.screen.height}</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontWeight: '600', color: '#374151' }}>Viewport Size:</span>
-                  <span style={{ color: '#6b7280' }}>{window.innerWidth} × {window.innerHeight}</span>
-                </div>
-              </div>
-              <div style={{ padding: '12px', background: '#eff6ff', borderRadius: '8px', border: '1px solid #bfdbfe' }}>
-                <p style={{ margin: 0, fontSize: '0.85em', color: '#1e40af', textAlign: 'center' }}>
-                  <strong>Version:</strong> 1.0.0 | Last Updated: {new Date().toLocaleDateString()}
-                </p>
-              </div>
-            </div>
-            <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'flex-end' }}>
-              <button
-                onClick={closeModal}
-                style={{
-                  padding: '10px 24px',
-                  background: '#e5e7eb',
-                  color: '#374151',
-                  border: 'none',
-                  borderRadius: '6px',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  cursor: 'pointer'
-                }}
-              >
-                Close
-              </button>
-            </div>
-          </Modal>
-        )}
       </div>
     </>
   );

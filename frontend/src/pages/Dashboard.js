@@ -41,6 +41,26 @@ const Modal = ({ children, onClose }) => {
   );
 };
 
+const WEEK_DAY_KEYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+const WEEK_DAY_LABELS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+const getCurrentWeekDayKey = () => WEEK_DAY_KEYS[new Date().getDay()];
+const getCurrentWeekDayLabel = () => WEEK_DAY_LABELS[new Date().getDay()];
+
+const getTodayScheduledCellsFromWeekly = () => {
+  try {
+    const saved = localStorage.getItem('weeklyCellSchedule');
+    if (!saved) return null;
+    const parsed = JSON.parse(saved);
+    const todayKey = getCurrentWeekDayKey();
+    const todayIds = Array.isArray(parsed?.[todayKey]) ? parsed[todayKey] : [];
+    return new Set(todayIds.map(id => Number(id)).filter(id => !Number.isNaN(id)));
+  } catch (error) {
+    logger.error('Error reading weekly schedule:', error);
+    return null;
+  }
+};
+
 const Dashboard = () => {
   const [visitors, setVisitors] = useState([]);
   const [resetTrigger] = useState(0);
@@ -105,35 +125,18 @@ const Dashboard = () => {
   });
   const [availableCells, setAvailableCells] = useState([]);
   const [cellsLoaded, setCellsLoaded] = useState(false);
-  const [showScheduleModal, setShowScheduleModal] = useState(false);
-  const [scheduleDuration, setScheduleDuration] = useState(() => {
-    const saved = localStorage.getItem('scheduleDuration');
-    return saved !== null ? parseInt(saved, 10) : 12; // Default 12 hours
-  });
   const [scheduledCells, setScheduledCells] = useState(() => {
-    // Load scheduled cells from localStorage on mount
+    const weeklyToday = getTodayScheduledCellsFromWeekly();
+    if (weeklyToday) return weeklyToday;
+
+    // Legacy fallback: load previous single-day schedule from localStorage
     try {
       const saved = localStorage.getItem('scheduledCells');
       if (saved) {
         const data = JSON.parse(saved);
-        const savedDuration = localStorage.getItem('scheduleDuration');
-        const duration = savedDuration !== null ? parseInt(savedDuration, 10) : 12;
-        
         // Normalize IDs to numbers (Set uses strict equality, so type matters)
         const normalizedIds = (data.cellIds || []).map(id => Number(id));
-        
-        // Check if schedule is still valid
-        if (duration === -1) {
-          // Indefinitely - always valid
-          return new Set(normalizedIds);
-        } else {
-          // Check if within duration
-          const now = Date.now();
-          const elapsed = (now - data.timestamp) / (1000 * 60 * 60); // hours
-          if (elapsed < duration) {
-            return new Set(normalizedIds);
-          }
-        }
+        return new Set(normalizedIds);
       }
     } catch (error) {
       logger.error('Error loading scheduled cells:', error);
@@ -251,40 +254,23 @@ const Dashboard = () => {
     fetchAvailableCells();
   }, [fetchVisitors]);
 
-  // Listen for changes to QR upload setting and schedule duration from Settings page
+  // Listen for changes to QR upload setting and weekly schedule from Settings page
   useEffect(() => {
     const handleStorageChange = (e) => {
       if (e.key === 'qrUploadEnabled') {
         setQrUploadEnabled(e.newValue === 'true');
-      } else if (e.key === 'scheduleDuration') {
-        const newDuration = e.newValue !== null ? parseInt(e.newValue, 10) : 12;
-        setScheduleDuration(newDuration);
-        
-        // Validate current scheduled cells against new duration
-        try {
-          const saved = localStorage.getItem('scheduledCells');
-          if (saved) {
-            const data = JSON.parse(saved);
-            if (newDuration === -1) {
-              // Indefinitely - keep all (normalize IDs to numbers)
-              const normalizedIds = (data.cellIds || []).map(id => Number(id));
-              setScheduledCells(new Set(normalizedIds));
-            } else {
-              // Check if still valid
-              const now = Date.now();
-              const elapsed = (now - data.timestamp) / (1000 * 60 * 60); // hours
-              if (elapsed < newDuration) {
-                const normalizedIds = (data.cellIds || []).map(id => Number(id));
-                setScheduledCells(new Set(normalizedIds));
-              } else {
-                // Expired - clear
-                setScheduledCells(new Set());
-                localStorage.removeItem('scheduledCells');
-              }
-            }
+      } else if (e.key === 'weeklyCellSchedule' || e.key === 'scheduledCells') {
+        const weeklyToday = getTodayScheduledCellsFromWeekly();
+        if (weeklyToday) {
+          setScheduledCells(weeklyToday);
+        } else if (e.key === 'scheduledCells' && e.newValue) {
+          try {
+            const data = JSON.parse(e.newValue);
+            const normalizedIds = (data.cellIds || []).map(id => Number(id));
+            setScheduledCells(new Set(normalizedIds));
+          } catch (error) {
+            logger.error('Error parsing legacy scheduledCells from storage event:', error);
           }
-        } catch (error) {
-          logger.error('Error validating scheduled cells:', error);
         }
       }
     };
@@ -300,38 +286,12 @@ const Dashboard = () => {
         setQrUploadEnabled(currentQrValue);
       }
       
-      // Check schedule duration
-      const savedDuration = localStorage.getItem('scheduleDuration');
-      const currentDuration = savedDuration !== null ? parseInt(savedDuration, 10) : 12;
-      if (currentDuration !== scheduleDuration) {
-        setScheduleDuration(currentDuration);
-        
-        // Validate current scheduled cells
-        try {
-          const saved = localStorage.getItem('scheduledCells');
-          if (saved) {
-            const data = JSON.parse(saved);
-            if (currentDuration === -1) {
-              // Indefinitely - keep all (normalize IDs to numbers)
-              const normalizedIds = (data.cellIds || []).map(id => Number(id));
-              setScheduledCells(new Set(normalizedIds));
-            } else {
-              // Check if still valid
-              const now = Date.now();
-              const elapsed = (now - data.timestamp) / (1000 * 60 * 60); // hours
-              if (elapsed >= currentDuration) {
-                // Expired - clear
-                setScheduledCells(new Set());
-                localStorage.removeItem('scheduledCells');
-              } else {
-                // Still valid - normalize IDs
-                const normalizedIds = (data.cellIds || []).map(id => Number(id));
-                setScheduledCells(new Set(normalizedIds));
-              }
-            }
-          }
-        } catch (error) {
-          logger.error('Error validating scheduled cells:', error);
+      const weeklyToday = getTodayScheduledCellsFromWeekly();
+      if (weeklyToday) {
+        const currentIds = Array.from(scheduledCells).map(Number).sort((a, b) => a - b);
+        const weeklyIds = Array.from(weeklyToday).map(Number).sort((a, b) => a - b);
+        if (JSON.stringify(currentIds) !== JSON.stringify(weeklyIds)) {
+          setScheduledCells(weeklyToday);
         }
       }
     }, 500);
@@ -340,7 +300,7 @@ const Dashboard = () => {
       window.removeEventListener('storage', handleStorageChange);
       clearInterval(interval);
     };
-  }, [qrUploadEnabled, scheduleDuration]);
+  }, [qrUploadEnabled, scheduledCells]);
 
   const fetchAvailableCells = async () => {
     try {
@@ -360,17 +320,6 @@ const Dashboard = () => {
         if (validScheduledIds.length !== prev.size) {
           logger.warn(`Removed ${prev.size - validScheduledIds.length} invalid scheduled cell IDs`);
           const newSet = new Set(validScheduledIds.map(id => Number(id)));
-          
-          // Update localStorage
-          try {
-            localStorage.setItem('scheduledCells', JSON.stringify({
-              cellIds: Array.from(newSet).map(id => Number(id)),
-              timestamp: Date.now()
-            }));
-          } catch (error) {
-            logger.error('Error updating scheduled cells:', error);
-          }
-          
           return newSet;
         }
         
@@ -380,38 +329,6 @@ const Dashboard = () => {
       logger.error('Failed to fetch cells:', error);
       setCellsLoaded(false); // Mark as not loaded on error
     }
-  };
-
-  const handleCellScheduleToggle = (cellId) => {
-    setScheduledCells(prev => {
-      const newSet = new Set(prev);
-      // Normalize cellId to number for consistent comparison
-      const normalizedId = Number(cellId);
-      
-      if (newSet.has(normalizedId)) {
-        newSet.delete(normalizedId);
-      } else {
-        newSet.add(normalizedId);
-      }
-      
-      // Save to localStorage (normalize all IDs to numbers)
-      try {
-        localStorage.setItem('scheduledCells', JSON.stringify({
-          cellIds: Array.from(newSet).map(id => Number(id)),
-          timestamp: Date.now()
-        }));
-      } catch (error) {
-        logger.error('Error saving scheduled cells:', error);
-      }
-      
-      return newSet;
-    });
-  };
-
-  const isCellScheduled = (cellId) => {
-    // Normalize to number for consistent comparison
-    const normalizedId = Number(cellId);
-    return scheduledCells.has(normalizedId);
   };
 
   // Helper function to check if a cell number string matches any scheduled cell
@@ -515,6 +432,11 @@ const Dashboard = () => {
     
     return isScheduled;
   };
+
+  const todayScheduledCellLabels = availableCells
+    .filter(cell => scheduledCells.has(Number(cell.id)))
+    .map(cell => (cell.cell_name ? `${cell.cell_name} - ${cell.cell_number}` : cell.cell_number));
+  const todayWeekDayLabel = getCurrentWeekDayLabel();
 
   // QR File Upload Handler
   const handleFileScan = async (file) => {
@@ -1397,34 +1319,68 @@ const Dashboard = () => {
       <main className="dashboard-main">
         <section style={{ textAlign: 'center' }}>
           <h2 style={{ margin: '0 0 16px 0' }}>QR Code Scanner</h2>
-          <div style={{ display: 'flex', justifyContent: 'center', gap: '12px', marginBottom: '16px' }}>
-            <button 
-              className="common-button" 
-              onClick={() => setShowScheduleModal(true)}
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '12px' }}>
+            <div
               style={{
-                background: 'linear-gradient(135deg, #4b5563 0%, #374151 100%)',
-                color: 'white',
-                border: 'none',
-                padding: '10px 20px',
-                borderRadius: '6px',
-                fontSize: '14px',
-                fontWeight: '600',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
                 display: 'flex',
-                alignItems: 'center',
-                gap: '8px'
+                flexWrap: 'wrap',
+                justifyContent: 'center',
+                gap: '8px',
+                maxWidth: 'min(92vw, 980px)'
               }}
+              title={
+                todayScheduledCellLabels.length > 0
+                  ? `Today's scheduled cells: ${todayScheduledCellLabels.join(', ')}`
+                  : "Today's scheduled cells: None"
+              }
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-                <line x1="16" y1="2" x2="16" y2="6"/>
-                <line x1="8" y1="2" x2="8" y2="6"/>
-                <line x1="3" y1="10" x2="21" y2="10"/>
-              </svg>
-              Schedule
-            </button>
+              <span
+                style={{
+                  background: 'linear-gradient(135deg, #4b5563 0%, #374151 100%)',
+                  color: 'white',
+                  padding: '6px 12px',
+                  borderRadius: '999px',
+                  fontSize: '12px',
+                  fontWeight: '700'
+                }}
+              >
+                {isMobile ? `${todayWeekDayLabel} schedule` : `${todayWeekDayLabel} scheduled cells`}
+              </span>
+              {todayScheduledCellLabels.length > 0 ? (
+                todayScheduledCellLabels.map((label, idx) => (
+                  <span
+                    key={`${label}-${idx}`}
+                    style={{
+                      background: '#f3f4f6',
+                      color: '#374151',
+                      border: '1px solid #d1d5db',
+                      padding: '6px 10px',
+                      borderRadius: '999px',
+                      fontSize: '12px',
+                      fontWeight: '600'
+                    }}
+                  >
+                    {label}
+                  </span>
+                ))
+              ) : (
+                <span
+                  style={{
+                    background: '#fee2e2',
+                    color: '#991b1b',
+                    border: '1px solid #fca5a5',
+                    padding: '6px 10px',
+                    borderRadius: '999px',
+                    fontSize: '12px',
+                    fontWeight: '600'
+                  }}
+                >
+                  None
+                </span>
+              )}
+            </div>
           </div>
+          <div style={{ marginBottom: '16px' }} />
           <div style={{ display: 'flex', justifyContent: 'center', flexDirection: 'column', alignItems: 'center', gap: '20px', width: '100%', maxWidth: '100%', padding: isMobile ? '0 10px' : '0' }}>
             {/* Lockout Message Display */}
             {lockoutUntil && Date.now() < lockoutUntil && (
@@ -2193,187 +2149,6 @@ const Dashboard = () => {
           document.body
         )}
 
-        {/* Schedule Modal */}
-        {showScheduleModal && (
-          <Modal onClose={() => setShowScheduleModal(false)}>
-            <div style={{ maxWidth: '500px' }}>
-              <h3 style={{ textAlign: 'center', marginBottom: '24px', fontSize: '24px', fontWeight: '600', color: '#111827' }}>
-                Schedule Cell Visits
-              </h3>
-              
-              <div style={{ marginBottom: '20px' }}>
-                <p style={{ fontSize: '14px', color: '#6b7280', marginBottom: '16px' }}>
-                  Select which cells are available for visits today. Only visitors to scheduled cells will be allowed to scan in.
-                </p>
-                
-                <div style={{ 
-                  background: '#f8fafc', 
-                  padding: '16px', 
-                  borderRadius: '8px',
-                  border: '1px solid #e2e8f0',
-                  maxHeight: '300px',
-                  overflowY: 'auto'
-                }}>
-                  {availableCells.length === 0 ? (
-                    <p style={{ textAlign: 'center', color: '#6b7280', fontStyle: 'italic' }}>
-                      No active cells found. Please add cells in Settings first.
-                    </p>
-                  ) : (
-                    <div style={{ display: 'grid', gap: '12px' }}>
-                      {availableCells.map((cell) => (
-                        <label 
-                          key={cell.id}
-                          style={{ 
-                            display: 'flex', 
-                            alignItems: 'center', 
-                            gap: '12px',
-                            padding: '12px',
-                            background: isCellScheduled(cell.id) ? '#ecfdf5' : '#fff',
-                            border: isCellScheduled(cell.id) ? '2px solid #10b981' : '2px solid #e5e7eb',
-                            borderRadius: '8px',
-                            cursor: 'pointer',
-                            transition: 'all 0.2s ease'
-                          }}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={isCellScheduled(cell.id)}
-                            onChange={() => handleCellScheduleToggle(cell.id)}
-                            style={{
-                              width: '18px',
-                              height: '18px',
-                              cursor: 'pointer'
-                            }}
-                          />
-                          <div style={{ flex: 1 }}>
-                            <div style={{ fontWeight: '600', color: '#111827' }}>
-                              {cell.cell_name ? `${cell.cell_name} - ${cell.cell_number}` : cell.cell_number}
-                            </div>
-                            {cell.cell_name && (
-                              <div style={{ fontSize: '12px', color: '#6b7280' }}>
-                                Cell Number: {cell.cell_number}
-                              </div>
-                            )}
-                            <div style={{ fontSize: '12px', color: '#6b7280' }}>
-                              Capacity: {cell.capacity} | Status: {cell.status}
-                            </div>
-                          </div>
-                          {isCellScheduled(cell.id) && (
-                            <div style={{ 
-                              background: '#10b981', 
-                              color: 'white', 
-                              padding: '4px 8px', 
-                              borderRadius: '4px',
-                              fontSize: '12px',
-                              fontWeight: '600'
-                            }}>
-                              Scheduled
-                            </div>
-                          )}
-                        </label>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div style={{ 
-                display: 'flex', 
-                justifyContent: 'space-between', 
-                alignItems: 'center',
-                padding: '16px 0',
-                borderTop: '1px solid #e5e7eb'
-              }}>
-                <div style={{ fontSize: '14px', color: '#6b7280' }}>
-                  {scheduledCells.size} of {availableCells.length} cells scheduled
-                </div>
-                <div style={{ display: 'flex', gap: '12px' }}>
-                  <button 
-                    type="button" 
-                    onClick={() => {
-                      const emptySet = new Set();
-                      setScheduledCells(emptySet);
-                      // Clear from localStorage
-                      try {
-                        localStorage.removeItem('scheduledCells');
-                      } catch (error) {
-                        logger.error('Error clearing scheduled cells:', error);
-                      }
-                    }}
-                    style={{
-                      background: '#ef4444',
-                      color: 'white',
-                      border: 'none',
-                      padding: '8px 16px',
-                      borderRadius: '6px',
-                      fontSize: '14px',
-                      fontWeight: '500',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease'
-                    }}
-                  >
-                    Clear All
-                  </button>
-                  <button 
-                    type="button" 
-                    onClick={() => {
-                      // Normalize all IDs to numbers for consistent comparison
-                      const allCellIds = new Set(availableCells.map(cell => Number(cell.id)));
-                      setScheduledCells(allCellIds);
-                      // Save to localStorage (normalize to numbers)
-                      try {
-                        localStorage.setItem('scheduledCells', JSON.stringify({
-                          cellIds: Array.from(allCellIds).map(id => Number(id)),
-                          timestamp: Date.now()
-                        }));
-                      } catch (error) {
-                        logger.error('Error saving scheduled cells:', error);
-                      }
-                    }}
-                    style={{
-                      background: '#10b981',
-                      color: 'white',
-                      border: 'none',
-                      padding: '8px 16px',
-                      borderRadius: '6px',
-                      fontSize: '14px',
-                      fontWeight: '500',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease'
-                    }}
-                  >
-                    Select All
-                  </button>
-                </div>
-              </div>
-
-              <div className="common-modal-buttons" style={{ 
-                display: 'flex', 
-                justifyContent: 'center', 
-                gap: '12px',
-                marginTop: '20px'
-              }}>
-                <button 
-                  type="button" 
-                  onClick={() => setShowScheduleModal(false)}
-                  style={{
-                    background: 'linear-gradient(135deg, #4b5563 0%, #374151 100%)',
-                    color: 'white',
-                    border: 'none',
-                    padding: '12px 24px',
-                    borderRadius: '6px',
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease'
-                  }}
-                >
-                  Done
-                </button>
-              </div>
-            </div>
-          </Modal>
-        )}
       </main>
     </div>
   );

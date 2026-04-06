@@ -7,6 +7,7 @@ const QRCodeScanner = ({ onScan, resetTrigger, scanLocked = false }) => {
   const html5QrcodeScannerRef = useRef(null);
   const isScannerRunningRef = useRef(false);
   const [error, setError] = useState(null);
+  const [cameraFailure, setCameraFailure] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
   const [isRetrying, setIsRetrying] = useState(false);
   const [isRunning, setIsRunning] = useState(false); // State to track if scanner is running (for re-renders)
@@ -91,6 +92,7 @@ const QRCodeScanner = ({ onScan, resetTrigger, scanLocked = false }) => {
       const cameras = await Html5Qrcode.getCameras();
       if (!cameras || cameras.length === 0) {
         setError('No camera found. Please connect a camera to use QR scanning.');
+        setCameraFailure(true);
         startAttemptRef.current = false;
         setIsRetrying(false);
         return;
@@ -151,6 +153,7 @@ const QRCodeScanner = ({ onScan, resetTrigger, scanLocked = false }) => {
       isScannerRunningRef.current = true;
       setIsRunning(true);
       setError(null);
+      setCameraFailure(false);
       setRetryCount(0);
       setIsRetrying(false);
       startAttemptRef.current = false;
@@ -171,22 +174,40 @@ const QRCodeScanner = ({ onScan, resetTrigger, scanLocked = false }) => {
       
       // Provide more user-friendly error messages
       let errorMessage = 'Error starting QR code scanner';
+      let isCameraStartFailure = false;
       
       if (err.name === 'NotAllowedError') {
         errorMessage = 'Camera access denied. Please allow camera permissions.';
+        isCameraStartFailure = true;
       } else if (err.name === 'NotFoundError') {
         errorMessage = 'No camera found. Please connect a camera.';
+        isCameraStartFailure = true;
       } else if (err.name === 'NotReadableError') {
         errorMessage = 'Camera is already in use by another application.';
+        isCameraStartFailure = true;
       } else if (err.name === 'OverconstrainedError') {
         errorMessage = 'Camera constraints cannot be satisfied.';
+        isCameraStartFailure = true;
       } else if (err.name === 'SecurityError') {
         errorMessage = 'Camera access blocked due to security restrictions.';
+        isCameraStartFailure = true;
       } else if (err.message) {
         errorMessage = err.message;
+        const lowerMsg = err.message.toLowerCase();
+        if (
+          lowerMsg.includes('camera') ||
+          lowerMsg.includes('permission') ||
+          lowerMsg.includes('notallowederror') ||
+          lowerMsg.includes('notfounderror') ||
+          lowerMsg.includes('notreadableerror') ||
+          lowerMsg.includes('overconstrainederror')
+        ) {
+          isCameraStartFailure = true;
+        }
       }
       
       setError(errorMessage);
+      setCameraFailure(isCameraStartFailure);
       isScannerRunningRef.current = false;
       setIsRunning(false);
       startAttemptRef.current = false;
@@ -375,7 +396,7 @@ const QRCodeScanner = ({ onScan, resetTrigger, scanLocked = false }) => {
       </div>
       
       {/* Error/Retry Message - Separated into its own container */}
-      {/* Only show error/retry button if there's an error AND scanner is NOT running */}
+      {/* Show recovery UI whenever scanner is not running and has an error */}
       {error && !isRunning && (
         <div style={{ 
           width: '100%',
@@ -429,7 +450,7 @@ const QRCodeScanner = ({ onScan, resetTrigger, scanLocked = false }) => {
                   <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/>
                   <path d="M3 21v-5h5"/>
                 </svg>
-                Retry Camera
+                {cameraFailure ? 'Retry Camera' : 'Retry Scanner'}
               </>
             )}
           </button>
