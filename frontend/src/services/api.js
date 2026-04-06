@@ -1,7 +1,8 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || 'http://localhost:3001',
+  // In deployed builds, prefer explicit env; fallback to same-origin to avoid localhost on mobile/remote clients.
+  baseURL: process.env.REACT_APP_API_URL || window.location.origin,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -17,6 +18,22 @@ api.interceptors.request.use(
     return config;
   },
   (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// Handle expired/invalid auth globally so protected API calls don't fail silently as generic fetch errors.
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const status = error?.response?.status;
+    if (status === 401) {
+      localStorage.removeItem('token');
+      // Avoid redirect loops while already on auth routes.
+      if (!window.location.pathname.startsWith('/login')) {
+        window.location.href = '/login';
+      }
+    }
     return Promise.reject(error);
   }
 );
