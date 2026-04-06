@@ -232,6 +232,15 @@ const Dashboard = () => {
     }, 4000);
   }, []);
 
+  const getApiErrorMessage = (error, fallbackMessage) => {
+    const serverMessage = error?.response?.data?.error || error?.response?.data?.message;
+    if (serverMessage) return serverMessage;
+    if (error?.message && (error.message.includes('Network Error') || error.message.includes('Failed to fetch'))) {
+      return 'Network error. Please check your connection and try again.';
+    }
+    return fallbackMessage;
+  };
+
   const fetchVisitors = useCallback(async () => {
     try {
       const res = await api.get('/api/scanned_visitors');
@@ -947,7 +956,7 @@ const Dashboard = () => {
           }
         } catch (error) {
           logger.error('Error adding scanned visitor (auto normal):', error);
-          showToast('Error adding scanned visitor', 'error');
+          showToast(getApiErrorMessage(error, 'Error adding scanned visitor'), 'error');
           isProcessingScanRef.current = false; // Reset processing flag on error
           setTimeout(() => setScanLocked(false), 1000);
         }
@@ -1165,7 +1174,7 @@ const Dashboard = () => {
       }
     } catch (error) {
       logger.error('Error adding scanned visitor:', error);
-      showToast('Error adding scanned visitor', 'error');
+      showToast(getApiErrorMessage(error, 'Error adding scanned visitor'), 'error');
       setPendingScanData(null);
       setVerifiedConjugal(false);
       isProcessingScanRef.current = false; // Reset processing flag on error
