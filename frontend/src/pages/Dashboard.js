@@ -778,6 +778,26 @@ const Dashboard = () => {
       // Store verified_conjugal status and visitor details
       setVerifiedConjugal(conjugalVerified);
 
+      // STEP 2.5: Enforce today's scheduled cells (block unscheduled scans)
+      // For new QR format (visitor_id-only), rely on backend-resolved cell.
+      // For old QR format, fall back to cell extracted directly from QR.
+      const cellToCheck = responseCell || cell;
+      if (!cellToCheck) {
+        logger.warn('Unable to determine visitor cell; blocking scan.');
+        showToast('Unable to determine cell for this visitor. Please try again.', 'error');
+        isProcessingScanRef.current = false;
+        setTimeout(() => setScanLocked(false), 800);
+        return;
+      }
+      const scheduledOk = isCellNumberScheduled(cellToCheck, cellsToUse);
+      if (!scheduledOk) {
+        logger.warn('Cell not scheduled for today; blocking scan:', { cellToCheck });
+        showToast(`Cell ${cellToCheck} is not scheduled for today's visits.`, 'error');
+        isProcessingScanRef.current = false;
+        setTimeout(() => setScanLocked(false), 800);
+        return;
+      }
+
       if (planned === 'duplicate_ignored') {
         const cooldownSeconds = preflight?.data?.cooldown_seconds;
         const elapsedSeconds = preflight?.data?.elapsed_seconds;
