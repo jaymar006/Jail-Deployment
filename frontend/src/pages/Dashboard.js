@@ -115,6 +115,8 @@ const Dashboard = () => {
   const [lastScanAt, setLastScanAt] = useState(0);
   const isProcessingScanRef = useRef(false); // Synchronous ref to prevent concurrent scans
   const lastUnscheduledBlockRef = useRef({ sig: null, at: 0 });
+  const isFetchingCellsRef = useRef(false);
+  const lastCellsFetchLogAtRef = useRef(0);
   const [selectedDeleteIds, setSelectedDeleteIds] = useState([]);
   const [selectAll, setSelectAll] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '', type: '' });
@@ -617,8 +619,22 @@ const Dashboard = () => {
     // This is why file upload works (cells are loaded by then) but camera scan might fail
     let cellsToUse = availableCells;
     if (!cellsLoaded || !availableCells || availableCells.length === 0) {
-      logger.warn('Cells not loaded yet, fetching now...');
-      logger.warn('This is why camera scan might fail - cells need to be loaded first!');
+      const now = Date.now();
+      if (isFetchingCellsRef.current) {
+        // Avoid console/toast spam while scanner continuously reads the same QR frame.
+        if (now - lastCellsFetchLogAtRef.current > 3000) {
+          logger.debug('Cells fetch already in progress, skipping duplicate fetch attempt');
+          lastCellsFetchLogAtRef.current = now;
+        }
+        return;
+      }
+
+      isFetchingCellsRef.current = true;
+      if (now - lastCellsFetchLogAtRef.current > 3000) {
+        logger.warn('Cells not loaded yet, fetching now...');
+        logger.warn('This is why camera scan might fail - cells need to be loaded first!');
+        lastCellsFetchLogAtRef.current = now;
+      }
       
       // Fetch cells directly and use the response
       try {
@@ -633,6 +649,8 @@ const Dashboard = () => {
         logger.error('Failed to fetch cells:', error);
         showToast('System not ready. Please try again in a moment.', 'error');
         return;
+      } finally {
+        isFetchingCellsRef.current = false;
       }
     }
 
