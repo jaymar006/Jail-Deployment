@@ -114,6 +114,7 @@ const Dashboard = () => {
   const [lastScanSig, setLastScanSig] = useState(null);
   const [lastScanAt, setLastScanAt] = useState(0);
   const isProcessingScanRef = useRef(false); // Synchronous ref to prevent concurrent scans
+  const lastUnscheduledBlockRef = useRef({ sig: null, at: 0 });
   const [selectedDeleteIds, setSelectedDeleteIds] = useState([]);
   const [selectAll, setSelectAll] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '', type: '' });
@@ -717,6 +718,17 @@ const Dashboard = () => {
     // Use visitor_id if available, otherwise use visitor_name + pdl_name combination
     const sig = visitorId ? `visitor_id:${visitorId}` : `visitor:${visitorName || ''}_pdl:${pdlName || ''}`;
     const nowMs = Date.now();
+
+    // Suppress repeated unscheduled-cell toasts while the same QR stays in view.
+    const unscheduledBlock = lastUnscheduledBlockRef.current;
+    if (
+      unscheduledBlock &&
+      unscheduledBlock.sig === sig &&
+      nowMs - unscheduledBlock.at < 5000
+    ) {
+      logger.debug('Recently blocked unscheduled scan; suppressing duplicate');
+      return;
+    }
     
     // Check if we just timed out this visitor recently (within 5 seconds)
     // This prevents the modal from showing if user accidentally scans again right after time-out
@@ -821,9 +833,10 @@ const Dashboard = () => {
       const scheduledOk = isCellNumberScheduled(cellToCheck, cellsToUse);
       if (!scheduledOk) {
         logger.warn('Cell not scheduled for today; blocking scan:', { cellToCheck });
+        lastUnscheduledBlockRef.current = { sig, at: Date.now() };
         showToast(`Cell ${cellToCheck} is not scheduled for today's visits.`, 'error');
         isProcessingScanRef.current = false;
-        setTimeout(() => setScanLocked(false), 800);
+        setTimeout(() => setScanLocked(false), 1800);
         return;
       }
 
