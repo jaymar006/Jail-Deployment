@@ -5,6 +5,7 @@ const PDL = require('../models/pdlModel');
 const logger = require('../utils/logger');
 
 const APP_TIMEZONE = process.env.APP_TIMEZONE || 'Asia/Manila';
+const DUPLICATE_SCAN_COOLDOWN_MS = 60 * 1000;
 
 const formatToAppTimezone = (input) => {
   if (!input) return null;
@@ -73,6 +74,37 @@ const resolveCellDisplayValue = async (rawCell) => {
   }
 
   return trimmed;
+};
+
+const parseDbTimestampToDate = (value) => {
+  if (!value) return null;
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? null : value;
+  }
+
+  if (typeof value === 'string') {
+    const normalized = value.includes('T') ? value : value.replace(' ', 'T');
+    const parsed = new Date(normalized);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  }
+
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
+
+const getOpenScanCooldownMeta = (openScan, referenceDate) => {
+  if (!openScan || openScan.time_out) return null;
+  const timeInDate = parseDbTimestampToDate(openScan.time_in);
+  if (!timeInDate) return null;
+
+  const elapsedMs = referenceDate.getTime() - timeInDate.getTime();
+  if (elapsedMs < 0 || elapsedMs >= DUPLICATE_SCAN_COOLDOWN_MS) return null;
+
+  return {
+    elapsedMs,
+    elapsedSeconds: Math.max(0, Math.floor(elapsedMs / 1000)),
+    cooldownSeconds: Math.floor(DUPLICATE_SCAN_COOLDOWN_MS / 1000)
+  };
 };
 
 exports.getVisitorsByPdl = async (req, res) => {
@@ -450,6 +482,19 @@ exports.addScannedVisitor = async (req, res) => {
       
       if (only_check) {
         if (openScan && !openScan.time_out) {
+          const cooldownMeta = getOpenScanCooldownMeta(openScan, new Date());
+          if (cooldownMeta) {
+            return res.status(200).json({
+              action: 'duplicate_ignored',
+              message: `Duplicate scan ignored within ${cooldownMeta.cooldownSeconds}-second cooldown.`,
+              elapsed_seconds: cooldownMeta.elapsedSeconds,
+              cooldown_seconds: cooldownMeta.cooldownSeconds,
+              verified_conjugal: verifiedConjugal,
+              visitor_name: visitor_name,
+              pdl_name: pdl_name,
+              cell: formattedCell
+            });
+          }
           return res.status(200).json({ 
             action: 'time_out',
             verified_conjugal: verifiedConjugal,
@@ -482,6 +527,19 @@ exports.addScannedVisitor = async (req, res) => {
 
       if (openScan) {
         if (!openScan.time_out) {
+          const cooldownMeta = getOpenScanCooldownMeta(openScan, referenceDate);
+          if (cooldownMeta) {
+            return res.status(200).json({
+              message: `Duplicate scan ignored within ${cooldownMeta.cooldownSeconds}-second cooldown.`,
+              id: openScan.id,
+              action: 'duplicate_ignored',
+              elapsed_seconds: cooldownMeta.elapsedSeconds,
+              cooldown_seconds: cooldownMeta.cooldownSeconds,
+              visitor_name: visitor_name,
+              pdl_name: pdl_name,
+              cell: formattedCell
+            });
+          }
           const localTimeOut = localizedTimestamp;
           await ScannedVisitor.updateTimeOut(openScan.id, localTimeOut);
           return res.status(200).json({ 
@@ -583,6 +641,19 @@ exports.addScannedVisitor = async (req, res) => {
       
       if (only_check) {
         if (openScan && !openScan.time_out) {
+          const cooldownMeta = getOpenScanCooldownMeta(openScan, new Date());
+          if (cooldownMeta) {
+            return res.status(200).json({
+              action: 'duplicate_ignored',
+              message: `Duplicate scan ignored within ${cooldownMeta.cooldownSeconds}-second cooldown.`,
+              elapsed_seconds: cooldownMeta.elapsedSeconds,
+              cooldown_seconds: cooldownMeta.cooldownSeconds,
+              verified_conjugal: verifiedConjugal,
+              visitor_name: visitor_name,
+              pdl_name: pdl_name,
+              cell: formattedCell
+            });
+          }
           return res.status(200).json({ 
             action: 'time_out',
             verified_conjugal: verifiedConjugal,
@@ -615,6 +686,19 @@ exports.addScannedVisitor = async (req, res) => {
 
       if (openScan) {
         if (!openScan.time_out) {
+          const cooldownMeta = getOpenScanCooldownMeta(openScan, referenceDate);
+          if (cooldownMeta) {
+            return res.status(200).json({
+              message: `Duplicate scan ignored within ${cooldownMeta.cooldownSeconds}-second cooldown.`,
+              id: openScan.id,
+              action: 'duplicate_ignored',
+              elapsed_seconds: cooldownMeta.elapsedSeconds,
+              cooldown_seconds: cooldownMeta.cooldownSeconds,
+              visitor_name: visitor_name,
+              pdl_name: pdl_name,
+              cell: formattedCell
+            });
+          }
           const localTimeOut = localizedTimestamp;
           await ScannedVisitor.updateTimeOut(openScan.id, localTimeOut);
           return res.status(200).json({ 
@@ -704,6 +788,16 @@ exports.addScannedVisitor = async (req, res) => {
 
     if (only_check) {
       if (openScan && !openScan.time_out) {
+        const cooldownMeta = getOpenScanCooldownMeta(openScan, new Date());
+        if (cooldownMeta) {
+          return res.status(200).json({
+            action: 'duplicate_ignored',
+            message: `Duplicate scan ignored within ${cooldownMeta.cooldownSeconds}-second cooldown.`,
+            elapsed_seconds: cooldownMeta.elapsedSeconds,
+            cooldown_seconds: cooldownMeta.cooldownSeconds,
+            verified_conjugal: verifiedConjugal
+          });
+        }
         return res.status(200).json({ 
           action: 'time_out',
           verified_conjugal: verifiedConjugal 
@@ -729,6 +823,16 @@ exports.addScannedVisitor = async (req, res) => {
 
     if (openScan) {
       if (!openScan.time_out) {
+        const cooldownMeta = getOpenScanCooldownMeta(openScan, referenceDate);
+        if (cooldownMeta) {
+          return res.status(200).json({
+            message: `Duplicate scan ignored within ${cooldownMeta.cooldownSeconds}-second cooldown.`,
+            id: openScan.id,
+            action: 'duplicate_ignored',
+            elapsed_seconds: cooldownMeta.elapsedSeconds,
+            cooldown_seconds: cooldownMeta.cooldownSeconds
+          });
+        }
         const localTimeOut = localizedTimestamp;
         await ScannedVisitor.updateTimeOut(openScan.id, localTimeOut);
         return res.status(200).json({ message: `Visitor "${visitor_name}" scan timed out`, id: openScan.id, time_out: localTimeOut, action: 'time_out' });

@@ -10,7 +10,7 @@ router.use((req, res, next) => {
 });
 
 // Apply authentication middleware to all routes
-// router.use(authMiddleware); // Temporarily commented out for testing
+router.use(authMiddleware);
 
 // GET all cells
 router.get('/', cellController.getAllCells);

@@ -1,6 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const visitorController = require('../controllers/visitorController');
+const authMiddleware = require('../middleware/authMiddleware');
+
+// Require authentication for all /api visitor routes
+router.use(authMiddleware);
 
 // Get all visitors for a specific PDL
 router.get('/pdls/:pdlId/visitors', visitorController.getVisitorsByPdl);

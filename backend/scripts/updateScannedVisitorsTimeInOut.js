@@ -2,6 +2,12 @@ const db = require('../config/db');
 
 async function updateTimeInOutForAll() {
   try {
+    // WARNING:
+    // This maintenance script force-rewrites visit lifecycle timestamps:
+    //   time_in  <- created_at
+    //   time_out <- updated_at
+    // Running it can compress visit durations and should only be used for
+    // explicit data repair/migration scenarios.
     const [result] = await db.query(
       `UPDATE scanned_visitors
        SET time_in = created_at,

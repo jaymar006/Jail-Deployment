@@ -203,6 +203,9 @@ const Dashboard = () => {
   const getDateString = (isoString) => {
     if (!isoString) return '';
     const date = new Date(isoString);
+    if (Number.isNaN(date.getTime())) {
+      return '';
+    }
     return date.toISOString().split('T')[0];
   };
 
@@ -841,6 +844,19 @@ const Dashboard = () => {
       
       // Store verified_conjugal status and visitor details
       setVerifiedConjugal(conjugalVerified);
+
+      if (planned === 'duplicate_ignored') {
+        const cooldownSeconds = preflight?.data?.cooldown_seconds;
+        const elapsedSeconds = preflight?.data?.elapsed_seconds;
+        const cooldownNote = cooldownSeconds
+          ? `Duplicate scan ignored. Please wait ${Math.max(cooldownSeconds - (elapsedSeconds || 0), 0)}s before scanning again.`
+          : 'Duplicate scan ignored. Please wait and scan again.';
+        logger.debug('Duplicate scan ignored during preflight');
+        showToast(cooldownNote, 'error');
+        isProcessingScanRef.current = false;
+        setTimeout(() => setScanLocked(false), 800);
+        return;
+      }
       
       if (planned === 'time_out') {
         // STEP 3: Time out - visitor already has time_in, directly execute time_out
@@ -865,6 +881,26 @@ const Dashboard = () => {
         }
         
         const timeOutResponse = await api.post('/api/scanned_visitors', timeOutPayload);
+        const timeOutAction = timeOutResponse?.data?.action;
+        if (timeOutAction === 'duplicate_ignored') {
+          const cooldownSeconds = timeOutResponse?.data?.cooldown_seconds;
+          const elapsedSeconds = timeOutResponse?.data?.elapsed_seconds;
+          const cooldownNote = cooldownSeconds
+            ? `Duplicate scan ignored. Please wait ${Math.max(cooldownSeconds - (elapsedSeconds || 0), 0)}s before scanning again.`
+            : 'Duplicate scan ignored. Please wait and scan again.';
+          logger.debug('Duplicate scan ignored by backend during time-out execution flow');
+          showToast(cooldownNote, 'error');
+          isProcessingScanRef.current = false;
+          setTimeout(() => setScanLocked(false), 800);
+          return;
+        }
+        if (timeOutAction !== 'time_out') {
+          logger.warn('Unexpected action from backend in time-out execution flow:', timeOutAction);
+          showToast('Unexpected response from server', 'error');
+          isProcessingScanRef.current = false;
+          setTimeout(() => setScanLocked(false), 1000);
+          return;
+        }
         
         logger.debug('Time out successful!');
         await fetchVisitors();
@@ -967,6 +1003,17 @@ const Dashboard = () => {
             setShowSuccessModal(true);
             // Keep scanner locked until user clicks OK
             // Don't reset isProcessingScanRef here - let OK button handle it
+            return;
+          } else if (action === 'duplicate_ignored') {
+            const cooldownSeconds = response?.data?.cooldown_seconds;
+            const elapsedSeconds = response?.data?.elapsed_seconds;
+            const cooldownNote = cooldownSeconds
+              ? `Duplicate scan ignored. Please wait ${Math.max(cooldownSeconds - (elapsedSeconds || 0), 0)}s before scanning again.`
+              : 'Duplicate scan ignored. Please wait and scan again.';
+            logger.debug('Duplicate scan ignored by backend during auto normal flow');
+            showToast(cooldownNote, 'error');
+            isProcessingScanRef.current = false;
+            setTimeout(() => setScanLocked(false), 800);
             return;
           } else {
             logger.warn('Unexpected action from backend:', action);
@@ -1150,6 +1197,22 @@ const Dashboard = () => {
         // Keep scanner locked until user clicks OK
         // Don't reset isProcessingScanRef here - let OK button handle it
         return; // Return early to prevent unlocking immediately
+      } else if (action === 'duplicate_ignored') {
+        const cooldownSeconds = response?.data?.cooldown_seconds;
+        const elapsedSeconds = response?.data?.elapsed_seconds;
+        const cooldownNote = cooldownSeconds
+          ? `Duplicate scan ignored. Please wait ${Math.max(cooldownSeconds - (elapsedSeconds || 0), 0)}s before scanning again.`
+          : 'Duplicate scan ignored. Please wait and scan again.';
+        logger.debug('Duplicate scan ignored during purpose flow');
+        showToast(cooldownNote, 'error');
+        setPendingScanData(null);
+        setVerifiedConjugal(false);
+        isProcessingScanRef.current = false;
+        setTimeout(() => {
+          setScanLocked(false);
+          logger.debug('Scan unlocked after duplicate ignored');
+        }, 800);
+        return;
       } else if (action === 'already_timed_out') {
         logger.warn('Visitor already timed out');
         showToast('This visitor has already timed out.', 'error');
@@ -1208,8 +1271,10 @@ const Dashboard = () => {
     if (!selectedVisitorId) return;
 
     const dateStr = currentDateString;
-    const timeInISO = new Date(`${dateStr}T${editTimeIn}`).toISOString();
-    const timeOutISO = new Date(`${dateStr}T${editTimeOut}`).toISOString();
+    const timeInDate = new Date(`${dateStr}T${editTimeIn}`);
+    const timeOutDate = new Date(`${dateStr}T${editTimeOut}`);
+    const timeInISO = timeInDate.toISOString();
+    const timeOutISO = timeOutDate.toISOString();
 
     try {
       await api.put(`/api/scanned_visitors/${selectedVisitorId}`, {
@@ -1228,7 +1293,7 @@ const Dashboard = () => {
   };
 
   const filteredVisitors = visitors.filter(
-    v => getDateString(v.time_in) === currentDateString
+    v => getDateString(v.scan_date || v.time_in) === currentDateString
   );
 
   const handleToggleSelectAll = () => {

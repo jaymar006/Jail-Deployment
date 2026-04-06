@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import api from '../services/api';
 import './Dashboard.css';
 import './common.css';
@@ -15,6 +15,9 @@ const Logs = () => {
   const [filterValue, setFilterValue] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [availableCells, setAvailableCells] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 20;
+  const tableWrapperRef = useRef(null);
 
   useEffect(() => {
     const fetchVisitors = async () => {
@@ -52,6 +55,16 @@ const Logs = () => {
       window.removeEventListener('visitorTimesUpdated', handleVisitorTimesUpdated);
     };
   }, []);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filterType, filterValue]);
+
+  useEffect(() => {
+    if (tableWrapperRef.current) {
+      tableWrapperRef.current.scrollTop = 0;
+    }
+  }, [currentPage]);
 
   const formatDateTime = (isoString) => {
     if (!isoString) return '';
@@ -192,6 +205,52 @@ const Logs = () => {
     if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
     return 0;
   });
+
+  const totalPages = Math.ceil(sortedVisitors.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const currentVisitors = sortedVisitors.slice(startIndex, startIndex + itemsPerPage);
+
+  // Smart pagination: Generate page numbers with ellipsis
+  const getPaginationPages = () => {
+    const pages = [];
+    const maxVisible = 7;
+    const sidePages = 2;
+
+    if (totalPages <= maxVisible) {
+      return Array.from({ length: totalPages }, (_, i) => i + 1);
+    }
+
+    pages.push(1);
+
+    let startPage = Math.max(2, currentPage - sidePages);
+    let endPage = Math.min(totalPages - 1, currentPage + sidePages);
+
+    if (currentPage <= sidePages + 2) {
+      endPage = Math.min(maxVisible - 1, totalPages - 1);
+    }
+
+    if (currentPage >= totalPages - sidePages - 1) {
+      startPage = Math.max(2, totalPages - maxVisible + 2);
+    }
+
+    if (startPage > 2) {
+      pages.push('ellipsis-start');
+    }
+
+    for (let i = startPage; i <= endPage; i++) {
+      pages.push(i);
+    }
+
+    if (endPage < totalPages - 1) {
+      pages.push('ellipsis-end');
+    }
+
+    if (totalPages > 1) {
+      pages.push(totalPages);
+    }
+
+    return pages;
+  };
 
   // Function to handle extraction and download of grouped table data by date as formatted Excel file
   const handleExtractTable = () => {
@@ -624,6 +683,7 @@ const Logs = () => {
                 </div>
               </div>
             </div>
+          <div className="table-wrapper" ref={tableWrapperRef}>
           <table className="common-table">
             <thead>
             <tr>
@@ -643,7 +703,7 @@ const Logs = () => {
                 <td colSpan="8">No records</td>
               </tr>
             ) : (
-              sortedVisitors.map((v) => (
+              currentVisitors.map((v) => (
                 <tr key={v.id}>
                   <td>{capitalizeWords(v.visitor_name)}</td>
                   <td>{v.contact_number}</td>
@@ -663,6 +723,83 @@ const Logs = () => {
             )}
           </tbody>
         </table>
+        </div>
+        {totalPages > 1 && (
+          <div className="pagination-container">
+            <button
+              className="pagination-button pagination-nav"
+              onClick={() => setCurrentPage(1)}
+              disabled={currentPage === 1}
+              aria-label="Go to first page"
+              title="First page"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <polyline points="11 17 6 12 11 7"/>
+                <polyline points="18 17 13 12 18 7"/>
+              </svg>
+            </button>
+            <button
+              className="pagination-button pagination-nav"
+              onClick={() => setCurrentPage(currentPage - 1)}
+              disabled={currentPage === 1}
+              aria-label="Go to previous page"
+              title="Previous page"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <polyline points="15 18 9 12 15 6"/>
+              </svg>
+            </button>
+
+            {getPaginationPages().map((pageNum, index) => {
+              if (pageNum === 'ellipsis-start' || pageNum === 'ellipsis-end') {
+                return (
+                  <span key={`ellipsis-${index}`} className="pagination-ellipsis">
+                    ...
+                  </span>
+                );
+              }
+              return (
+                <button
+                  key={pageNum}
+                  className={`pagination-button ${currentPage === pageNum ? 'active' : ''}`}
+                  onClick={() => setCurrentPage(pageNum)}
+                  aria-label={`Go to page ${pageNum}`}
+                  aria-current={currentPage === pageNum ? 'page' : undefined}
+                >
+                  {pageNum}
+                </button>
+              );
+            })}
+
+            <button
+              className="pagination-button pagination-nav"
+              onClick={() => setCurrentPage(currentPage + 1)}
+              disabled={currentPage === totalPages}
+              aria-label="Go to next page"
+              title="Next page"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <polyline points="9 18 15 12 9 6"/>
+              </svg>
+            </button>
+            <button
+              className="pagination-button pagination-nav"
+              onClick={() => setCurrentPage(totalPages)}
+              disabled={currentPage === totalPages}
+              aria-label="Go to last page"
+              title="Last page"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <polyline points="13 17 18 12 13 7"/>
+                <polyline points="6 17 11 12 6 7"/>
+              </svg>
+            </button>
+
+            <div className="pagination-info">
+              Page {currentPage} of {totalPages}
+            </div>
+          </div>
+        )}
         </main>
       </div>
     </>
