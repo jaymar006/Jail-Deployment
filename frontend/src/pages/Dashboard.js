@@ -143,6 +143,7 @@ const Dashboard = () => {
     }
     return new Set();
   });
+  const [scheduledCellsLoading, setScheduledCellsLoading] = useState(false);
   const [qrUploadEnabled, setQrUploadEnabled] = useState(() => {
     const saved = localStorage.getItem('qrUploadEnabled');
     return saved !== null ? saved === 'true' : true; // Default to enabled
@@ -267,6 +268,28 @@ const Dashboard = () => {
 
   // Listen for changes to QR upload setting and weekly schedule from Settings page
   useEffect(() => {
+    const fetchServerScheduleToday = async () => {
+      setScheduledCellsLoading(true);
+      try {
+        const res = await api.get('/api/schedule/weekly-cells');
+        const schedule = res?.data?.schedule;
+        const todayKey = getCurrentWeekDayKey();
+        const todayIds = Array.isArray(schedule?.[todayKey]) ? schedule[todayKey] : [];
+        const todaySet = new Set(todayIds.map(id => Number(id)).filter(id => !Number.isNaN(id)));
+        setScheduledCells(todaySet);
+        // Cache entire weekly schedule for quick startup/offline
+        try {
+          localStorage.setItem('weeklyCellSchedule', JSON.stringify(schedule));
+        } catch (_) {
+          // ignore cache errors
+        }
+      } catch (error) {
+        logger.error('Failed to fetch server schedule:', error);
+      } finally {
+        setScheduledCellsLoading(false);
+      }
+    };
+
     const handleStorageChange = (e) => {
       if (e.key === 'qrUploadEnabled') {
         setQrUploadEnabled(e.newValue === 'true');
@@ -287,9 +310,15 @@ const Dashboard = () => {
     };
     
     window.addEventListener('storage', handleStorageChange);
+
+    // Initial fetch so schedule is shared across devices
+    fetchServerScheduleToday();
     
     // Check for changes periodically (for same-tab updates)
     const interval = setInterval(() => {
+      // Refresh from server periodically to reflect changes from other devices
+      fetchServerScheduleToday();
+
       // Check QR upload setting
       const savedQr = localStorage.getItem('qrUploadEnabled');
       const currentQrValue = savedQr !== null ? savedQr === 'true' : true;

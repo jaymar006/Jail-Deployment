@@ -10,6 +10,7 @@ const pdlRoutes = require('./routes/pdlRoutes');
 const visitorRoutes = require('./routes/visitorRoutes');
 const authRoutes = require('./routes/authRoutes');
 const cellRoutes = require('./routes/cellRoutes');
+const scheduleRoutes = require('./routes/scheduleRoutes');
 
 const app = express();
 
@@ -57,6 +58,7 @@ app.use(express.json());
 
 app.use('/pdls', pdlRoutes);
 app.use('/api/cells', cellRoutes);
+app.use('/api/schedule', scheduleRoutes);
 app.use('/api', visitorRoutes);
 app.use('/auth', authRoutes);
 

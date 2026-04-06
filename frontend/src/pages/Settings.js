@@ -154,6 +154,7 @@ const Settings = () => {
       return createEmptyWeeklySchedule();
     }
   });
+  const [weeklyScheduleLoading, setWeeklyScheduleLoading] = useState(false);
   
   // Delete confirmation text
   const [deleteAllPdlsConfirmation, setDeleteAllPdlsConfirmation] = useState('');
@@ -200,6 +201,34 @@ const Settings = () => {
 
     fetchUsername();
     fetchCells();
+  }, []);
+
+  // Load shared weekly schedule from server (global for all users)
+  useEffect(() => {
+    const loadServerWeeklySchedule = async () => {
+      setWeeklyScheduleLoading(true);
+      try {
+        const res = await axios.get('/api/schedule/weekly-cells');
+        const serverSchedule = res?.data?.schedule;
+        if (serverSchedule && typeof serverSchedule === 'object') {
+          const normalized = createEmptyWeeklySchedule();
+          WEEK_DAYS.forEach(({ key }) => {
+            normalized[key] = Array.isArray(serverSchedule?.[key])
+              ? serverSchedule[key].map(id => Number(id)).filter(id => !Number.isNaN(id))
+              : [];
+          });
+          setWeeklySchedule(normalized);
+          localStorage.setItem('weeklyCellSchedule', JSON.stringify(normalized));
+        }
+      } catch (error) {
+        // Fallback to localStorage schedule already loaded above
+        console.error('Error loading weekly schedule from server:', error);
+      } finally {
+        setWeeklyScheduleLoading(false);
+      }
+    };
+
+    loadServerWeeklySchedule();
   }, []);
 
   // Fetch registration codes
@@ -528,9 +557,16 @@ const Settings = () => {
     localStorage.setItem('qrUploadEnabled', newValue.toString());
   };
 
-  const persistWeeklySchedule = (nextSchedule) => {
+  const persistWeeklySchedule = async (nextSchedule) => {
     setWeeklySchedule(nextSchedule);
     localStorage.setItem('weeklyCellSchedule', JSON.stringify(nextSchedule));
+    try {
+      await axios.put('/api/schedule/weekly-cells', { schedule: nextSchedule });
+    } catch (error) {
+      console.error('Error saving weekly schedule to server:', error);
+      // Keep local changes but warn user
+      alert('Schedule saved locally, but failed to sync to server. Please try again.');
+    }
   };
 
   const toggleCellForSelectedDay = (cellId) => {

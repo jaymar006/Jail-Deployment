@@ -330,6 +330,13 @@ const initializeSchema = async () => {
           token VARCHAR(255) NOT NULL UNIQUE,
           expires_at TIMESTAMP NOT NULL,
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )`,
+        `CREATE TABLE IF NOT EXISTS weekly_cell_schedule (
+          day_key VARCHAR(16) NOT NULL,
+          cell_id INTEGER NOT NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          PRIMARY KEY (day_key, cell_id)
         )`
       ];
 
