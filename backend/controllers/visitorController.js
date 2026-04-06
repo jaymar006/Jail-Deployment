@@ -21,7 +21,8 @@ const formatToAppTimezone = (input) => {
       hour: '2-digit',
       minute: '2-digit',
       second: '2-digit',
-      hour12: false
+      hour12: false,
+      hourCycle: 'h23'
     });
 
     const parts = formatter.formatToParts(date).reduce((acc, part) => {
@@ -35,7 +36,10 @@ const formatToAppTimezone = (input) => {
     if (!year || !month || !day || !hour || !minute || !second) {
       return date.toISOString().slice(0, 19).replace('T', ' ');
     }
-    return `${year}-${month}-${day} ${hour}:${minute}:${second}`;
+    // Some runtimes can still emit hour "24" in 24-hour formatting.
+    // Normalize to "00" to keep SQL datetime values valid.
+    const safeHour = hour === '24' ? '00' : hour;
+    return `${year}-${month}-${day} ${safeHour}:${minute}:${second}`;
   } catch (error) {
     logger.error('Failed to format date to application timezone:', error);
     return date.toISOString().slice(0, 19).replace('T', ' ');
