@@ -216,19 +216,21 @@ const Dashboard = () => {
 
   const showToast = useCallback((message, type = 'success') => {
     logger.debug('showToast called:', { message, type, timestamp: new Date().toISOString() });
-    logger.debug('Current toast state before update:', toast);
-    
+
     setToast({ show: true, message, type });
-    
+
     if (type === 'error') {
       logger.error('ERROR TOAST:', message);
     }
-    
+
     setTimeout(() => {
       logger.debug('Toast hiding after 4 seconds');
-      setToast({ show: false, message: '', type: '' });
-    }, 4000); // Increased to 4 seconds for better visibility
-  }, [toast]);
+      setToast(prev => (prev.message === message && prev.type === type
+        ? { show: false, message: '', type: '' }
+        : prev
+      ));
+    }, 4000);
+  }, []);
 
   const fetchVisitors = useCallback(async () => {
     try {
