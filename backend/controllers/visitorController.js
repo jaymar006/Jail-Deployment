@@ -96,12 +96,43 @@ const parseDbTimestampToDate = (value) => {
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 };
 
-const getOpenScanCooldownMeta = (openScan, referenceDate) => {
-  if (!openScan || openScan.time_out) return null;
-  const timeInDate = parseDbTimestampToDate(openScan.time_in);
-  if (!timeInDate) return null;
+// Parse "YYYY-MM-DD HH:mm:ss" (or Date/ISO) into comparable milliseconds.
+// For SQL-style strings we parse as a "floating" timestamp via Date.UTC so both
+// values are compared in the same frame without host-timezone drift.
+const parseComparableTimestampMs = (value) => {
+  if (!value) return null;
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? null : value.getTime();
+  }
 
-  const elapsedMs = referenceDate.getTime() - timeInDate.getTime();
+  if (typeof value === 'string') {
+    const sqlMatch = value.match(
+      /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2}):(\d{2})$/
+    );
+    if (sqlMatch) {
+      const [, y, m, d, h, min, s] = sqlMatch;
+      return Date.UTC(
+        Number(y),
+        Number(m) - 1,
+        Number(d),
+        Number(h),
+        Number(min),
+        Number(s)
+      );
+    }
+  }
+
+  const parsed = parseDbTimestampToDate(value);
+  return parsed ? parsed.getTime() : null;
+};
+
+const getOpenScanCooldownMeta = (openScan, referenceTimestamp) => {
+  if (!openScan || openScan.time_out) return null;
+  const timeInMs = parseComparableTimestampMs(openScan.time_in);
+  const referenceMs = parseComparableTimestampMs(referenceTimestamp);
+  if (timeInMs === null || referenceMs === null) return null;
+
+  const elapsedMs = referenceMs - timeInMs;
   if (elapsedMs < 0 || elapsedMs >= DUPLICATE_SCAN_COOLDOWN_MS) return null;
 
   return {
@@ -109,6 +140,38 @@ const getOpenScanCooldownMeta = (openScan, referenceDate) => {
     elapsedSeconds: Math.max(0, Math.floor(elapsedMs / 1000)),
     cooldownSeconds: Math.floor(DUPLICATE_SCAN_COOLDOWN_MS / 1000)
   };
+};
+
+/** Calendar day (YYYY-MM-DD) in APP_TIMEZONE for a DB string, Date, or localized SQL string. */
+const getCalendarDayKeyInAppTimezone = (value) => {
+  if (!value) return null;
+  if (typeof value === 'string') {
+    const head = value.match(/^(\d{4}-\d{2}-\d{2})/);
+    if (head) return head[1];
+  }
+  const parsed = parseDbTimestampToDate(value);
+  if (!parsed) return null;
+  const localized = formatToAppTimezone(parsed);
+  return localized ? localized.slice(0, 10) : null;
+};
+
+/**
+ * Open visits from a previous calendar day are ignored for time-out / cooldown:
+ * the next scan starts a fresh time_in without writing time_out on the old row.
+ */
+const getEffectiveOpenScan = (openScan, referenceLocalizedTimestamp) => {
+  if (!openScan || openScan.time_out) return null;
+  const refDay = getCalendarDayKeyInAppTimezone(referenceLocalizedTimestamp);
+  const scanDay = getCalendarDayKeyInAppTimezone(openScan.time_in || openScan.scan_date);
+  if (!refDay || !scanDay || scanDay !== refDay) {
+    logger.debug('Ignoring stale open scan (different calendar day than scan):', {
+      openScanId: openScan.id,
+      scanDay,
+      refDay
+    });
+    return null;
+  }
+  return openScan;
 };
 
 exports.getVisitorsByPdl = async (req, res) => {
@@ -483,10 +546,20 @@ exports.addScannedVisitor = async (req, res) => {
         openScan = await ScannedVisitor.findOpenScanByVisitorName(visitor_name);
       }
       logger.debug('Final openScan result:', openScan ? `Found open scan ID ${openScan.id}` : 'No open scan found');
+
+      let referenceDate = device_time ? new Date(device_time) : new Date();
+      if (Number.isNaN(referenceDate.getTime())) {
+        referenceDate = new Date();
+      }
+      let localizedTimestamp = formatToAppTimezone(referenceDate);
+      if (!localizedTimestamp) {
+        localizedTimestamp = formatToAppTimezone(new Date());
+      }
+      openScan = getEffectiveOpenScan(openScan, localizedTimestamp);
       
       if (only_check) {
         if (openScan && !openScan.time_out) {
-          const cooldownMeta = getOpenScanCooldownMeta(openScan, new Date());
+          const cooldownMeta = getOpenScanCooldownMeta(openScan, localizedTimestamp);
           if (cooldownMeta) {
             return res.status(200).json({
               action: 'duplicate_ignored',
@@ -518,20 +591,10 @@ exports.addScannedVisitor = async (req, res) => {
       
       // Continue with time_in/time_out logic below...
       const normalizedPurpose = purpose ? purpose.trim() : 'normal';
-      
-      // Use client-provided device time if valid ISO string; fallback to server time
-      let referenceDate = device_time ? new Date(device_time) : new Date();
-      if (Number.isNaN(referenceDate.getTime())) {
-        referenceDate = new Date();
-      }
-      let localizedTimestamp = formatToAppTimezone(referenceDate);
-      if (!localizedTimestamp) {
-        localizedTimestamp = formatToAppTimezone(new Date());
-      }
 
       if (openScan) {
         if (!openScan.time_out) {
-          const cooldownMeta = getOpenScanCooldownMeta(openScan, referenceDate);
+          const cooldownMeta = getOpenScanCooldownMeta(openScan, localizedTimestamp);
           if (cooldownMeta) {
             return res.status(200).json({
               message: `Duplicate scan ignored within ${cooldownMeta.cooldownSeconds}-second cooldown.`,
@@ -642,10 +705,20 @@ exports.addScannedVisitor = async (req, res) => {
         openScan = await ScannedVisitor.findOpenScanByVisitorName(visitor_name);
       }
       logger.debug('Final openScan result:', openScan ? `Found open scan ID ${openScan.id}` : 'No open scan found');
+
+      let referenceDate = device_time ? new Date(device_time) : new Date();
+      if (Number.isNaN(referenceDate.getTime())) {
+        referenceDate = new Date();
+      }
+      let localizedTimestamp = formatToAppTimezone(referenceDate);
+      if (!localizedTimestamp) {
+        localizedTimestamp = formatToAppTimezone(new Date());
+      }
+      openScan = getEffectiveOpenScan(openScan, localizedTimestamp);
       
       if (only_check) {
         if (openScan && !openScan.time_out) {
-          const cooldownMeta = getOpenScanCooldownMeta(openScan, new Date());
+          const cooldownMeta = getOpenScanCooldownMeta(openScan, localizedTimestamp);
           if (cooldownMeta) {
             return res.status(200).json({
               action: 'duplicate_ignored',
@@ -677,20 +750,10 @@ exports.addScannedVisitor = async (req, res) => {
       
       // Continue with time_in/time_out logic below...
       const normalizedPurpose = purpose ? purpose.trim() : 'normal';
-      
-      // Use client-provided device time if valid ISO string; fallback to server time
-      let referenceDate = device_time ? new Date(device_time) : new Date();
-      if (Number.isNaN(referenceDate.getTime())) {
-        referenceDate = new Date();
-      }
-      let localizedTimestamp = formatToAppTimezone(referenceDate);
-      if (!localizedTimestamp) {
-        localizedTimestamp = formatToAppTimezone(new Date());
-      }
 
       if (openScan) {
         if (!openScan.time_out) {
-          const cooldownMeta = getOpenScanCooldownMeta(openScan, referenceDate);
+          const cooldownMeta = getOpenScanCooldownMeta(openScan, localizedTimestamp);
           if (cooldownMeta) {
             return res.status(200).json({
               message: `Duplicate scan ignored within ${cooldownMeta.cooldownSeconds}-second cooldown.`,
@@ -776,7 +839,7 @@ exports.addScannedVisitor = async (req, res) => {
       return null;
     };
 
-    const openScan = await findOpenScan();
+    let openScan = await findOpenScan();
 
     // Check verified_conjugal status from visitors table
     let verifiedConjugal = false;
@@ -790,9 +853,20 @@ exports.addScannedVisitor = async (req, res) => {
       // Continue without verified_conjugal check if it fails
     }
 
+    let referenceDate = device_time ? new Date(device_time) : new Date();
+    if (Number.isNaN(referenceDate.getTime())) {
+      referenceDate = new Date();
+    }
+    let localizedTimestamp = formatToAppTimezone(referenceDate);
+    if (!localizedTimestamp) {
+      localizedTimestamp = formatToAppTimezone(new Date());
+    }
+
+    openScan = getEffectiveOpenScan(openScan, localizedTimestamp);
+
     if (only_check) {
       if (openScan && !openScan.time_out) {
-        const cooldownMeta = getOpenScanCooldownMeta(openScan, new Date());
+        const cooldownMeta = getOpenScanCooldownMeta(openScan, localizedTimestamp);
         if (cooldownMeta) {
           return res.status(200).json({
             action: 'duplicate_ignored',
@@ -815,19 +889,9 @@ exports.addScannedVisitor = async (req, res) => {
 
     logger.debug('Found openScan:', openScan);
 
-    // Use client-provided device time if valid ISO string; fallback to server time
-    let referenceDate = device_time ? new Date(device_time) : new Date();
-    if (Number.isNaN(referenceDate.getTime())) {
-      referenceDate = new Date();
-    }
-    let localizedTimestamp = formatToAppTimezone(referenceDate);
-    if (!localizedTimestamp) {
-      localizedTimestamp = formatToAppTimezone(new Date());
-    }
-
     if (openScan) {
       if (!openScan.time_out) {
-        const cooldownMeta = getOpenScanCooldownMeta(openScan, referenceDate);
+        const cooldownMeta = getOpenScanCooldownMeta(openScan, localizedTimestamp);
         if (cooldownMeta) {
           return res.status(200).json({
             message: `Duplicate scan ignored within ${cooldownMeta.cooldownSeconds}-second cooldown.`,
@@ -847,7 +911,7 @@ exports.addScannedVisitor = async (req, res) => {
       // CRITICAL: Double-check for openScan before creating new record (race condition fix)
       // This prevents duplicate records when multiple requests come in simultaneously
       logger.debug('⚠️ No openScan found on first check - performing double-check to prevent race condition...');
-      const doubleCheckOpenScan = await findOpenScan();
+      const doubleCheckOpenScan = getEffectiveOpenScan(await findOpenScan(), localizedTimestamp);
       if (doubleCheckOpenScan) {
         logger.debug('✅ Double-check found openScan - another request may have created it. Updating instead of creating new record.');
         // Another request just created this record, update it instead
@@ -861,7 +925,10 @@ exports.addScannedVisitor = async (req, res) => {
       }
       // Additional safeguard: Check for very recently created records (within last 5 seconds)
       // This catches race conditions where a record was just created but not yet visible in the first check
-      const recentScan = await ScannedVisitor.findRecentScanByVisitorDetails(visitor_name, pdl_name, formattedCell, 5);
+      let recentScan = await ScannedVisitor.findRecentScanByVisitorDetails(visitor_name, pdl_name, formattedCell, 5);
+      if (recentScan && !recentScan.time_out) {
+        recentScan = getEffectiveOpenScan(recentScan, localizedTimestamp);
+      }
       if (recentScan && !recentScan.time_out) {
         // Found a recent open scan - this is likely a time_out request that didn't find the openScan due to race condition
         logger.warn('⚠️ Found recent open scan created within last 5 seconds - treating as time_out to prevent duplicate');
