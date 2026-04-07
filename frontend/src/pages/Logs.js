@@ -14,6 +14,8 @@ const Logs = () => {
   const [filterType, setFilterType] = useState('all'); // 'all', 'year', 'month', 'day'
   const [filterValue, setFilterValue] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  /** 'all' | 'normal' | 'conjugal' — matches scanned_visitors.purpose */
+  const [purposeFilter, setPurposeFilter] = useState('all');
   const [availableCells, setAvailableCells] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 20;
@@ -58,7 +60,7 @@ const Logs = () => {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, filterType, filterValue]);
+  }, [searchTerm, filterType, filterValue, purposeFilter]);
 
   useEffect(() => {
     if (tableWrapperRef.current) {
@@ -154,6 +156,20 @@ const Logs = () => {
           default:
             return true;
         }
+      });
+    }
+
+    // Visit type (purpose): normal vs conjugal
+    if (purposeFilter !== 'all') {
+      filtered = filtered.filter((visitor) => {
+        const p = (visitor.purpose || '').toLowerCase().trim();
+        if (purposeFilter === 'normal') {
+          return p === 'normal' || p === '';
+        }
+        if (purposeFilter === 'conjugal') {
+          return p === 'conjugal';
+        }
+        return true;
       });
     }
 
@@ -595,8 +611,32 @@ const Logs = () => {
                   </div>
                 </div>
                 
-                {/* Empty Middle Column - Creates Space */}
-                <div></div>
+                {/* Visit type filter */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifySelf: 'center' }}>
+                  <label htmlFor="logs-purpose-filter" style={{ fontWeight: '600', color: '#374151', fontSize: '14px' }}>
+                    Visit type:
+                  </label>
+                  <select
+                    id="logs-purpose-filter"
+                    value={purposeFilter}
+                    onChange={(e) => setPurposeFilter(e.target.value)}
+                    aria-label="Filter logs by visit type"
+                    style={{
+                      padding: '8px 12px',
+                      border: '2px solid #e5e7eb',
+                      borderRadius: '6px',
+                      fontSize: '12px',
+                      background: '#fff',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      minWidth: '140px'
+                    }}
+                  >
+                    <option value="all">All</option>
+                    <option value="normal">Normal</option>
+                    <option value="conjugal">Conjugal Visit</option>
+                  </select>
+                </div>
                 
                 {/* Show Only Section - Right Column */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifySelf: 'end' }}>

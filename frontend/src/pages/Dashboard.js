@@ -838,6 +838,8 @@ const Dashboard = () => {
       setVerifiedConjugal(conjugalVerified);
 
       // STEP 2.5: Enforce today's scheduled cells (block unscheduled scans)
+      // Conjugal-verified visitors may proceed when unscheduled so staff can choose Normal vs Conjugal;
+      // normal-only visits still require the cell to be scheduled (enforced at purpose selection if needed).
       // For new QR format (visitor_id-only), rely on backend-resolved cell.
       // For old QR format, fall back to cell extracted directly from QR.
       const cellToCheck = responseCell || cell;
@@ -849,7 +851,7 @@ const Dashboard = () => {
         return;
       }
       const scheduledOk = isCellNumberScheduled(cellToCheck, cellsToUse);
-      if (!scheduledOk) {
+      if (!scheduledOk && !conjugalVerified) {
         logger.warn('Cell not scheduled for today; blocking scan:', { cellToCheck });
         lastUnscheduledBlockRef.current = { sig, at: Date.now() };
         showToast(`Cell ${cellToCheck} is not scheduled for today's visits.`, 'error');
@@ -1060,7 +1062,8 @@ const Dashboard = () => {
         visitor_id: visitorId,
         visitor_name: responseVisitorName,
         pdl_name: responsePdlName,
-        cell: responseCell
+        cell: responseCell,
+        cellScheduledToday: scheduledOk
       });
       setShowPurposeModal(true);
       logger.debug('Purpose modal opened (conjugal verified visitor)');
@@ -1113,6 +1116,15 @@ const Dashboard = () => {
     
     if (!pendingScanData) {
       logger.error('No pending scan data!');
+      return;
+    }
+
+    if (purpose === 'normal' && pendingScanData.cellScheduledToday === false) {
+      const cellLabel = pendingScanData.cell || 'this cell';
+      showToast(
+        `Regular visits require ${cellLabel} to be scheduled for today's visits. Choose Conjugal or add this cell to today's schedule.`,
+        'error'
+      );
       return;
     }
 
