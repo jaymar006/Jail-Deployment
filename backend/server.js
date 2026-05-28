@@ -56,25 +56,21 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json());
 
-app.use('/pdls', pdlRoutes);
-app.use('/api/cells', cellRoutes);
-app.use('/api/schedule', scheduleRoutes);
-app.use('/api', visitorRoutes);
-app.use('/auth', authRoutes);
-
-// Health check endpoint for deployment platforms
+// Health check must be registered before app.use('/api', visitorRoutes),
+// otherwise visitor auth middleware intercepts /api/health.
 app.get('/api/health', (req, res) => {
-  res.json({ 
-    status: 'OK', 
+  res.json({
+    status: 'OK',
     message: 'Server is running!',
     timestamp: new Date().toISOString()
   });
 });
 
-// Test route to verify server is working
-app.get('/test', (req, res) => {
-  res.json({ message: 'Server is running!' });
-});
+app.use('/pdls', pdlRoutes);
+app.use('/api/cells', cellRoutes);
+app.use('/api/schedule', scheduleRoutes);
+app.use('/api', visitorRoutes);
+app.use('/auth', authRoutes);
 
 const errorHandler = require('./middleware/errorHandler');
 app.use(errorHandler);

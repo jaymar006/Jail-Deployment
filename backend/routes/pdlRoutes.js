@@ -1,11 +1,70 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../config/db');
+const authMiddleware = require('../middleware/authMiddleware');
+
+// Require authentication for all PDL routes
+router.use(authMiddleware);
 
 // GET all PDLs
 router.get('/', async (req, res) => {
   const [rows] = await db.query('SELECT * FROM pdls');
   res.json(rows);
+});
+
+// GET all PDLs with their visitors (must be registered before /:id)
+router.get('/with-visitors', async (req, res) => {
+  try {
+    const [rows] = await db.query(`
+      SELECT 
+        pdls.id AS pdl_id,
+        pdls.first_name AS pdl_first_name,
+        pdls.last_name AS pdl_last_name,
+        pdls.middle_name AS pdl_middle_name,
+        visitors.id AS visitor_id,
+        visitors.name AS visitor_name,
+        visitors.relationship,
+        visitors.age,
+        visitors.address,
+        visitors.valid_id,
+        visitors.date_of_application,
+        visitors.contact_number
+      FROM pdls
+      LEFT JOIN visitors ON pdls.id = visitors.pdl_id
+      ORDER BY pdls.last_name, pdls.first_name, visitors.name
+    `);
+
+    const pdlMap = new Map();
+    rows.forEach(row => {
+      const pdlId = row.pdl_id;
+      if (!pdlMap.has(pdlId)) {
+        pdlMap.set(pdlId, {
+          pdl_id: pdlId,
+          pdl_first_name: row.pdl_first_name,
+          pdl_last_name: row.pdl_last_name,
+          pdl_middle_name: row.pdl_middle_name,
+          visitors: []
+        });
+      }
+      if (row.visitor_id) {
+        pdlMap.get(pdlId).visitors.push({
+          visitor_id: row.visitor_id,
+          visitor_name: row.visitor_name,
+          relationship: row.relationship,
+          age: row.age,
+          address: row.address,
+          valid_id: row.valid_id,
+          date_of_application: row.date_of_application,
+          contact_number: row.contact_number
+        });
+      }
+    });
+
+    res.json(Array.from(pdlMap.values()));
+  } catch (err) {
+    console.error('Error fetching PDLs with visitors:', err);
+    res.status(500).json({ error: 'Failed to fetch PDLs with visitors' });
+  }
 });
 
 // GET single PDL by ID
@@ -106,63 +165,6 @@ router.delete('/:id', async (req, res) => {
   } catch (err) {
     console.error('Error deleting PDL:', err);
     res.status(500).json({ error: 'Failed to delete PDL' });
-  }
-});
-
-router.get('/with-visitors', async (req, res) => {
-  try {
-    const [rows] = await db.query(`
-      SELECT 
-        pdls.id AS pdl_id,
-        pdls.first_name AS pdl_first_name,
-        pdls.last_name AS pdl_last_name,
-        pdls.middle_name AS pdl_middle_name,
-        visitors.id AS visitor_id,
-        visitors.name AS visitor_name,
-        visitors.relationship,
-        visitors.age,
-        visitors.address,
-        visitors.valid_id,
-        visitors.date_of_application,
-        visitors.contact_number
-      FROM pdls
-      LEFT JOIN visitors ON pdls.id = visitors.pdl_id
-      ORDER BY pdls.last_name, pdls.first_name, visitors.name
-    `);
-
-    // Group visitors by PDL
-    const pdlMap = new Map();
-    rows.forEach(row => {
-      const pdlId = row.pdl_id;
-      if (!pdlMap.has(pdlId)) {
-        pdlMap.set(pdlId, {
-          pdl_id: pdlId,
-          pdl_first_name: row.pdl_first_name,
-          pdl_last_name: row.pdl_last_name,
-          pdl_middle_name: row.pdl_middle_name,
-          visitors: []
-        });
-      }
-      if (row.visitor_id) {
-        pdlMap.get(pdlId).visitors.push({
-          visitor_id: row.visitor_id,
-          visitor_name: row.visitor_name,
-          relationship: row.relationship,
-          age: row.age,
-          address: row.address,
-          valid_id: row.valid_id,
-          date_of_application: row.date_of_application,
-          contact_number: row.contact_number
-        });
-      }
-    });
-
-    // Convert map to array
-    const result = Array.from(pdlMap.values());
-    res.json(result);
-  } catch (err) {
-    console.error('Error fetching PDLs with visitors:', err);
-    res.status(500).json({ error: 'Failed to fetch PDLs with visitors' });
   }
 });
 
