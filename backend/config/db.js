@@ -1,28 +1,40 @@
 const fs = require('fs');
 const path = require('path');
 
-// Check if DATABASE_URL is set (PostgreSQL/Neon) or use SQLite
-const usePostgres = !!process.env.DATABASE_URL;
+// Check database type: mssql, postgres (DATABASE_URL), or sqlite
+const dbType = (process.env.DB_TYPE || '').toLowerCase();
+const useMssql = dbType === 'mssql' || !!process.env.MSSQL_SERVER;
+const usePostgres = dbType === 'postgres' || (!useMssql && !!process.env.DATABASE_URL);
 
 let db;
-if (usePostgres) {
+if (useMssql) {
+  console.log('🔌 Using Microsoft SQL Server database');
+  db = require('./db.mssql');
+  module.exports = db;
+} else if (usePostgres) {
   // Use PostgreSQL (Neon)
   console.log('🔌 Using PostgreSQL database (Neon)');
   db = require('./db.postgres');
   module.exports = db;
 } else {
-  // Use SQLite (local development)
-  console.log('🔌 Using SQLite database (local)');
+  // Use SQLite (local development / desktop app)
+  console.log('🔌 Using SQLite database (local / standalone desktop)');
   const sqlite3 = require('sqlite3').verbose();
 
-  // Ensure data directory exists
-  const dataDir = path.join(__dirname, '..', 'data');
+  // Custom DB file path for Electron desktop app or fallback to default data folder
+  const customDbPath = process.env.SQLITE_DB_PATH || (process.env.USER_DATA_PATH ? path.join(process.env.USER_DATA_PATH, 'data', 'jail_visitation.sqlite') : null);
+  const dataDir = customDbPath ? path.dirname(customDbPath) : path.join(__dirname, '..', 'data');
+
   if (!fs.existsSync(dataDir)) {
     fs.mkdirSync(dataDir, { recursive: true });
   }
 
-  const dbFilePath = path.join(dataDir, 'jail_visitation.sqlite');
+  const dbFilePath = customDbPath || path.join(dataDir, 'jail_visitation.sqlite');
   const sqliteDb = new sqlite3.Database(dbFilePath);
+
+  // Enable WAL mode & foreign keys for high performance
+  sqliteDb.run('PRAGMA journal_mode = WAL;');
+  sqliteDb.run('PRAGMA synchronous = NORMAL;');
 
 // Initialize schema (SQLite-compatible)
 const schemaStatements = `

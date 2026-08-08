@@ -1,8 +1,8 @@
 {
   "name": "jail-information-system",
   "version": "1.0.0",
-  "description": "Jail Information System - Backend API",
-  "main": "backend/server.js",
+  "description": "Jail Information System - Desktop Standalone Application",
+  "main": "main.js",
   "scripts": {
     "setup": "node setup_env.js",
     "postinstall": "node setup_env.js",
@@ -14,7 +14,17 @@
     "serve": "cd frontend && npx serve -s build -l 3000",
     "start-prod": "npm run build && npm run serve",
     "db:export": "node backend/scripts/exportDatabase.js",
-    "db:import": "node backend/scripts/importDatabase.js"
+    "db:import": "node backend/scripts/importDatabase.js",
+    "electron:dev": "cross-env NODE_ENV=development electron .",
+    "electron:pack": "npm run build && electron-builder --dir",
+    "electron:build": "npm run build && electron-builder"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "cross-env": "^7.0.3",
+    "electron": "^34.0.0",
+    "electron-builder": "^25.1.8",
+    "wait-on": "^7.2.0"
   },
   "engines": {
     "node": ">=16.0.0",
@@ -24,8 +34,10 @@
     "jail",
     "information",
     "system",
-    "api",
-    "nodejs",
+    "desktop",
+    "electron",
+    "sqlite",
+    "mssql",
     "express"
   ],
   "author": "Your Name",
