@@ -1,0 +1,39 @@
+{
+  "$schema": "https://raw.githubusercontent.com/electron-userland/electron-builder/master/packages/app-builder-lib/scheme.json",
+  "appId": "com.jailsystem.app",
+  "productName": "Jail Information System",
+  "copyright": "Copyright © 2026 Jail Information System",
+  "directories": {
+    "output": "dist"
+  },
+  "files": [
+    "main.js",
+    "preload.js",
+    "package.json",
+    "backend/**/*",
+    "frontend/build/**/*"
+  ],
+  "asarUnpack": [
+    "**/node_modules/sqlite3/**/*",
+    "**/node_modules/bcrypt/**/*"
+  ],
+  "win": {
+    "target": [
+      {
+        "target": "nsis",
+        "arch": ["x64"]
+      },
+      {
+        "target": "portable",
+        "arch": ["x64"]
+      }
+    ]
+  },
+  "nsis": {
+    "oneClick": false,
+    "allowToChangeInstallationDirectory": true,
+    "createDesktopShortcut": true,
+    "createStartMenuShortcut": true,
+    "shortcutName": "Jail Information System"
+  }
+}
