@@ -230,14 +230,44 @@ sqliteDb.serialize(() => {
           }
         });
 
-        // Drop legacy email column if it exists in SQLite
+        // Remove legacy email column from users table using table recreation
+        // (SQLite cannot DROP COLUMN with UNIQUE constraint via ALTER TABLE)
         sqliteDb.all(`PRAGMA table_info(users);`, (e, rows) => {
           if (e) return console.error('Failed to read users schema:', e);
           const hasEmail = rows && rows.some(r => r.name === 'email');
           if (hasEmail) {
-            sqliteDb.run(`ALTER TABLE users DROP COLUMN email`, (alterErr) => {
-              if (alterErr) console.error('Failed to drop users.email:', alterErr);
-              else console.log('Dropped users.email column');
+            console.log('Migrating users table: removing legacy email column...');
+            sqliteDb.serialize(() => {
+              sqliteDb.run('BEGIN TRANSACTION;');
+              // 1. Create new users table without email column
+              sqliteDb.run(`
+                CREATE TABLE IF NOT EXISTS users_new (
+                  id INTEGER PRIMARY KEY AUTOINCREMENT,
+                  username TEXT NOT NULL UNIQUE,
+                  password TEXT NOT NULL,
+                  telegram_username TEXT,
+                  created_at TEXT DEFAULT (datetime('now'))
+                )
+              `);
+              // 2. Copy existing data (excluding email column)
+              sqliteDb.run(`
+                INSERT INTO users_new (id, username, password, telegram_username, created_at)
+                SELECT id, username, password, telegram_username, created_at FROM users
+              `);
+              // 3. Drop old table
+              sqliteDb.run(`DROP TABLE users`);
+              // 4. Rename new table
+              sqliteDb.run(`ALTER TABLE users_new RENAME TO users`, (renameErr) => {
+                if (renameErr) {
+                  sqliteDb.run('ROLLBACK;');
+                  console.error('Failed to migrate users table:', renameErr);
+                } else {
+                  sqliteDb.run('COMMIT;', (commitErr) => {
+                    if (commitErr) console.error('Failed to commit migration:', commitErr);
+                    else console.log('✅ Migrated users table: removed legacy email column');
+                  });
+                }
+              });
             });
           }
         });
