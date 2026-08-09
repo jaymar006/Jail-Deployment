@@ -105,7 +105,6 @@ CREATE TABLE IF NOT EXISTS users (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   username TEXT NOT NULL UNIQUE,
   password TEXT NOT NULL,
-  email TEXT NOT NULL UNIQUE,
   telegram_username TEXT,
   created_at TEXT DEFAULT (datetime('now'))
 );
@@ -186,13 +185,12 @@ sqliteDb.serialize(() => {
       ensureColumn('visitors', 'verified_conjugal', 'INTEGER', 'DEFAULT 0');
       // Scanned visitors: purpose TEXT
       ensureColumn('scanned_visitors', 'purpose', 'TEXT');
-      // Users: email
-      ensureColumn('users', 'email', 'TEXT', '');
+      // Users: email column is removed
       // Users: telegram_username
       ensureColumn('users', 'telegram_username', 'TEXT', '');
       
-      // Migration: Rename dorm columns to cell
-      const migrateDormToCell = () => {
+      // Migration: Rename dorm columns to cell, drop legacy email column
+      const runMigrations = () => {
         // Check if dorm_number exists in pdls table and rename to cell_number
         sqliteDb.all(`PRAGMA table_info(pdls);`, (e, rows) => {
           if (e) return console.error('Failed to read pdls schema:', e);
@@ -231,10 +229,22 @@ sqliteDb.serialize(() => {
             });
           }
         });
+
+        // Drop legacy email column if it exists in SQLite
+        sqliteDb.all(`PRAGMA table_info(users);`, (e, rows) => {
+          if (e) return console.error('Failed to read users schema:', e);
+          const hasEmail = rows && rows.some(r => r.name === 'email');
+          if (hasEmail) {
+            sqliteDb.run(`ALTER TABLE users DROP COLUMN email`, (alterErr) => {
+              if (alterErr) console.error('Failed to drop users.email:', alterErr);
+              else console.log('Dropped users.email column');
+            });
+          }
+        });
       };
       
       // Run migration
-      migrateDormToCell();
+      runMigrations();
     }
   });
 });

@@ -29,6 +29,7 @@ This folder contains all documentation files for the Jail Visitation Management 
 
 ### 🔧 Setup & Configuration
 - **SETUP.md** - Initial project setup guide
+- **USEFUL_COMMANDS.md** - Quick reference for scripts and npm/docker commands
 - **LOCAL_NETWORK_SETUP.md** - Local network configuration
 
 ### 🔒 Security
@@ -51,6 +52,7 @@ This folder contains all documentation files for the Jail Visitation Management 
 **New to the project?** Start with:
 1. [SETUP.md](./SETUP.md) - Initial setup
 2. [DEPLOYMENT.md](./DEPLOYMENT.md) - Deployment overview
+3. [USEFUL_COMMANDS.md](./USEFUL_COMMANDS.md) - Command quick reference
 
 **Deploying to Render?** Check:
 1. [RENDER_DEPLOYMENT.md](./RENDER_DEPLOYMENT.md) - Complete guide
