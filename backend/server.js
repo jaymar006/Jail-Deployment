@@ -42,7 +42,11 @@ const corsOptions = {
       process.env.FRONTEND_URL || 'http://localhost:3000',
     ];
     
-    if (allowedOrigins.includes(origin)) {
+    if (
+      allowedOrigins.includes(origin) ||
+      origin.startsWith('http://localhost:') ||
+      origin.startsWith('http://127.0.0.1:')
+    ) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));
