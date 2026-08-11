@@ -11,6 +11,8 @@ const visitorRoutes = require('./routes/visitorRoutes');
 const authRoutes = require('./routes/authRoutes');
 const cellRoutes = require('./routes/cellRoutes');
 const scheduleRoutes = require('./routes/scheduleRoutes');
+const cron = require('node-cron');
+const backupService = require('./services/backupService');
 
 const app = express();
 
@@ -179,6 +181,31 @@ const startServer = async () => {
           // Don't crash - server can still run
         }
       }, 1000);
+
+      // Initialize automatic database backup and cleanup cron job (runs every day at midnight)
+      cron.schedule('0 0 * * *', async () => {
+        try {
+          logger.info('⏰ Starting scheduled database backup and cleanup...');
+          const report = await backupService.runScheduledBackup();
+          logger.info(`✅ Scheduled backup completed successfully: ${report.backupFile}`);
+        } catch (error) {
+          logger.error('❌ Scheduled backup failed:', error.message);
+        }
+      });
+      logger.info('⏰ Database backup and cleanup cron job scheduled (daily at midnight)');
+
+      // Run a backup on startup if explicitly requested via environment variable (useful for testing/verifying)
+      if (process.env.RUN_BACKUP_ON_STARTUP === 'true') {
+        setTimeout(async () => {
+          try {
+            logger.info('🚀 Triggering startup database backup and cleanup...');
+            const report = await backupService.runScheduledBackup();
+            logger.info(`✅ Startup database backup completed: ${report.backupFile}`);
+          } catch (error) {
+            logger.error('❌ Startup database backup failed:', error.message);
+          }
+        }, 5000);
+      }
     });
     
     // Handle server errors
