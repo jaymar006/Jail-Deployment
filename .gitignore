@@ -161,4 +161,4 @@ backend/utils/service-account.json
 backend/.env    
 # Package lock files (optional - uncomment if you want to ignore)
 # package-lock.json
-# yarn.lock
+# yarn.lockbackend/google-drive-token.json
