@@ -1,40 +1,31 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import './Login.css';
+import Box from '@mui/material/Box';
+import TextField from '@mui/material/TextField';
+import Button from '@mui/material/Button';
+import Alert from '@mui/material/Alert';
+import InputAdornment from '@mui/material/InputAdornment';
+import IconButton from '@mui/material/IconButton';
+import Typography from '@mui/material/Typography';
+import CircularProgress from '@mui/material/CircularProgress';
+import Visibility from '@mui/icons-material/Visibility';
+import VisibilityOff from '@mui/icons-material/VisibilityOff';
+import { useToast } from '../components/ToastProvider';
+import AuthShell from '../components/AuthShell';
 
 const ResetPassword = () => {
   const [searchParams] = useSearchParams();
   const token = searchParams.get('token');
   const navigate = useNavigate();
-  
+
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordErrors, setPasswordErrors] = useState([]);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState('');
-  const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
   const [isResetting, setIsResetting] = useState(false);
-  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
-  const [isSmallMobile, setIsSmallMobile] = useState(window.innerWidth <= 480);
-
-  useEffect(() => {
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = previousOverflow || '';
-    };
-  }, []);
-
-  useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth <= 768);
-      setIsSmallMobile(window.innerWidth <= 480);
-    };
-
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
+  const showToast = useToast();
 
   useEffect(() => {
     if (!token) {
@@ -42,17 +33,10 @@ const ResetPassword = () => {
     }
   }, [token]);
 
-  const showToast = (message, type = 'success') => {
-    setToast({ show: true, message, type });
-    setTimeout(() => {
-      setToast({ show: false, message: '', type: 'success' });
-    }, 4000);
-  };
-
   const validatePasswordStrength = (pwd) => {
     const errors = [];
     if (!pwd) return errors;
-    
+
     if (pwd.length < 8) {
       errors.push('At least 8 characters');
     }
@@ -68,7 +52,7 @@ const ResetPassword = () => {
     if (!/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(pwd)) {
       errors.push('One special character');
     }
-    
+
     return errors;
   };
 
@@ -147,275 +131,120 @@ const ResetPassword = () => {
     }
   };
 
+  const textFieldProps = {
+    fullWidth: true,
+    size: 'small',
+    margin: 'dense',
+    sx: { mb: 1.5 },
+  };
+
   return (
-    <div className="login-container" style={{ 
-      padding: isMobile ? '1rem' : '2rem',
-      minHeight: '100vh',
-      height: 'auto'
-    }}>
-      <div className="login-header">
-        <div className="login-logos">
-          <img src="/logo1.png" alt="Logo 1" />
-          <img src="/logo2.png" alt="Logo 2" />
-          <img src="/logo3.png" alt="Logo 3" />
-        </div>
-        <h1 className="login-title" style={{
-          fontSize: isSmallMobile ? '1rem' : isMobile ? '1.2rem' : '1.8rem',
-          lineHeight: '1.3',
-          padding: isMobile ? '0 0.5rem' : '0'
-        }}>
-          SILANG MUNICIPAL JAIL VISITATION MANAGEMENT SYSTEM
-        </h1>
-      </div>
-      
-      <form className="login-form" onSubmit={handleSubmit} style={{
-        width: isMobile ? '100%' : '320px',
-        maxWidth: isMobile ? '100%' : '320px',
-        padding: isSmallMobile ? '1rem' : '1.5rem'
-      }}>
-        <div className="login-text" style={{
-          fontSize: isSmallMobile ? '1rem' : '1.3rem'
-        }}>Reset Password</div>
-        
-        {!token ? (
-          <div className="login-error" style={{ marginBottom: '20px' }}>
+    <AuthShell title="Reset Password">
+      {!token ? (
+        <>
+          <Alert severity="error" sx={{ mb: 2 }}>
             Invalid or missing reset token. Please request a new password reset link.
-          </div>
-        ) : (
-          <>
-            <p style={{ 
-              fontSize: isSmallMobile ? '0.8em' : '0.9em', 
-              color: '#6b7280', 
-              marginBottom: '20px', 
-              textAlign: 'center',
-              lineHeight: '1.5',
-              padding: isSmallMobile ? '0 0.5rem' : '0'
-            }}>
-              Enter your new password below. Make sure it meets all security requirements.
-            </p>
-            
-            <label>
-              New Password:
-              <div className="input-with-icon">
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  value={newPassword}
-                  onChange={(e) => handlePasswordChange(e.target.value)}
-                  placeholder={isSmallMobile ? "Min 8 chars, A-Z, a-z, 0-9, !@#" : "Min 8 chars, uppercase, lowercase, number, special char"}
-                  required
-                  autoFocus={!isSmallMobile}
-                  disabled={isResetting}
-                  style={{
-                    fontSize: isSmallMobile ? '16px' : '0.95rem',
-                    padding: isSmallMobile ? '0.875rem' : '0.75rem',
-                    minHeight: isSmallMobile ? '44px' : 'auto'
-                  }}
-                />
-                <button
-                  type="button"
-                  className="toggle-visibility"
-                  aria-label={showPassword ? 'Hide password' : 'Show password'}
-                  onClick={() => setShowPassword((v) => !v)}
-                >
-                  {showPassword ? (
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-5 0-9.27-3.11-11-8 1.02-2.76 2.86-5.06 5.06-6.64"/><path d="M1 1l22 22"/><path d="M10.58 10.58a2 2 0 1 0 2.83 2.83"/><path d="M16.24 7.76A10.94 10.94 0 0 1 23 12a10.94 10.94 0 0 1-2.06 3.34"/></svg>
-                  ) : (
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                  )}
-                </button>
-              </div>
-              {newPassword && passwordErrors.length > 0 && (
-                <div className="password-requirements" style={{ 
-                  fontSize: isSmallMobile ? '0.75em' : '0.85em', 
-                  color: '#d32f2f', 
-                  marginTop: '8px',
-                  lineHeight: '1.5'
-                }}>
-                  <div style={{ fontWeight: '600', marginBottom: '4px' }}>Password must contain:</div>
-                  <ul style={{ 
-                    margin: '5px 0', 
-                    paddingLeft: isSmallMobile ? '18px' : '20px',
-                    lineHeight: '1.6'
-                  }}>
-                    {passwordErrors.map((err, idx) => (
-                      <li key={idx} style={{ marginBottom: '2px' }}>{err}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-              {newPassword && passwordErrors.length === 0 && (
-                <div style={{ 
-                  fontSize: isSmallMobile ? '0.75em' : '0.85em', 
-                  color: '#2e7d32', 
-                  marginTop: '8px',
-                  fontWeight: '500'
-                }}>
-                  ✓ Password meets all requirements
-                </div>
-              )}
-            </label>
-            
-            <label>
-              Confirm New Password:
-              <div className="input-with-icon">
-                <input
-                  type={showConfirmPassword ? 'text' : 'password'}
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="Confirm your new password"
-                  required
-                  disabled={isResetting}
-                  style={{
-                    fontSize: isSmallMobile ? '16px' : '0.95rem',
-                    padding: isSmallMobile ? '0.875rem' : '0.75rem',
-                    minHeight: isSmallMobile ? '44px' : 'auto'
-                  }}
-                />
-                <button
-                  type="button"
-                  className="toggle-visibility"
-                  aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
-                  onClick={() => setShowConfirmPassword((v) => !v)}
-                >
-                  {showConfirmPassword ? (
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-5 0-9.27-3.11-11-8 1.02-2.76 2.86-5.06 5.06-6.64"/><path d="M1 1l22 22"/><path d="M10.58 10.58a2 2 0 1 0 2.83 2.83"/><path d="M16.24 7.76A10.94 10.94 0 0 1 23 12a10.94 10.94 0 0 1-2.06 3.34"/></svg>
-                  ) : (
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                  )}
-                </button>
-              </div>
-              {confirmPassword && newPassword !== confirmPassword && (
-                <div style={{ 
-                  fontSize: isSmallMobile ? '0.75em' : '0.85em', 
-                  color: '#d32f2f', 
-                  marginTop: '8px',
-                  fontWeight: '500'
-                }}>
-                  ✗ Passwords do not match
-                </div>
-              )}
-              {confirmPassword && newPassword === confirmPassword && newPassword && (
-                <div style={{ 
-                  fontSize: isSmallMobile ? '0.75em' : '0.85em', 
-                  color: '#2e7d32', 
-                  marginTop: '8px',
-                  fontWeight: '500'
-                }}>
-                  ✓ Passwords match
-                </div>
-              )}
-            </label>
-          </>
-        )}
-        
-        {error && <div className="login-error">{error}</div>}
-        
-        <div className="login-buttons" style={{
-          flexDirection: isMobile ? 'column' : 'row',
-          width: '100%'
-        }}>
-          <button 
-            type="submit" 
-            disabled={isResetting || !token} 
-            style={{ 
-              position: 'relative', 
-              minWidth: isMobile ? '100%' : '140px',
-              width: isMobile ? '100%' : 'auto',
-              minHeight: isSmallMobile ? '48px' : '44px',
-              fontSize: isSmallMobile ? '1rem' : '0.9rem',
-              padding: isSmallMobile ? '1rem 1.2rem' : '0.8rem 1.5rem'
-            }}
-          >
-            {isResetting ? (
-              <>
-                <svg
-                  style={{
-                    display: 'inline-block',
-                    width: '16px',
-                    height: '16px',
-                    marginRight: '8px',
-                    animation: 'spin 1s linear infinite',
-                    verticalAlign: 'middle'
-                  }}
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <circle cx="12" cy="12" r="10" opacity="0.25"/>
-                  <path d="M12 2a10 10 0 0 1 10 10" opacity="0.75"/>
-                </svg>
-                Resetting...
-              </>
-            ) : (
-              'Reset Password'
-            )}
-          </button>
-        </div>
-      </form>
-      
-      <div className="auth-links">
-        <div className="register-link-container">
-          <span>Remember your password? </span>
-          <button
-            type="button"
-            className="register-link"
-            onClick={() => navigate('/login')}
-          >
+          </Alert>
+          <Button fullWidth variant="contained" onClick={() => navigate('/login')}>
             Back to Login
-          </button>
-        </div>
-      </div>
-      
-      {/* Toast Notification */}
-      {toast.show && (
-        <div 
-          className={`toast toast-${toast.type}`}
-          style={{
-            top: isMobile ? '20px' : 'auto',
-            bottom: isMobile ? 'auto' : '20px',
-            right: isSmallMobile ? '10px' : '20px',
-            left: isSmallMobile ? '10px' : 'auto',
-            minWidth: isSmallMobile ? 'auto' : '300px',
-            maxWidth: isSmallMobile ? 'calc(100% - 20px)' : '400px',
-            padding: isSmallMobile ? '0.875rem' : '1rem',
-            animation: isMobile ? 'slideInTop 0.3s ease-out' : 'slideInRight 0.3s ease-out'
-          }}
-        >
-          <div className="toast-content">
-            <div className="toast-icon">
-              {toast.type === 'success' ? (
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-                  <polyline points="22,4 12,14.01 9,11.01"/>
-                </svg>
-              ) : (
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="12" r="10"/>
-                  <line x1="15" y1="9" x2="9" y2="15"/>
-                  <line x1="9" y1="9" x2="15" y2="15"/>
-                </svg>
-              )}
-            </div>
-            <span className="toast-message">{toast.message}</span>
-          </div>
-          <button 
-            className="toast-close" 
-            onClick={() => setToast({ show: false, message: '', type: 'success' })}
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="18" y1="6" x2="6" y2="18"/>
-              <line x1="6" y1="6" x2="18" y2="18"/>
-            </svg>
-          </button>
-        </div>
+          </Button>
+        </>
+      ) : (
+        <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', flexDirection: 'column' }}>
+          <Typography variant="body2" color="text.secondary" align="center" sx={{ mb: 1.5 }}>
+            Enter your new password below. Make sure it meets all security requirements.
+          </Typography>
+          <TextField
+            label="New Password"
+            type={showPassword ? 'text' : 'password'}
+            value={newPassword}
+            onChange={(e) => handlePasswordChange(e.target.value)}
+            placeholder="Min 8 chars, uppercase, lowercase, number, special char"
+            autoFocus
+            disabled={isResetting}
+            {...textFieldProps}
+            InputProps={{
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconButton
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    onClick={() => setShowPassword((v) => !v)}
+                    edge="end"
+                  >
+                    {showPassword ? <VisibilityOff /> : <Visibility />}
+                  </IconButton>
+                </InputAdornment>
+              ),
+            }}
+          />
+          {newPassword && passwordErrors.length > 0 && (
+            <Box sx={{ mb: 1, fontSize: 13, color: 'error.main' }}>
+              <div style={{ fontWeight: 600, marginBottom: 4 }}>Password must contain:</div>
+              <ul style={{ margin: '5px 0', paddingLeft: 20, lineHeight: 1.6 }}>
+                {passwordErrors.map((err, idx) => (
+                  <li key={idx} style={{ marginBottom: 2 }}>{err}</li>
+                ))}
+              </ul>
+            </Box>
+          )}
+          {newPassword && passwordErrors.length === 0 && (
+            <Typography variant="caption" color="success.main" sx={{ mb: 1.5, fontWeight: 500 }}>
+              Password meets all requirements
+            </Typography>
+          )}
+          <TextField
+            label="Confirm New Password"
+            type={showConfirmPassword ? 'text' : 'password'}
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            placeholder="Confirm your new password"
+            disabled={isResetting}
+            {...textFieldProps}
+            InputProps={{
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconButton
+                    aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+                    onClick={() => setShowConfirmPassword((v) => !v)}
+                    edge="end"
+                  >
+                    {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
+                  </IconButton>
+                </InputAdornment>
+              ),
+            }}
+          />
+          {confirmPassword && newPassword !== confirmPassword && (
+            <Typography variant="caption" color="error" sx={{ mb: 1, fontWeight: 500 }}>
+              Passwords do not match
+            </Typography>
+          )}
+          {confirmPassword && newPassword === confirmPassword && newPassword && (
+            <Typography variant="caption" color="success.main" sx={{ mb: 1, fontWeight: 500 }}>
+              Passwords match
+            </Typography>
+          )}
+          {error && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {error}
+            </Alert>
+          )}
+          <Button type="submit" variant="contained" disabled={isResetting} sx={{ mt: 1 }}>
+            {isResetting && <CircularProgress size={18} color="inherit" sx={{ mr: 1 }} />}
+            Reset Password
+          </Button>
+        </Box>
       )}
-    </div>
+      <Box sx={{ textAlign: 'center', mt: 2 }}>
+        <Typography variant="body2" color="text.secondary">
+          Remember your password?{' '}
+          <Button size="small" onClick={() => navigate('/login')}>
+            Back to Login
+          </Button>
+        </Typography>
+      </Box>
+    </AuthShell>
   );
 };
 
 export default ResetPassword;
-
