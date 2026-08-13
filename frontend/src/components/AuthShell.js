@@ -14,7 +14,7 @@ const AuthShell = ({ title, children }) => {
         justifyContent: 'center',
         px: 2,
         py: 4,
-        background: 'linear-gradient(160deg, #172554 0%, #1e3a8a 60%, #2563eb 100%)',
+        background: '#f4f5f7',
       }}
     >
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1.5, mb: 2.5 }}>
@@ -26,7 +26,7 @@ const AuthShell = ({ title, children }) => {
         variant="h5"
         component="h1"
         align="center"
-        sx={{ color: '#fff', maxWidth: 680, mb: 3, px: 1, lineHeight: 1.35 }}
+        sx={{ color: 'primary.main', maxWidth: 680, mb: 3, px: 1, lineHeight: 1.35 }}
       >
         Silang Municipal Jail Visitation Management System
       </Typography>

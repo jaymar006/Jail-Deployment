@@ -51,6 +51,7 @@ const SidebarContent = ({ activePath, onClose }) => {
       <List sx={{ px: 1, py: 1.5 }}>
         {NAV_ITEMS.map((item) => {
           const active = isActive(item.path);
+          const textColor = active ? '#fff' : 'rgba(255,255,255,0.92)';
           return (
             <ListItemButton
               key={item.path}
@@ -64,7 +65,7 @@ const SidebarContent = ({ activePath, onClose }) => {
                 mb: 0.5,
                 px: 1.5,
                 py: 1,
-                color: active ? '#fff' : 'rgba(255,255,255,0.95)',
+                color: textColor,
                 bgcolor: active ? 'primary.dark' : 'transparent',
                 '&:hover': { bgcolor: 'rgba(255,255,255,0.10)', color: '#fff' },
                 '&.Mui-selected': {
@@ -74,13 +75,15 @@ const SidebarContent = ({ activePath, onClose }) => {
                 },
               }}
             >
-              <ListItemIcon sx={{ color: 'inherit', minWidth: 34 }}>{item.icon}</ListItemIcon>
+              <ListItemIcon sx={{ color: textColor, minWidth: 34 }}>{item.icon}</ListItemIcon>
               <ListItemText
                 primary={item.label}
-                primaryTypographyProps={{
-                  fontSize: 14,
-                  fontWeight: active ? 600 : 500,
-                  color: 'inherit',
+                slotProps={{
+                  primary: {
+                    fontSize: 14,
+                    fontWeight: active ? 600 : 500,
+                    color: textColor,
+                  },
                 }}
               />
             </ListItemButton>
