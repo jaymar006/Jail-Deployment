@@ -80,9 +80,7 @@ const SidebarContent = ({ activePath, onClose }) => {
                 primary={item.label}
                 slotProps={{
                   primary: {
-                    fontSize: 14,
-                    fontWeight: active ? 600 : 500,
-                    color: textColor,
+                    sx: { fontSize: 14, fontWeight: active ? 600 : 500, color: textColor },
                   },
                 }}
               />
