@@ -9,6 +9,7 @@ import ResetPassword from './pages/ResetPassword';
 import Settings from './pages/Settings';
 import { VisitorProvider } from './context/VisitorContext';
 import { AuthProvider } from './context/AuthContext';
+import ToastProvider from './components/ToastProvider';
 import PrivateRoute from './components/PrivateRoute';
 import PageTransition from './components/PageTransition';
 import Layout from './components/Layout';
@@ -80,9 +81,11 @@ const App = () => {
   return (
     <AuthProvider>
       <VisitorProvider>
-        <Router>
-          <AppRoutes />
-        </Router>
+        <ToastProvider>
+          <Router>
+            <AppRoutes />
+          </Router>
+        </ToastProvider>
       </VisitorProvider>
     </AuthProvider>
   );

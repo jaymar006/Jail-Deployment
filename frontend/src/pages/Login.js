@@ -1,7 +1,98 @@
-import React, { useState, useContext, useEffect } from 'react';
+import React, { useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
+import Box from '@mui/material/Box';
+import TextField from '@mui/material/TextField';
+import Button from '@mui/material/Button';
+import Alert from '@mui/material/Alert';
+import InputAdornment from '@mui/material/InputAdornment';
+import IconButton from '@mui/material/IconButton';
+import Tooltip from '@mui/material/Tooltip';
+import Typography from '@mui/material/Typography';
+import CircularProgress from '@mui/material/CircularProgress';
+import FormControlLabel from '@mui/material/FormControlLabel';
+import Checkbox from '@mui/material/Checkbox';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import Visibility from '@mui/icons-material/Visibility';
+import VisibilityOff from '@mui/icons-material/VisibilityOff';
 import { AuthContext } from '../context/AuthContext';
-import './Login.css';
+import { useToast } from '../components/ToastProvider';
+import AuthShell from '../components/AuthShell';
+
+const PasswordRequirements = ({ password, errors }) => {
+  if (!password) return null;
+  if (errors.length > 0) {
+    return (
+      <Box sx={{ mt: 1, fontSize: 13, color: 'error.main' }}>
+        <div>Password must contain:</div>
+        <ul style={{ margin: '4px 0 0', paddingLeft: 18 }}>
+          {errors.map((err) => (
+            <li key={err}>{err}</li>
+          ))}
+        </ul>
+      </Box>
+    );
+  }
+  return (
+    <Box sx={{ mt: 1, fontSize: 13, color: 'success.main' }}>Password meets all requirements.</Box>
+  );
+};
+
+const BotInfoIcon = () => {
+  const botUsername = process.env.REACT_APP_TELEGRAM_BOT_USERNAME || 'BJMPnoreplybot';
+  return (
+    <Tooltip
+      interactive
+      placement="right"
+      title={
+        <Box sx={{ p: 0.5, maxWidth: 300 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, fontWeight: 700, mb: 0.5 }}>
+            <InfoOutlinedIcon fontSize="small" color="info" />
+            Start Bot First
+          </Box>
+          <Box sx={{ fontSize: 13, lineHeight: 1.5, mb: 1 }}>
+            Start our Telegram bot before requesting password reset:
+          </Box>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1, mb: 1 }}>
+            <Typography variant="body2" sx={{ fontWeight: 600 }}>
+              @{botUsername}
+            </Typography>
+            <Button
+              size="small"
+              variant="contained"
+              color="primary"
+              component="a"
+              href={`https://t.me/${botUsername}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              sx={{ whiteSpace: 'nowrap', minWidth: 0 }}
+            >
+              Open
+            </Button>
+          </Box>
+          <Box sx={{ fontSize: 12, lineHeight: 1.4 }}>
+            <strong>Note:</strong> After &quot;Start&quot;, send a message (e.g., &quot;hello&quot;) to the bot.
+          </Box>
+        </Box>
+      }
+      slotProps={{
+        tooltip: {
+          sx: {
+            bgcolor: 'background.paper',
+            color: 'text.primary',
+            boxShadow: 6,
+            border: 1,
+            borderColor: 'divider',
+            borderRadius: 2,
+          },
+        },
+      }}
+    >
+      <IconButton size="small" aria-label="Telegram bot information">
+        <InfoOutlinedIcon sx={{ fontSize: 20 }} color="action" />
+      </IconButton>
+    </Tooltip>
+  );
+};
 
 const Login = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -13,43 +104,16 @@ const Login = () => {
   const [error, setError] = useState('');
   const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [passwordErrors, setPasswordErrors] = useState([]);
-  // Forgot password via Telegram
   const [fpUsernameOrTelegram, setFpUsernameOrTelegram] = useState('');
-  const [showBotInfo, setShowBotInfo] = useState(false);
-  const [botInfoTimeout, setBotInfoTimeout] = useState(null);
-  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [showSignUpPassword, setShowSignUpPassword] = useState(false);
   const [showSignUpConfirmPassword, setShowSignUpConfirmPassword] = useState(false);
-  const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [isSigningUp, setIsSigningUp] = useState(false);
   const [isRequestingReset, setIsRequestingReset] = useState(false);
   const navigate = useNavigate();
   const { login } = useContext(AuthContext);
-
-  useEffect(() => {
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = previousOverflow || '';
-    };
-  }, []);
-
-  useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth <= 768);
-    };
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
-  const showToast = (message, type = 'success') => {
-    setToast({ show: true, message, type });
-    setTimeout(() => {
-      setToast({ show: false, message: '', type: 'success' });
-    }, 4000);
-  };
+  const showToast = useToast();
 
   const resetForm = () => {
     setUsername('');
@@ -61,13 +125,12 @@ const Login = () => {
     setPasswordErrors([]);
     setIsForgotPassword(false);
     setFpUsernameOrTelegram('');
-    setShowBotInfo(false);
   };
 
   const validatePasswordStrength = (pwd) => {
     const errors = [];
     if (!pwd) return errors;
-    
+
     if (pwd.length < 8) {
       errors.push('At least 8 characters');
     }
@@ -83,7 +146,7 @@ const Login = () => {
     if (!/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(pwd)) {
       errors.push('One special character');
     }
-    
+
     return errors;
   };
 
@@ -111,25 +174,22 @@ const Login = () => {
         login();
         showToast('Logged in successfully! Welcome back.', 'success');
         setTimeout(() => {
-          navigate('/'); // Redirect to dashboard
+          navigate('/');
         }, 1500);
       } else {
-        // Try to parse error response
         let errorMessage = 'Login failed. Please check your credentials.';
         try {
           const data = await response.json();
           errorMessage = data.message || errorMessage;
         } catch (parseError) {
-          // If response is not JSON, use status text or default message
           errorMessage = response.statusText || errorMessage;
         }
-        
+
         showToast(errorMessage, 'error');
         setError(errorMessage);
         setIsLoggingIn(false);
       }
     } catch (err) {
-      // Network error or other fetch errors
       const errorMessage = err.message || 'Network error. Please check your connection and try again.';
       showToast(errorMessage, 'error');
       setError(errorMessage);
@@ -147,8 +207,6 @@ const Login = () => {
       setIsSigningUp(false);
       return;
     }
-
-    // Telegram username is optional - can be added later in settings
 
     if (password !== confirmPassword) {
       showToast('Passwords do not match. Please try again.', 'error');
@@ -168,7 +226,7 @@ const Login = () => {
       const response = await fetch(`${apiUrl}/auth/signup`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
+        body: JSON.stringify({
           username,
           password,
           telegramUsername: telegramUsername.trim() || null,
@@ -185,9 +243,9 @@ const Login = () => {
         let errorMessage = 'Registration failed. Please try again.';
         try {
           const data = await response.json();
-          errorMessage = data.errors ? 
-            data.message + ': ' + data.errors.join(', ') : 
-            data.message || errorMessage;
+          errorMessage = data.errors
+            ? data.message + ': ' + data.errors.join(', ')
+            : data.message || errorMessage;
           if (data.errors) {
             setPasswordErrors(data.errors);
           }
@@ -232,7 +290,6 @@ const Login = () => {
         showToast(data.message || 'If an account exists, a password reset link has been sent to your Telegram.', 'success');
         setFpUsernameOrTelegram('');
         setIsRequestingReset(false);
-        // Wait a bit before going back to login to show the success message
         setTimeout(() => {
           setIsForgotPassword(false);
         }, 2000);
@@ -256,520 +313,242 @@ const Login = () => {
     }
   };
 
-  // Bot Info Icon Component
-  const BotInfoIcon = () => {
-    const handleMouseEnter = () => {
-      // Clear any existing timeout
-      if (botInfoTimeout) {
-        clearTimeout(botInfoTimeout);
-      }
-      // Show popup immediately
-      setShowBotInfo(true);
-    };
-
-    const handleMouseLeave = () => {
-      // Hide after 5 seconds
-      const timeout = setTimeout(() => {
-        setShowBotInfo(false);
-      }, 5000);
-      setBotInfoTimeout(timeout);
-    };
-
-    // Add click outside listener when popup is shown
-    useEffect(() => {
-      if (!showBotInfo) return;
-      
-      const handleClickOutside = (e) => {
-        if (!e.target.closest('.bot-info-container')) {
-          setShowBotInfo(false);
-          if (botInfoTimeout) {
-            clearTimeout(botInfoTimeout);
-            setBotInfoTimeout(null);
-          }
-        }
-      };
-      
-      document.addEventListener('click', handleClickOutside);
-      return () => {
-        document.removeEventListener('click', handleClickOutside);
-      };
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [showBotInfo]);
-
-    return (
-      <div 
-        className="bot-info-container"
-        style={{ position: 'relative', display: 'inline-block', marginLeft: '8px' }}
-        onMouseEnter={handleMouseEnter}
-        onMouseLeave={handleMouseLeave}
-      >
-        <div
-          style={{
-            width: '22px',
-            height: '22px',
-            borderRadius: '50%',
-            backgroundColor: '#6b7280',
-            color: 'white',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            cursor: 'pointer',
-            transition: 'all 0.2s ease',
-            flexShrink: 0,
-            userSelect: 'none'
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = '#4b5563';
-            e.currentTarget.style.transform = 'scale(1.15)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = '#6b7280';
-            e.currentTarget.style.transform = 'scale(1)';
-          }}
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="12" cy="12" r="10"></circle>
-            <line x1="12" y1="16" x2="12" y2="12"></line>
-            <line x1="12" y1="8" x2="12.01" y2="8"></line>
-          </svg>
-        </div>
-        
-        {showBotInfo && (
-          <div
-            style={{
-              position: 'absolute',
-              top: isMobile ? '28px' : '0',
-              left: isMobile ? '50%' : 'calc(100% + 12px)',
-              transform: isMobile ? 'translateX(-50%)' : 'none',
-              backgroundColor: '#f0f9ff',
-              border: '1px solid #bae6fd',
-              borderRadius: '8px',
-              padding: isMobile ? '10px' : '12px',
-              fontSize: isMobile ? '0.8em' : '0.85em',
-              width: isMobile ? 'calc(100vw - 40px)' : '280px',
-              maxWidth: isMobile ? 'calc(100vw - 40px)' : 'calc(100vw - 40px)',
-              boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-              zIndex: 1000,
-              pointerEvents: 'auto'
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div style={{ fontWeight: '600', color: '#0369a1', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.9em' }}>
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="10"></circle>
-                <line x1="12" y1="16" x2="12" y2="12"></line>
-                <line x1="12" y1="8" x2="12.01" y2="8"></line>
-              </svg>
-              Start Bot First
-            </div>
-            <p style={{ margin: '6px 0', color: '#0c4a6e', fontSize: '0.85em', lineHeight: '1.4' }}>
-              Start our Telegram bot before requesting password reset:
-            </p>
-            <div style={{ 
-              backgroundColor: 'white', 
-              padding: '8px', 
-              borderRadius: '6px', 
-              margin: '8px 0',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '10px',
-              flexWrap: 'wrap'
-            }}>
-              <span style={{ fontWeight: '600', color: '#0369a1', fontSize: '0.9em' }}>
-                @{process.env.REACT_APP_TELEGRAM_BOT_USERNAME || 'BJMPnoreplybot'}
-              </span>
-              <a
-                href={`https://t.me/${process.env.REACT_APP_TELEGRAM_BOT_USERNAME || 'BJMPnoreplybot'}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  backgroundColor: '#0088cc',
-                  color: 'white',
-                  padding: '4px 10px',
-                  borderRadius: '4px',
-                  textDecoration: 'none',
-                  fontSize: '0.8em',
-                  fontWeight: '500',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  whiteSpace: 'nowrap'
-                }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                }}
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
-                </svg>
-                Open
-              </a>
-            </div>
-            <p style={{ margin: '6px 0 0 0', color: '#0c4a6e', fontSize: '0.75em', lineHeight: '1.3' }}>
-              <strong>Note:</strong> After "Start", send a message (e.g., "hello") to the bot.
-            </p>
-          </div>
-        )}
-      </div>
-    );
+  const textFieldProps = {
+    fullWidth: true,
+    size: 'small',
+    margin: 'dense',
+    sx: { mb: 1.5 },
   };
 
   return (
-    <div className="login-container">
-      <div className="login-header">
-        <div className="login-logos">
-          <img src="/logo1.png" alt="Logo 1" />
-          <img src="/logo2.png" alt="Logo 2" />
-          <img src="/logo3.png" alt="Logo 3" />
-        </div>
-        <h1 className="login-title">SILANG MUNICIPAL JAIL VISITATION MANAGEMENT SYSTEM</h1>
-      </div>
+    <AuthShell title={isForgotPassword ? 'Forgot Password' : isLogin ? 'Login' : 'Sign Up'}>
       {isForgotPassword ? (
         <>
-          <form className="login-form" onSubmit={handleForgotPassword}>
-            <div className="login-text" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-              Forgot Password
+          <Box
+            component="form"
+            onSubmit={handleForgotPassword}
+            sx={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch' }}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 1 }}>
+              <Typography variant="body2" color="text.secondary">
+                Reset via Telegram
+              </Typography>
               <BotInfoIcon />
-            </div>
-            
-            <label>
-              Username or Telegram Username:
-              <input
-                type="text"
-                value={fpUsernameOrTelegram}
-                onChange={(e) => setFpUsernameOrTelegram(e.target.value)}
-                placeholder="Enter your username or Telegram username (e.g., @username)"
-                required
-                autoFocus
-                disabled={isRequestingReset}
-              />
-            </label>
-            <p style={{ fontSize: '0.9em', color: '#6b7280', marginTop: '10px', marginBottom: '20px' }}>
-              Enter your username or Telegram username and we'll send you a link to reset your password via Telegram.
-            </p>
-            {error && <div className="login-error">{error}</div>}
-            <div className="login-buttons">
-              <button type="submit" disabled={isRequestingReset} style={{ position: 'relative', minWidth: '140px' }}>
-                {isRequestingReset ? (
-                  <>
-                    <svg
-                      style={{
-                        display: 'inline-block',
-                        width: '16px',
-                        height: '16px',
-                        marginRight: '8px',
-                        animation: 'spin 1s linear infinite',
-                        verticalAlign: 'middle'
-                      }}
-                      xmlns="http://www.w3.org/2000/svg"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <circle cx="12" cy="12" r="10" opacity="0.25"/>
-                      <path d="M12 2a10 10 0 0 1 10 10" opacity="0.75"/>
-                    </svg>
-                    Sending...
-                  </>
-                ) : (
-                  'Send Reset Link'
-                )}
-              </button>
-            </div>
-          </form>
-          <div className="auth-links">
-            <div className="register-link-container">
-              <span>Remember your password? </span>
-              <button
-                type="button"
-                className="register-link"
-                onClick={() => { setIsForgotPassword(false); resetForm(); }}
+            </Box>
+            <TextField
+              label="Username or Telegram Username"
+              value={fpUsernameOrTelegram}
+              onChange={(e) => setFpUsernameOrTelegram(e.target.value)}
+              placeholder="Enter your username or Telegram username (e.g., @username)"
+              autoFocus
+              disabled={isRequestingReset}
+              {...textFieldProps}
+            />
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.5 }}>
+              Enter your username or Telegram username and we&apos;ll send you a link to reset your
+              password via Telegram.
+            </Typography>
+            {error && (
+              <Alert severity="error" sx={{ mb: 2 }}>
+                {error}
+              </Alert>
+            )}
+            <Button type="submit" variant="contained" disabled={isRequestingReset} sx={{ mt: 1 }}>
+              {isRequestingReset && <CircularProgress size={18} color="inherit" sx={{ mr: 1 }} />}
+              Send Reset Link
+            </Button>
+          </Box>
+          <Box sx={{ textAlign: 'center', mt: 2 }}>
+            <Typography variant="body2" color="text.secondary">
+              Remember your password?{' '}
+              <Button
+                size="small"
+                onClick={() => {
+                  setIsForgotPassword(false);
+                  resetForm();
+                }}
               >
                 Back to Login
-              </button>
-            </div>
-          </div>
+              </Button>
+            </Typography>
+          </Box>
         </>
       ) : isLogin ? (
         <>
-          <form className="login-form" onSubmit={handleLoginSubmit}>
-            <div className="login-text">Login</div>
-            <label>
-              Username:
-              <input
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                required
-                autoFocus
-              />
-            </label>
-            <label>
-              Password:
-              <input
-                type={showLoginPassword ? 'text' : 'password'}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-            </label>
-            <div className="show-password-row">
-              <label className="show-password-label">
-                <input
-                  type="checkbox"
+          <Box component="form" onSubmit={handleLoginSubmit} sx={{ display: 'flex', flexDirection: 'column' }}>
+            <TextField
+              label="Username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              autoFocus
+              {...textFieldProps}
+            />
+            <TextField
+              label="Password"
+              type={showLoginPassword ? 'text' : 'password'}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              {...textFieldProps}
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton
+                      aria-label={showLoginPassword ? 'Hide password' : 'Show password'}
+                      onClick={() => setShowLoginPassword((v) => !v)}
+                      edge="end"
+                    >
+                      {showLoginPassword ? <VisibilityOff /> : <Visibility />}
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
+            />
+            <FormControlLabel
+              control={
+                <Checkbox
                   checked={showLoginPassword}
                   onChange={(e) => setShowLoginPassword(e.target.checked)}
+                  size="small"
                 />
-                <span> Show password</span>
-              </label>
-            </div>
-            {error && <div className="login-error">{error}</div>}
-            <div className="login-buttons">
-              <button type="submit" disabled={isLoggingIn} style={{ position: 'relative', minWidth: '120px' }}>
-                {isLoggingIn ? (
-                  <>
-                    <svg
-                      style={{
-                        display: 'inline-block',
-                        width: '16px',
-                        height: '16px',
-                        marginRight: '8px',
-                        animation: 'spin 1s linear infinite',
-                        verticalAlign: 'middle'
-                      }}
-                      xmlns="http://www.w3.org/2000/svg"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <circle cx="12" cy="12" r="10" opacity="0.25"/>
-                      <path d="M12 2a10 10 0 0 1 10 10" opacity="0.75"/>
-                    </svg>
-                    Logging in...
-                  </>
-                ) : (
-                  'Login'
-                )}
-              </button>
-            </div>
-          </form>
-          <div className="auth-links">
-            <div className="register-link-container">
-              <span>Don't have an account? </span>
-              <button
-                type="button"
-                className="register-link"
-                onClick={() => { setIsLogin(false); resetForm(); }}
+              }
+              label="Show password"
+            />
+            {error && (
+              <Alert severity="error" sx={{ mb: 2 }}>
+                {error}
+              </Alert>
+            )}
+            <Button type="submit" variant="contained" disabled={isLoggingIn} sx={{ mt: 1 }}>
+              {isLoggingIn && <CircularProgress size={18} color="inherit" sx={{ mr: 1 }} />}
+              Login
+            </Button>
+          </Box>
+          <Box sx={{ textAlign: 'center', mt: 2 }}>
+            <Typography variant="body2" color="text.secondary">
+              Don&apos;t have an account?{' '}
+              <Button
+                size="small"
+                onClick={() => {
+                  setIsLogin(false);
+                  resetForm();
+                }}
               >
                 Click here
-              </button>
-            </div>
-            <button
-              type="button"
-              className="forgot-password-link"
-              onClick={() => setIsForgotPassword(true)}
-            >
+              </Button>
+            </Typography>
+            <Button size="small" onClick={() => setIsForgotPassword(true)} sx={{ mt: 0.5 }}>
               Forgot Password?
-            </button>
-          </div>
+            </Button>
+          </Box>
         </>
       ) : (
         <>
-          <form className="login-form horizontal-form" onSubmit={handleSignUpSubmit}>
-            <div className="login-text">Sign Up</div>
-            <div className="form-row">
-              <label>
-                Registration Code:
-                <input
-                  type="text"
-                  value={registrationCode}
-                  onChange={(e) => setRegistrationCode(e.target.value)}
-                  placeholder="Enter registration code"
-                  required
-                  autoFocus
-                />
-              </label>
-            </div>
-            <div className="form-row">
-              <label>
-                Username:
-                <input
-                  type="text"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  placeholder="At least 3 characters, letters, numbers, and underscores only"
-                  required
-                />
-              </label>
-            </div>
-            <div className="form-row">
-              <label>
-                Password:
-                <div className="input-with-icon">
-                  <input
-                    type={showSignUpPassword ? 'text' : 'password'}
-                    value={password}
-                    onChange={(e) => handlePasswordChange(e.target.value)}
-                    placeholder="Min 8 chars, uppercase, lowercase, number, special char"
-                    required
-                  />
-                  <button
-                    type="button"
-                    className="toggle-visibility"
-                    aria-label={showSignUpPassword ? 'Hide password' : 'Show password'}
-                    onClick={() => setShowSignUpPassword((v) => !v)}
-                  >
-                    {showSignUpPassword ? (
-                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-5 0-9.27-3.11-11-8 1.02-2.76 2.86-5.06 5.06-6.64"/><path d="M1 1l22 22"/><path d="M10.58 10.58a2 2 0 1 0 2.83 2.83"/><path d="M16.24 7.76A10.94 10.94 0 0 1 23 12a10.94 10.94 0 0 1-2.06 3.34"/></svg>
-                    ) : (
-                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                    )}
-                  </button>
-                </div>
-                {password && passwordErrors.length > 0 && (
-                  <div className="password-requirements" style={{ fontSize: '0.85em', color: '#d32f2f', marginTop: '5px' }}>
-                    <div>Password must contain:</div>
-                    <ul style={{ margin: '5px 0', paddingLeft: '20px' }}>
-                      {passwordErrors.map((err, idx) => (
-                        <li key={idx}>{err}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-                {password && passwordErrors.length === 0 && (
-                  <div style={{ fontSize: '0.85em', color: '#2e7d32', marginTop: '5px' }}>
-                    ✓ Password meets all requirements
-                  </div>
-                )}
-              </label>
-              <label>
-                Confirm Password:
-                <div className="input-with-icon">
-                  <input
-                    type={showSignUpConfirmPassword ? 'text' : 'password'}
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    required
-                  />
-                  <button
-                    type="button"
-                    className="toggle-visibility"
-                    aria-label={showSignUpConfirmPassword ? 'Hide password' : 'Show password'}
-                    onClick={() => setShowSignUpConfirmPassword((v) => !v)}
-                  >
-                    {showSignUpConfirmPassword ? (
-                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-5 0-9.27-3.11-11-8 1.02-2.76 2.86-5.06 5.06-6.64"/><path d="M1 1l22 22"/><path d="M10.58 10.58a2 2 0 1 0 2.83 2.83"/><path d="M16.24 7.76A10.94 10.94 0 0 1 23 12a10.94 10.94 0 0 1-2.06 3.34"/></svg>
-                    ) : (
-                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                    )}
-                  </button>
-                </div>
-              </label>
-            </div>
-            <div className="form-row">
-              <label>
-                Telegram Username (Optional - for account recovery):
-                <input
-                  type="text"
-                  value={telegramUsername}
-                  onChange={(e) => setTelegramUsername(e.target.value)}
-                  placeholder="Enter Telegram username (optional)"
-                />
-                <p style={{ fontSize: '0.85em', color: '#6b7280', marginTop: '5px', fontStyle: 'italic' }}>
-                  Optional: Add your Telegram username for password recovery. You can add this later in Settings.
-                </p>
-              </label>
-            </div>
-            {error && <div className="login-error">{error}</div>}
-            <div className="login-buttons">
-              <button type="submit" disabled={isSigningUp} style={{ position: 'relative', minWidth: '120px' }}>
-                {isSigningUp ? (
-                  <>
-                    <svg
-                      style={{
-                        display: 'inline-block',
-                        width: '16px',
-                        height: '16px',
-                        marginRight: '8px',
-                        animation: 'spin 1s linear infinite',
-                        verticalAlign: 'middle'
-                      }}
-                      xmlns="http://www.w3.org/2000/svg"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
+          <Box component="form" onSubmit={handleSignUpSubmit} sx={{ display: 'flex', flexDirection: 'column' }}>
+            <TextField
+              label="Registration Code"
+              value={registrationCode}
+              onChange={(e) => setRegistrationCode(e.target.value)}
+              placeholder="Enter registration code"
+              autoFocus
+              {...textFieldProps}
+            />
+            <TextField
+              label="Username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="At least 3 characters, letters, numbers, and underscores only"
+              {...textFieldProps}
+            />
+            <TextField
+              label="Password"
+              type={showSignUpPassword ? 'text' : 'password'}
+              value={password}
+              onChange={(e) => handlePasswordChange(e.target.value)}
+              placeholder="Min 8 chars, uppercase, lowercase, number, special char"
+              {...textFieldProps}
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton
+                      aria-label={showSignUpPassword ? 'Hide password' : 'Show password'}
+                      onClick={() => setShowSignUpPassword((v) => !v)}
+                      edge="end"
                     >
-                      <circle cx="12" cy="12" r="10" opacity="0.25"/>
-                      <path d="M12 2a10 10 0 0 1 10 10" opacity="0.75"/>
-                    </svg>
-                    Signing up...
-                  </>
-                ) : (
-                  'Sign Up'
-                )}
-              </button>
-            </div>
-          </form>
-          <div className="auth-links">
-            <div className="register-link-container">
-              <span>Already have an account? </span>
-              <button
-                type="button"
-                className="register-link"
-                onClick={() => { setIsLogin(true); resetForm(); }}
+                      {showSignUpPassword ? <VisibilityOff /> : <Visibility />}
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
+            />
+            <PasswordRequirements password={password} errors={passwordErrors} />
+            <TextField
+              label="Confirm Password"
+              type={showSignUpConfirmPassword ? 'text' : 'password'}
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              {...textFieldProps}
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton
+                      aria-label={showSignUpConfirmPassword ? 'Hide password' : 'Show password'}
+                      onClick={() => setShowSignUpConfirmPassword((v) => !v)}
+                      edge="end"
+                    >
+                      {showSignUpConfirmPassword ? <VisibilityOff /> : <Visibility />}
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
+            />
+            {confirmPassword && confirmPassword !== password && (
+              <Typography variant="caption" color="error" sx={{ mb: 1 }}>
+                Passwords do not match
+              </Typography>
+            )}
+            {confirmPassword && confirmPassword === password && (
+              <Typography variant="caption" color="success.main" sx={{ mb: 1 }}>
+                Passwords match
+              </Typography>
+            )}
+            <TextField
+              label="Telegram Username (Optional)"
+              value={telegramUsername}
+              onChange={(e) => setTelegramUsername(e.target.value)}
+              placeholder="Enter Telegram username (optional)"
+              {...textFieldProps}
+            />
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+              Optional: Add your Telegram username for password recovery. You can add this later in
+              Settings.
+            </Typography>
+            {error && (
+              <Alert severity="error" sx={{ mb: 2 }}>
+                {error}
+              </Alert>
+            )}
+            <Button type="submit" variant="contained" disabled={isSigningUp} sx={{ mt: 1 }}>
+              {isSigningUp && <CircularProgress size={18} color="inherit" sx={{ mr: 1 }} />}
+              Sign Up
+            </Button>
+          </Box>
+          <Box sx={{ textAlign: 'center', mt: 2 }}>
+            <Typography variant="body2" color="text.secondary">
+              Already have an account?{' '}
+              <Button
+                size="small"
+                onClick={() => {
+                  setIsLogin(true);
+                  resetForm();
+                }}
               >
                 Click here
-              </button>
-            </div>
-          </div>
+              </Button>
+            </Typography>
+          </Box>
         </>
       )}
-      
-      {/* Toast Notification */}
-      {toast.show && (
-        <div 
-          className={`toast toast-${toast.type}`}
-          style={{
-            top: 'auto',
-            bottom: '20px',
-            left: isMobile ? '10px' : 'auto',
-            right: isMobile ? '10px' : '20px',
-            minWidth: isMobile ? 'auto' : '300px',
-            maxWidth: isMobile ? 'calc(100% - 20px)' : '400px',
-            padding: isMobile ? '0.875rem' : '1rem',
-            animation: isMobile ? 'slideInBottom 0.3s ease-out' : 'slideInRight 0.3s ease-out'
-          }}
-        >
-          <div className="toast-content">
-            <div className="toast-icon">
-              {toast.type === 'success' ? (
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-                  <polyline points="22,4 12,14.01 9,11.01"/>
-                </svg>
-              ) : (
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="12" r="10"/>
-                  <line x1="15" y1="9" x2="9" y2="15"/>
-                  <line x1="9" y1="9" x2="15" y2="15"/>
-                </svg>
-              )}
-            </div>
-            <span className="toast-message">{toast.message}</span>
-          </div>
-        </div>
-      )}
-    </div>
+    </AuthShell>
   );
 };
 
