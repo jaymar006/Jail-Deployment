@@ -1,0 +1,54 @@
+.skeleton-table {
+  width: 100%;
+  border-collapse: collapse;
+  border-spacing: 0;
+  background: #fff;
+  font-size: 13px;
+}
+
+.skeleton-table thead {
+  background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+}
+
+.skeleton-table th {
+  padding: 10px 12px;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.skeleton-table td {
+  padding: 14px 12px;
+  border-bottom: 1px solid #e5e7eb;
+  vertical-align: middle;
+}
+
+.skeleton-bar {
+  display: inline-block;
+  height: 12px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #eef2ff 25%, #dbeafe 37%, #eef2ff 63%);
+  background-size: 400px 100%;
+  animation: skeleton-shimmer 1.2s ease-in-out infinite;
+}
+
+.skeleton-table thead .skeleton-bar {
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.55) 25%, rgba(255, 255, 255, 0.85) 37%, rgba(255, 255, 255, 0.55) 63%);
+  background-size: 400px 100%;
+  animation: skeleton-shimmer 1.2s ease-in-out infinite;
+}
+
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: -400px 0;
+  }
+  100% {
+    background-position: 400px 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-bar,
+  .skeleton-table thead .skeleton-bar {
+    animation: none;
+  }
+}

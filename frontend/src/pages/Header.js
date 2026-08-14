@@ -4,18 +4,24 @@ import AppBar from '@mui/material/AppBar';
 import Toolbar from '@mui/material/Toolbar';
 import Typography from '@mui/material/Typography';
 import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
 import IconButton from '@mui/material/IconButton';
 import Avatar from '@mui/material/Avatar';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import ListItemIcon from '@mui/material/ListItemIcon';
+import Breadcrumbs from '@mui/material/Breadcrumbs';
+import MuiLink from '@mui/material/Link';
 import MenuIcon from '@mui/icons-material/Menu';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import SettingsIcon from '@mui/icons-material/Settings';
 import LogoutIcon from '@mui/icons-material/Logout';
 import { AuthContext } from '../context/AuthContext';
+import { useToast } from '../components/ToastProvider';
 
-const Header = ({ activePage, onMenuClick }) => {
+const Header = ({ activePage, breadcrumbs = [], onMenuClick }) => {
   const navigate = useNavigate();
+  const showToast = useToast();
   const { isAuthenticated, logout } = useContext(AuthContext);
   const [username, setUsername] = useState(null);
   const [anchorEl, setAnchorEl] = useState(null);
@@ -46,6 +52,7 @@ const Header = ({ activePage, onMenuClick }) => {
     logout();
     localStorage.removeItem('token');
     setAnchorEl(null);
+    showToast('Logged out successfully', 'success');
     navigate('/login');
   };
 
@@ -64,10 +71,53 @@ const Header = ({ activePage, onMenuClick }) => {
         >
           <MenuIcon />
         </IconButton>
-        <Typography variant="h6" component="h1" noWrap sx={{ fontSize: 18 }}>
-          {activePage}
-        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, minWidth: 0 }}>
+          <Typography variant="h6" component="h1" noWrap sx={{ fontSize: 18 }}>
+            {activePage}
+          </Typography>
+          {breadcrumbs.length > 1 && (
+            <Breadcrumbs
+              aria-label="breadcrumb"
+              separator="/"
+              sx={{
+                display: { xs: 'none', sm: 'flex' },
+                '& .MuiBreadcrumbs-separator': { mx: 0.75 },
+                color: 'text.secondary',
+              }}
+            >
+              {breadcrumbs.map((crumb, i) =>
+                i === breadcrumbs.length - 1 ? (
+                  <Typography key={i} color="text.primary" sx={{ fontSize: 13, fontWeight: 600 }}>
+                    {crumb.label}
+                  </Typography>
+                ) : (
+                  <MuiLink
+                    key={i}
+                    component={Link}
+                    to={crumb.to}
+                    underline="hover"
+                    color="inherit"
+                    sx={{ fontSize: 13 }}
+                  >
+                    {crumb.label}
+                  </MuiLink>
+                )
+              )}
+            </Breadcrumbs>
+          )}
+        </Box>
         <Box sx={{ flexGrow: 1 }} />
+        {breadcrumbs.length > 1 && (
+          <Button
+            component={Link}
+            to={breadcrumbs[0].to}
+            size="small"
+            startIcon={<ArrowBackIcon />}
+            sx={{ mr: 1, textTransform: 'none', fontWeight: 600 }}
+          >
+            Back
+          </Button>
+        )}
         {isAuthenticated && (
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <Typography variant="body2" sx={{ fontWeight: 600, display: { xs: 'none', sm: 'block' } }}>

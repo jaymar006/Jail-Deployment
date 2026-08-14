@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { Html5Qrcode } from 'html5-qrcode';
+import { Html5Qrcode, Html5QrcodeScannerState } from 'html5-qrcode';
 import logger from '../utils/logger';
 
 const QRCodeScanner = ({ onScan, resetTrigger, scanLocked = false }) => {
@@ -13,6 +13,7 @@ const QRCodeScanner = ({ onScan, resetTrigger, scanLocked = false }) => {
   const [isRunning, setIsRunning] = useState(false); // State to track if scanner is running (for re-renders)
   const startAttemptRef = useRef(false);
   const lastScannedTextRef = useRef(null); // Track last scanned text to prevent duplicates
+  const prevResetTriggerRef = useRef(null); // Track previous resetTrigger to skip initial mount
 
   const startScanner = useCallback(async (isRetry = false) => {
     // Prevent multiple simultaneous start attempts
@@ -50,7 +51,7 @@ const QRCodeScanner = ({ onScan, resetTrigger, scanLocked = false }) => {
       try {
         const state = html5QrcodeScannerRef.current.getState();
         // Don't start if already started or in transition
-        if (state === Html5Qrcode.STATE.STARTED || state === Html5Qrcode.STATE.SCANNING) {
+        if (state === Html5QrcodeScannerState.SCANNING) {
           logger.debug('QRScanner: Already running or scanning');
           isScannerRunningRef.current = true;
           setIsRunning(true);
@@ -59,7 +60,7 @@ const QRCodeScanner = ({ onScan, resetTrigger, scanLocked = false }) => {
           return;
         }
         // Wait if in transition
-        if (state === Html5Qrcode.STATE.PAUSED) {
+        if (state === Html5QrcodeScannerState.PAUSED) {
           logger.debug('QRScanner: In transition, waiting...');
           startAttemptRef.current = false;
           return;
@@ -73,16 +74,10 @@ const QRCodeScanner = ({ onScan, resetTrigger, scanLocked = false }) => {
     startAttemptRef.current = true;
 
     // Optimize config for fast scanning without system overload
+    // No qrbox set - library scans the entire viewfinder by default (avoids
+    // the 'minimum size of config.qrbox dimension value is 50px' error)
     const config = { 
       fps: 10, // 10 FPS = very fast scanning for immediate response (scans 10 times per second)
-      // Remove qrbox restriction - scan entire viewfinder instead of a restricted box
-      qrbox: function(viewfinderWidth, viewfinderHeight) {
-        // Return full viewfinder dimensions to scan entire area (no restricted box)
-        return {
-          width: viewfinderWidth,
-          height: viewfinderHeight
-        };
-      },
       aspectRatio: 1.0, // Square aspect ratio works better on mobile
       disableFlip: false // Allow flipping to try both orientations
     };
@@ -162,11 +157,15 @@ const QRCodeScanner = ({ onScan, resetTrigger, scanLocked = false }) => {
       logger.error('QRScanner: Start error:', err);
       
       // Only show error if it's not a scanner already running error
-      if (err.message && err.message.includes('Scanner is already running')) {
+      if (err.message && (
+        err.message.includes('Scanner is already running') ||
+        err.message.includes('Cannot clear while scan is ongoing')
+      )) {
         // Scanner is already running, which is fine
         isScannerRunningRef.current = true;
         setIsRunning(true);
         setError(null);
+        setCameraFailure(false);
         startAttemptRef.current = false;
         logger.debug('QRScanner: Already running (caught in error)');
         return;
@@ -229,9 +228,10 @@ const QRCodeScanner = ({ onScan, resetTrigger, scanLocked = false }) => {
         // Check if scanner is actually running before trying to stop it
         let isRunning = false;
         
-        if (html5QrcodeScannerRef.current.getState && Html5Qrcode.STATE) {
+        if (html5QrcodeScannerRef.current.getState && Html5QrcodeScannerState) {
           try {
-            isRunning = html5QrcodeScannerRef.current.getState() === Html5Qrcode.STATE.STARTED;
+            const state = html5QrcodeScannerRef.current.getState();
+            isRunning = state === Html5QrcodeScannerState.SCANNING || state === Html5QrcodeScannerState.PAUSED;
           } catch (stateErr) {
             // Fallback: use our internal state tracking
             isRunning = isScannerRunningRef.current;
@@ -291,7 +291,7 @@ const QRCodeScanner = ({ onScan, resetTrigger, scanLocked = false }) => {
           // Try to stop again to ensure it's fully stopped
           if (html5QrcodeScannerRef.current.getState) {
             const state = html5QrcodeScannerRef.current.getState();
-            if (state !== Html5Qrcode.STATE.NOT_STARTED) {
+            if (state !== Html5QrcodeScannerState.NOT_STARTED) {
               await html5QrcodeScannerRef.current.stop();
             }
           }
@@ -376,7 +376,13 @@ const QRCodeScanner = ({ onScan, resetTrigger, scanLocked = false }) => {
   }, []); // Empty deps to run only once on mount/unmount
 
   useEffect(() => {
-    if (resetTrigger !== null && resetTrigger !== undefined) {
+    // Skip the initial render so the reset effect doesn't race the mount-start
+    if (prevResetTriggerRef.current === null) {
+      prevResetTriggerRef.current = resetTrigger;
+      return;
+    }
+    if (resetTrigger !== prevResetTriggerRef.current) {
+      prevResetTriggerRef.current = resetTrigger;
       logger.debug('QRScanner: Reset trigger activated');
       (async () => {
         await stopScanner();

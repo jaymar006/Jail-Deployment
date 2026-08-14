@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback, useRef, useContext } from 'react';
 import ReactDOM from 'react-dom';
 import { VisitorContext } from '../context/VisitorContext';
-import { useParams, useLocation, useNavigate } from 'react-router-dom';
+import { PageMetaContext } from '../context/PageMetaContext';
+import { useParams, useLocation } from 'react-router-dom';
 import api from '../services/api';
 import './common.css';
 import './VisitorPage.css';
@@ -48,7 +49,6 @@ const Modal = ({ children, onClose, wide = false }) => {
 const VisitorPage = () => {
   const { pdlId } = useParams();
   const location = useLocation();
-  const navigate = useNavigate();
 
   // Function to get today's date in yyyy-mm-dd format for max attribute
   const getTodayDate = () => {
@@ -62,6 +62,7 @@ const VisitorPage = () => {
   const [pdl, setPdl] = useState(location.state?.pdl || null);
   // eslint-disable-next-line no-unused-vars
   const { visitorData, loading, error } = useContext(VisitorContext);
+  const { setVisitorName } = useContext(PageMetaContext);
   const [visitors, setVisitors] = useState([]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -132,6 +133,11 @@ const VisitorPage = () => {
     }
     fetchVisitors();
   }, [pdlId, pdl, fetchVisitors]);
+
+  useEffect(() => {
+    setVisitorName(pdl ? `${pdl.first_name} ${pdl.last_name}` : null);
+    return () => setVisitorName(null);
+  }, [pdl, setVisitorName]);
 
   const resetForm = () => {
     setVisitorForm({
@@ -404,15 +410,6 @@ const VisitorPage = () => {
   return (
     <div className="common-container">
       <main>
-        <button
-          onClick={() => navigate(-1)}
-          className="back-link"
-          style={{ color: 'black', fontWeight: 'bold', textDecoration: 'none', background: '#e0e0e0', border: '1px solid #ccc', cursor: 'pointer', padding: '5px 10px', fontSize: '1rem', borderRadius: '4px' }}
-          aria-label="Go back"
-        >
-          ← Back to PDLs
-        </button>
-        <h2>Visitors for {pdl ? `${pdl.first_name} ${pdl.last_name}` : 'Loading PDL data...'}</h2>
         {pdlFetchError && <p style={{ color: 'red' }}>{pdlFetchError}</p>}
         {fetchError && <p style={{ color: 'red' }}>{fetchError}</p>}
 

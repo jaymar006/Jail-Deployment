@@ -63,7 +63,7 @@ const getTodayScheduledCellsFromWeekly = () => {
 
 const Dashboard = () => {
   const [visitors, setVisitors] = useState([]);
-  const [resetTrigger] = useState(0);
+  const [resetTrigger] = useState(null);
 
   const [selectedVisitorId, setSelectedVisitorId] = useState(null);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -1438,7 +1438,7 @@ const Dashboard = () => {
             >
               <span
                 style={{
-                  background: 'linear-gradient(135deg, #4b5563 0%, #374151 100%)',
+                  background: 'linear-gradient(135deg, #2563eb 0%, #1e40af 100%)',
                   color: 'white',
                   padding: '6px 12px',
                   borderRadius: '999px',
@@ -1589,22 +1589,15 @@ const Dashboard = () => {
 
             <div className="time-format-toggle">
               <span>Time format:</span>
-              <button
-                type="button"
-                className={`time-format-button ${useMilitaryTime ? 'active' : ''}`}
-                onClick={() => setUseMilitaryTime(true)}
-                aria-pressed={useMilitaryTime}
+              <select
+                className="time-format-select"
+                value={useMilitaryTime ? '24' : '12'}
+                onChange={(e) => setUseMilitaryTime(e.target.value === '24')}
+                aria-label="Time format"
               >
-                24h
-              </button>
-              <button
-                type="button"
-                className={`time-format-button ${!useMilitaryTime ? 'active' : ''}`}
-                onClick={() => setUseMilitaryTime(false)}
-                aria-pressed={!useMilitaryTime}
-              >
-                12h
-              </button>
+                <option value="12">12-hour (AM/PM)</option>
+                <option value="24">24-hour</option>
+              </select>
             </div>
 
             <table className="common-table">

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import api from '../services/api';
+import SkeletonTable from '../components/SkeletonTable';
 import './Dashboard.css';
 import './common.css';
 import * as XLSX from 'xlsx';
@@ -18,7 +19,7 @@ const Logs = () => {
   const [purposeFilter, setPurposeFilter] = useState('all');
   const [availableCells, setAvailableCells] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 20;
+  const [pageSize, setPageSize] = useState(20);
   const tableWrapperRef = useRef(null);
 
   useEffect(() => {
@@ -222,9 +223,16 @@ const Logs = () => {
     return 0;
   });
 
-  const totalPages = Math.ceil(sortedVisitors.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const currentVisitors = sortedVisitors.slice(startIndex, startIndex + itemsPerPage);
+  const resolvedPageSize = pageSize === 'all' ? sortedVisitors.length : pageSize;
+  const totalPages = Math.max(1, Math.ceil(sortedVisitors.length / (resolvedPageSize || 1)));
+  const startIndex = (currentPage - 1) * resolvedPageSize;
+  const currentVisitors = sortedVisitors.slice(startIndex, startIndex + resolvedPageSize);
+
+  const handlePageSizeChange = (e) => {
+    const val = e.target.value;
+    setPageSize(val === 'all' ? 'all' : Number(val));
+    setCurrentPage(1);
+  };
 
   // Smart pagination: Generate page numbers with ellipsis
   const getPaginationPages = () => {
@@ -378,68 +386,13 @@ const Logs = () => {
 
   if (loading) {
     return (
-      <>
-        <div className="common-container">
-          <main>
-            <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-              <h2 style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'center', 
-                gap: '12px',
-                margin: '0 0 16px 0',
-                fontSize: '28px',
-                fontWeight: '700',
-                color: '#111827'
-              }}>
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-                  <circle cx="9" cy="7" r="4"/>
-                  <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-                  <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-                </svg>
-                Visitor Logs
-              </h2>
-              
-              <div style={{ display: 'flex', justifyContent: 'center', gap: '12px' }}>
-                <button
-                  onClick={handleExtractTable}
-                  className="common-button export"
-                  aria-label="Extract table grouped by date"
-                >
-                  <svg className="button-icon" viewBox="0 0 24 24" style={{ width: '18px', height: '18px' }}>
-                    <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
-                  </svg>
-                  Export To Excel
-                </button>
-                <button
-                  onClick={() => {
-                    setLoading(true);
-                    setError(null);
-                    api.get('/api/scanned_visitors')
-                      .then(res => {
-                        setAllowedVisitors(res.data);
-                        setLoading(false);
-                      })
-                      .catch(err => {
-                        console.error('Failed to fetch visitors:', err);
-                        setError('Failed to fetch visitors data');
-                        setLoading(false);
-                      });
-                  }}
-                  className="common-button"
-                  aria-label="Refresh visitor logs"
-                >
-                  <svg className="button-icon" viewBox="0 0 24 24" style={{ width: '18px', height: '18px' }}>
-                    <path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
-                  </svg>
-                  Refresh
-                </button>
-              </div>
-            </div>
-          </main>
-        </div>
-      </>
+      <div className="common-container">
+        <main>
+          <div className="table-wrapper">
+            <SkeletonTable columns={8} rows={7} />
+          </div>
+        </main>
+      </div>
     );
   }
 
@@ -455,65 +408,6 @@ const Logs = () => {
     <>
       <div className="common-container">
         <main>
-          <section className="p-4">
-            <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-              <h2 style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'center', 
-                gap: '12px',
-                margin: '0 0 16px 0',
-                fontSize: '28px',
-                fontWeight: '700',
-                color: '#111827'
-              }}>
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-                  <circle cx="9" cy="7" r="4"/>
-                  <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-                  <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-                </svg>
-                Visitor Logs
-              </h2>
-              
-              <div style={{ display: 'flex', justifyContent: 'center' }}>
-                <button
-                  onClick={handleExtractTable}
-                  className="common-button"
-                  aria-label="Extract table grouped by date"
-                  style={{
-                    background: 'linear-gradient(135deg, #4b5563 0%, #374151 100%)',
-                    color: 'white',
-                    border: 'none',
-                    padding: '12px 20px',
-                    borderRadius: '8px',
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    transition: 'all 0.3s ease',
-                    boxShadow: '0 4px 12px rgba(75, 85, 99, 0.2)'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.target.style.transform = 'translateY(-2px)';
-                    e.target.style.boxShadow = '0 6px 16px rgba(75, 85, 99, 0.3)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.target.style.transform = 'translateY(0)';
-                    e.target.style.boxShadow = '0 4px 12px rgba(75, 85, 99, 0.2)';
-                  }}
-                >
-                  <svg className="button-icon" viewBox="0 0 24 24" style={{ width: '18px', height: '18px' }}>
-                    <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
-                  </svg>
-                  Export To Excel
-                </button>
-              </div>
-            </div>
-          </section>
-
           <h3 style={{ textAlign: 'center', margin: '20px 0 16px 0', fontSize: '20px', fontWeight: '600', color: '#111827' }}>Allowed Visitors</h3>
 
             {/* Filter Controls */}
@@ -538,16 +432,16 @@ const Logs = () => {
                       onChange={(e) => setSearchTerm(e.target.value)}
                       onFocus={(e) => {
                         e.target.style.outline = 'none';
-                        e.target.style.borderColor = '#4b5563';
-                        e.target.style.boxShadow = '0 0 0 3px rgba(75, 85, 99, 0.1)';
+                        e.target.style.borderColor = '#2563eb';
+                        e.target.style.boxShadow = '0 0 0 3px rgba(37, 99, 235, 0.12)';
                       }}
                       onBlur={(e) => {
-                        e.target.style.borderColor = '#e5e7eb';
+                        e.target.style.borderColor = '#bfdbfe';
                         e.target.style.boxShadow = 'none';
                       }}
                       style={{
                         padding: '8px 12px',
-                        border: '2px solid #e5e7eb',
+                        border: '2px solid #bfdbfe',
                         borderRadius: '6px',
                         fontSize: '12px',
                         transition: 'all 0.2s ease',
@@ -582,7 +476,7 @@ const Logs = () => {
                     aria-label="Filter logs by visit type"
                     style={{
                       padding: '8px 12px',
-                      border: '2px solid #e5e7eb',
+                      border: '2px solid #bfdbfe',
                       borderRadius: '6px',
                       fontSize: '12px',
                       background: '#fff',
@@ -610,7 +504,7 @@ const Logs = () => {
                     }}
                     style={{
                       padding: '8px 12px',
-                      border: '2px solid #e5e7eb',
+                      border: '2px solid #bfdbfe',
                       borderRadius: '6px',
                       fontSize: '12px',
                       background: '#fff',
@@ -630,7 +524,7 @@ const Logs = () => {
                       onChange={(e) => setFilterValue(e.target.value)}
                       style={{
                         padding: '8px 12px',
-                        border: '2px solid #e5e7eb',
+                        border: '2px solid #bfdbfe',
                         borderRadius: '6px',
                         fontSize: '12px',
                         background: '#fff',
@@ -670,12 +564,10 @@ const Logs = () => {
                   )}
                   
                   <div style={{ 
-                    background: 'linear-gradient(135deg, #4b5563 0%, #374151 100%)', 
-                    color: 'white', 
-                    padding: '8px 12px', 
-                    borderRadius: '6px', 
-                    fontWeight: '600',
-                    fontSize: '12px'
+                    color: '#6b7280', 
+                    fontSize: '12px',
+                    fontWeight: '400',
+                    whiteSpace: 'nowrap'
                   }}>
                     Showing: {sortedVisitors.length} of {allowedVisitors.length} records
                   </div>
@@ -723,8 +615,20 @@ const Logs = () => {
           </tbody>
         </table>
         </div>
-        {totalPages > 1 && (
+        {(totalPages > 1 || pageSize === 'all') && (
           <div className="pagination-container">
+            <select
+              className="pagination-size-select"
+              value={String(pageSize)}
+              onChange={handlePageSizeChange}
+              aria-label="Rows per page"
+            >
+              <option value="10">10 per page</option>
+              <option value="25">25 per page</option>
+              <option value="50">50 per page</option>
+              <option value="100">100 per page</option>
+              <option value="all">All</option>
+            </select>
             <button
               className="pagination-button pagination-nav"
               onClick={() => setCurrentPage(1)}
@@ -795,10 +699,37 @@ const Logs = () => {
             </button>
 
             <div className="pagination-info">
-              Page {currentPage} of {totalPages}
+              {pageSize === 'all' ? `Showing all ${sortedVisitors.length} rows` : `Page ${currentPage} of ${totalPages}`}
             </div>
           </div>
         )}
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '4px' }}>
+          <button
+            onClick={handleExtractTable}
+            style={{
+              background: 'none',
+              border: 'none',
+              padding: '6px 8px',
+              fontSize: '13px',
+              fontWeight: '500',
+              color: '#2563eb',
+              textDecoration: 'underline',
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              fontFamily: 'inherit'
+            }}
+            onMouseEnter={(e) => (e.target.style.color = '#1e40af')}
+            onMouseLeave={(e) => (e.target.style.color = '#2563eb')}
+            aria-label="Extract table grouped by date"
+          >
+            <svg viewBox="0 0 24 24" style={{ width: '16px', height: '16px', flexShrink: 0 }}>
+              <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z" fill="currentColor"/>
+            </svg>
+            Export to Excel
+          </button>
+        </div>
         </main>
       </div>
     </>

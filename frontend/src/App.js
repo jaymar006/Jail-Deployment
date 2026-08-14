@@ -9,9 +9,9 @@ import ResetPassword from './pages/ResetPassword';
 import Settings from './pages/Settings';
 import { VisitorProvider } from './context/VisitorContext';
 import { AuthProvider } from './context/AuthContext';
+import { PageMetaProvider } from './context/PageMetaContext';
 import ToastProvider from './components/ToastProvider';
 import PrivateRoute from './components/PrivateRoute';
-import PageTransition from './components/PageTransition';
 import Layout from './components/Layout';
 import './App.css';
 
@@ -26,50 +26,48 @@ const AppRoutes = () => {
         path="/*"
         element={
           <Layout>
-            <PageTransition>
-              <Routes location={location}>
-                <Route
-                  path="/"
-                  element={
-                    <PrivateRoute>
-                      <Dashboard />
-                    </PrivateRoute>
-                  }
-                />
-                <Route
-                  path="/datas"
-                  element={
-                    <PrivateRoute>
-                      <Datas />
-                    </PrivateRoute>
-                  }
-                />
-                <Route
-                  path="/logs"
-                  element={
-                    <PrivateRoute>
-                      <Logs />
-                    </PrivateRoute>
-                  }
-                />
-                <Route
-                  path="/visitors/:pdlId"
-                  element={
-                    <PrivateRoute>
-                      <VisitorPage />
-                    </PrivateRoute>
-                  }
-                />
-                <Route
-                  path="/settings"
-                  element={
-                    <PrivateRoute>
-                      <Settings />
-                    </PrivateRoute>
-                  }
-                />
-              </Routes>
-            </PageTransition>
+            <Routes location={location}>
+              <Route
+                path="/"
+                element={
+                  <PrivateRoute>
+                    <Dashboard />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/datas"
+                element={
+                  <PrivateRoute>
+                    <Datas />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/logs"
+                element={
+                  <PrivateRoute>
+                    <Logs />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/visitors/:pdlId"
+                element={
+                  <PrivateRoute>
+                    <VisitorPage />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/settings"
+                element={
+                  <PrivateRoute>
+                    <Settings />
+                  </PrivateRoute>
+                }
+              />
+            </Routes>
           </Layout>
         }
       />
@@ -83,7 +81,9 @@ const App = () => {
       <VisitorProvider>
         <ToastProvider>
           <Router>
-            <AppRoutes />
+            <PageMetaProvider>
+              <AppRoutes />
+            </PageMetaProvider>
           </Router>
         </ToastProvider>
       </VisitorProvider>

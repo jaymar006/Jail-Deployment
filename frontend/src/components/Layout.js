@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useContext, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { PageMetaContext } from '../context/PageMetaContext';
 import Box from '@mui/material/Box';
 import Drawer from '@mui/material/Drawer';
 import List from '@mui/material/List';
@@ -34,7 +35,7 @@ const SidebarContent = ({ activePath, onClose }) => {
 
   return (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', bgcolor: 'primary.main' }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1.5, py: 2, px: 1, position: 'relative' }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1.5, height: 64, py: 0, px: 1, position: 'relative', boxSizing: 'border-box' }}>
         <img src="/logo1.png" alt="Logo 1" style={{ height: 48, objectFit: 'contain' }} />
         <img src="/logo2.png" alt="Logo 2" style={{ height: 48, objectFit: 'contain' }} />
         {onClose && (
@@ -48,7 +49,7 @@ const SidebarContent = ({ activePath, onClose }) => {
         )}
       </Box>
       <Divider sx={{ borderColor: 'rgba(255,255,255,0.15)' }} />
-      <List sx={{ px: 1, py: 1.5 }}>
+      <List sx={{ px: 0, py: 0.5 }}>
         {NAV_ITEMS.map((item) => {
           const active = isActive(item.path);
           const textColor = active ? '#fff' : 'rgba(255,255,255,0.92)';
@@ -61,12 +62,13 @@ const SidebarContent = ({ activePath, onClose }) => {
               }}
               selected={active}
               sx={{
-                borderRadius: 1.5,
-                mb: 0.5,
-                px: 1.5,
+                borderRadius: 0,
+                mb: 0,
+                px: 2.5,
                 py: 1,
                 color: textColor,
                 bgcolor: active ? 'primary.dark' : 'transparent',
+                borderLeft: active ? '4px solid #fff' : '4px solid transparent',
                 '&:hover': { bgcolor: 'rgba(255,255,255,0.10)', color: '#fff' },
                 '&.Mui-selected': {
                   bgcolor: 'primary.dark',
@@ -117,6 +119,7 @@ const SidebarContent = ({ activePath, onClose }) => {
 const Layout = ({ children }) => {
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { visitorName } = useContext(PageMetaContext);
 
   const getActivePage = () => {
     const path = location.pathname;
@@ -126,6 +129,20 @@ const Layout = ({ children }) => {
     if (path.startsWith('/visitors/')) return 'PDL Management';
     if (path === '/settings') return 'Settings';
     return '';
+  };
+
+  const getBreadcrumbs = (path) => {
+    if (path === '/') return [{ label: 'Dashboard' }];
+    if (path === '/datas') return [{ label: 'PDL Management' }];
+    if (path === '/logs') return [{ label: 'Logs' }];
+    if (path === '/settings') return [{ label: 'Settings' }];
+    if (path.startsWith('/visitors/')) {
+      return [
+        { label: 'PDL Management', to: '/datas' },
+        { label: visitorName ? `Visitors for ${visitorName}` : 'Visitors' },
+      ];
+    }
+    return [];
   };
 
   return (
@@ -154,7 +171,7 @@ const Layout = ({ children }) => {
         </Drawer>
       </Box>
       <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', minWidth: 0, height: '100vh' }}>
-        <Header activePage={getActivePage()} onMenuClick={() => setMobileOpen(true)} />
+        <Header activePage={getActivePage()} breadcrumbs={getBreadcrumbs(location.pathname)} onMenuClick={() => setMobileOpen(true)} />
         <Box component="main" sx={{ flexGrow: 1, width: '100%', overflowY: 'auto' }}>
           {children}
         </Box>

@@ -1,6 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import ReactDOM from 'react-dom';
 import axios from '../services/api';
+import Dialog from '@mui/material/Dialog';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogContent from '@mui/material/DialogContent';
+import DialogActions from '@mui/material/DialogActions';
+import TextField from '@mui/material/TextField';
+import Select from '@mui/material/Select';
+import MenuItem from '@mui/material/MenuItem';
+import InputLabel from '@mui/material/InputLabel';
+import FormControl from '@mui/material/FormControl';
+import FormControlLabel from '@mui/material/FormControlLabel';
+import Checkbox from '@mui/material/Checkbox';
+import Button from '@mui/material/Button';
+import Box from '@mui/material/Box';
+import Typography from '@mui/material/Typography';
+import CircularProgress from '@mui/material/CircularProgress';
 import './Settings.css';
 
 const WEEK_DAYS = [
@@ -24,86 +38,40 @@ const createEmptyWeeklySchedule = () =>
     return acc;
   }, {});
 
-const Modal = ({ children, onClose }) => {
-  const overlayRef = React.useRef(null);
-  
-  // Prevent body scroll when modal is open and ensure overlay covers everything
-  React.useEffect(() => {
-    // Save current scroll position
-    const scrollY = window.scrollY;
-    const scrollX = window.scrollX;
-    
-    // Calculate full document height to ensure overlay covers everything
-    const documentHeight = Math.max(
-      document.body.scrollHeight,
-      document.body.offsetHeight,
-      document.documentElement.clientHeight,
-      document.documentElement.scrollHeight,
-      document.documentElement.offsetHeight
-    );
-    
-    const originalOverflow = document.body.style.overflow;
-    const originalHtmlOverflow = document.documentElement.style.overflow;
-    const originalBgColor = document.body.style.backgroundColor;
-    const originalHtmlBgColor = document.documentElement.style.backgroundColor;
-    const originalPosition = document.body.style.position;
-    const originalTop = document.body.style.top;
-    const originalLeft = document.body.style.left;
-    const originalWidth = document.body.style.width;
-    
-    // Prevent scrolling on both body and html
-    document.body.style.overflow = 'hidden';
-    document.documentElement.style.overflow = 'hidden';
-    
-    // Lock body position to prevent scroll (keep current scroll position)
-    document.body.style.position = 'fixed';
-    document.body.style.top = `-${scrollY}px`;
-    document.body.style.left = `-${scrollX}px`;
-    document.body.style.width = '100%';
-    
-    // Ensure background doesn't show white behind modal
-    document.body.style.backgroundColor = '#f9fafb';
-    document.documentElement.style.backgroundColor = '#f9fafb';
-    
-    // Set overlay height to cover full document
-    if (overlayRef.current) {
-      overlayRef.current.style.height = `${documentHeight}px`;
-      overlayRef.current.style.minHeight = `${documentHeight}px`;
-    }
-    
-    return () => {
-      // Restore original styles
-      document.body.style.overflow = originalOverflow;
-      document.documentElement.style.overflow = originalHtmlOverflow;
-      document.body.style.backgroundColor = originalBgColor;
-      document.documentElement.style.backgroundColor = originalHtmlBgColor;
-      document.body.style.position = originalPosition;
-      document.body.style.top = originalTop;
-      document.body.style.left = originalLeft;
-      document.body.style.width = originalWidth;
-      
-      // Reset overlay height
-      if (overlayRef.current) {
-        overlayRef.current.style.height = '';
-        overlayRef.current.style.minHeight = '';
-      }
-      
-      // Restore scroll position
-      window.scrollTo(scrollX, scrollY);
-    };
-  }, []);
+const SettingsDialog = ({ open, onClose, maxWidth = 'sm', fullWidth = true, children }) => (
+  <Dialog
+    open={open}
+    onClose={onClose}
+    maxWidth={maxWidth}
+    fullWidth={fullWidth}
+    PaperProps={{
+      sx: {
+        borderRadius: '16px',
+        boxShadow: '0 24px 48px rgba(15, 23, 42, 0.18), 0 4px 12px rgba(15, 23, 42, 0.08)',
+        border: '1px solid rgba(0, 0, 0, 0.06)',
+        overflow: 'hidden',
+      },
+    }}
+  >
+    {children}
+  </Dialog>
+);
 
-  // Render modal at document body level to ensure it covers everything
-  return ReactDOM.createPortal(
-    <div className="modal-overlay" ref={overlayRef} onClick={onClose}>
-      <div className="modal-content" onClick={e => e.stopPropagation()}>
-        <button className="modal-close" onClick={onClose}>×</button>
-        {children}
-      </div>
-    </div>,
-    document.body
-  );
-};
+const SettingsDialogHeader = ({ icon, title, subtitle, titleColor = '#111827' }) => (
+  <Box sx={{ textAlign: 'center', pt: 1.5, pb: 1 }}>
+    {icon && (
+      <Box sx={{ mb: 1.5, display: 'flex', justifyContent: 'center' }}>{icon}</Box>
+    )}
+    <Typography variant="h6" sx={{ fontWeight: 700, color: titleColor }}>
+      {title}
+    </Typography>
+    {subtitle && (
+      <Typography variant="body2" sx={{ color: '#6b7280', mt: 0.5 }}>
+        {subtitle}
+      </Typography>
+    )}
+  </Box>
+);
 
 const Settings = () => {
   const [modalOpen, setModalOpen] = useState(null); // 'username', 'password', 'telegram', 'cell', 'editCell', 'deleteAllPdls', 'deleteLogs', 'selectLogs', 'registrationCodes', 'weeklySchedule', 'systemInfo' or null
@@ -655,7 +623,6 @@ const Settings = () => {
   return (
     <>
       <div className="settings-container">
-        <h2>Settings</h2>
         {username && (
           <div className="username-card">
             <strong>Username:</strong> {username}
@@ -925,1363 +892,1129 @@ const Settings = () => {
           </div>
         </div>
         {modalOpen === 'weeklySchedule' && (
-          <Modal onClose={closeModal}>
-            <div style={{ maxWidth: '640px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px', justifyContent: 'center' }}>
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#d97706' }}>
+          <SettingsDialog open onClose={closeModal} maxWidth="md">
+            <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1.5, pb: 1 }}>
+              <Box sx={{ color: '#d97706', display: 'flex' }}>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
                   <line x1="16" y1="2" x2="16" y2="6"/>
                   <line x1="8" y1="2" x2="8" y2="6"/>
                   <line x1="3" y1="10" x2="21" y2="10"/>
                 </svg>
-                <h3 style={{ margin: 0 }}>Weekly Cell Visit Schedules</h3>
-              </div>
-              <p style={{ margin: '0 0 16px 0', fontSize: '14px', color: '#6b7280', textAlign: 'center' }}>
+              </Box>
+              <Typography variant="h6" sx={{ fontWeight: 700 }}>Weekly Cell Visit Schedules</Typography>
+            </DialogTitle>
+            <DialogContent dividers>
+              <Typography variant="body2" sx={{ color: '#6b7280', textAlign: 'center', mb: 2 }}>
                 Select a day and choose which cells are allowed for scanning.
-              </p>
-              <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', justifyContent: 'center' }}>
-                <select
-                  value={selectedScheduleDay}
-                  onChange={(e) => setSelectedScheduleDay(e.target.value)}
-                  style={{
-                    minWidth: '180px',
-                    padding: '8px 12px',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '6px',
-                    fontSize: '14px'
-                  }}
-                >
-                  {WEEK_DAYS.map((day) => (
-                    <option key={day.key} value={day.key}>
-                      {day.label}
-                    </option>
-                  ))}
-                </select>
-                <button
-                  type="button"
-                  onClick={() => setAllCellsForSelectedDay(true)}
-                  className="common-button add"
-                >
-                  Select All
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setAllCellsForSelectedDay(false)}
-                  className="common-button delete"
-                >
-                  Clear Day
-                </button>
-              </div>
-              <div style={{
-                maxHeight: '320px',
-                overflowY: 'auto',
-                border: '1px solid #e5e7eb',
-                borderRadius: '8px',
-                background: 'white',
-                padding: '10px'
-              }}>
-                {cells.length === 0 ? (
-                  <p style={{ margin: '8px 0', fontSize: '13px', color: '#6b7280', textAlign: 'center' }}>
-                    No cells found. Add cells first to configure schedules.
-                  </p>
-                ) : (
-                  <div style={{ display: 'grid', gap: '8px' }}>
-                    {cells.map((cell) => (
-                      <label
-                        key={cell.id}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '10px',
-                          padding: '10px',
-                          borderRadius: '8px',
-                          border: isCellScheduledForSelectedDay(cell.id) ? '2px solid #10b981' : '1px solid #e5e7eb',
-                          background: isCellScheduledForSelectedDay(cell.id) ? '#ecfdf5' : '#fff',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={isCellScheduledForSelectedDay(cell.id)}
-                          onChange={() => toggleCellForSelectedDay(cell.id)}
-                          style={{ width: '16px', height: '16px' }}
-                        />
-                        <span style={{ fontSize: '14px', color: '#111827', fontWeight: '500' }}>
-                          {cell.cell_name ? `${cell.cell_name} - ${cell.cell_number}` : cell.cell_number}
-                        </span>
-                      </label>
+              </Typography>
+              <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center', mb: 2, flexWrap: 'wrap', justifyContent: 'center' }}>
+                <FormControl size="small" sx={{ minWidth: 180 }}>
+                  <InputLabel id="schedule-day-label">Day</InputLabel>
+                  <Select
+                    labelId="schedule-day-label"
+                    value={selectedScheduleDay}
+                    onChange={(e) => setSelectedScheduleDay(e.target.value)}
+                    label="Day"
+                  >
+                    {WEEK_DAYS.map((day) => (
+                      <MenuItem key={day.key} value={day.key}>
+                        {day.label}
+                      </MenuItem>
                     ))}
-                  </div>
+                  </Select>
+                </FormControl>
+                <Button variant="contained" color="success" onClick={() => setAllCellsForSelectedDay(true)}>
+                  Select All
+                </Button>
+                <Button variant="outlined" color="error" onClick={() => setAllCellsForSelectedDay(false)}>
+                  Clear Day
+                </Button>
+              </Box>
+              <Box sx={{ maxHeight: 320, overflowY: 'auto', border: '1px solid #e5e7eb', borderRadius: '8px', background: 'white', p: 1 }}>
+                {cells.length === 0 ? (
+                  <Typography variant="body2" sx={{ color: '#6b7280', textAlign: 'center', py: 1 }}>
+                    No cells found. Add cells first to configure schedules.
+                  </Typography>
+                ) : (
+                  <Box sx={{ display: 'grid', gap: 1 }}>
+                    {cells.map((cell) => {
+                      const scheduled = isCellScheduledForSelectedDay(cell.id);
+                      return (
+                        <FormControlLabel
+                          key={cell.id}
+                          control={
+                            <Checkbox
+                              checked={scheduled}
+                              onChange={() => toggleCellForSelectedDay(cell.id)}
+                            />
+                          }
+                          label={cell.cell_name ? `${cell.cell_name} - ${cell.cell_number}` : cell.cell_number}
+                          sx={{
+                            mx: 0,
+                            px: 1.25,
+                            py: 0.75,
+                            borderRadius: '8px',
+                            border: scheduled ? '2px solid #10b981' : '1px solid #e5e7eb',
+                            backgroundColor: scheduled ? '#ecfdf5' : '#fff',
+                          }}
+                        />
+                      );
+                    })}
+                  </Box>
                 )}
-              </div>
-              <p style={{ margin: '12px 0 0 0', fontSize: '12px', color: '#6b7280', fontStyle: 'italic', textAlign: 'center' }}>
+              </Box>
+              <Typography variant="caption" sx={{ display: 'block', textAlign: 'center', mt: 1.5, fontStyle: 'italic', color: '#6b7280' }}>
                 {`${(weeklySchedule[selectedScheduleDay] || []).length} cell(s) scheduled for ${WEEK_DAYS.find(d => d.key === selectedScheduleDay)?.label || selectedScheduleDay}.`}
-              </p>
-              <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'center' }}>
-                <button
-                  onClick={closeModal}
-                  className="common-button cancel"
-                >
-                  Done
-                </button>
-              </div>
-            </div>
-          </Modal>
+              </Typography>
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={closeModal} color="inherit">Done</Button>
+            </DialogActions>
+          </SettingsDialog>
         )}
 
 
         {modalOpen === 'username' && (
-          <Modal onClose={closeModal}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px', justifyContent: 'center' }}>
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#4b5563' }}>
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                <circle cx="12" cy="7" r="4"/>
-              </svg>
-              <h3 style={{ margin: 0 }}>Change Username</h3>
-            </div>
-            <form onSubmit={handleUsernameSubmit} className="settings-form">
-              <label htmlFor="username">New Username:</label>
-              <input
-                type="text"
-                id="username"
-                value={newUsername}
-                onChange={(e) => setNewUsername(e.target.value)}
-                required
-              />
-              <button type="submit">Change Username</button>
-            </form>
-          </Modal>
+          <SettingsDialog open onClose={closeModal} maxWidth="xs">
+            <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1.5, pb: 1 }}>
+              <Box sx={{ color: '#4b5563', display: 'flex' }}>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                  <circle cx="12" cy="7" r="4"/>
+                </svg>
+              </Box>
+              <Typography variant="h6" sx={{ fontWeight: 700 }}>Change Username</Typography>
+            </DialogTitle>
+            <DialogContent>
+              <Box component="form" onSubmit={handleUsernameSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
+                <TextField
+                  label="New Username"
+                  value={newUsername}
+                  onChange={(e) => setNewUsername(e.target.value)}
+                  required
+                  fullWidth
+                  autoFocus
+                />
+                <Button type="submit" variant="contained" fullWidth sx={{ bgcolor: '#2563eb', '&:hover': { bgcolor: '#1e40af' } }}>
+                  Change Username
+                </Button>
+              </Box>
+            </DialogContent>
+          </SettingsDialog>
         )}
 
         {modalOpen === 'password' && (
-          <Modal onClose={closeModal}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px', justifyContent: 'center' }}>
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#4b5563' }}>
-                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-              </svg>
-              <h3 style={{ margin: 0 }}>Change Password</h3>
-            </div>
-            <form onSubmit={handlePasswordSubmit} className="settings-form">
-              <label htmlFor="currentPassword">Current Password:</label>
-              <input
-                type="password"
-                id="currentPassword"
-                value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
-                required
-              />
-              <label htmlFor="newPassword">New Password:</label>
-              <input
-                type="password"
-                id="newPassword"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                required
-                minLength="6"
-              />
-              <button type="submit">Change Password</button>
-            </form>
-          </Modal>
+          <SettingsDialog open onClose={closeModal} maxWidth="xs">
+            <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1.5, pb: 1 }}>
+              <Box sx={{ color: '#4b5563', display: 'flex' }}>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                </svg>
+              </Box>
+              <Typography variant="h6" sx={{ fontWeight: 700 }}>Change Password</Typography>
+            </DialogTitle>
+            <DialogContent>
+              <Box component="form" onSubmit={handlePasswordSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
+                <TextField
+                  label="Current Password"
+                  type="password"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  required
+                  fullWidth
+                />
+                <TextField
+                  label="New Password"
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  required
+                  fullWidth
+                  slotProps={{ htmlInput: { minLength: 6 } }}
+                />
+                <Button type="submit" variant="contained" fullWidth sx={{ bgcolor: '#2563eb', '&:hover': { bgcolor: '#1e40af' } }}>
+                  Change Password
+                </Button>
+              </Box>
+            </DialogContent>
+          </SettingsDialog>
         )}
 
         {modalOpen === 'telegram' && (
-          <Modal onClose={closeModal}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px', justifyContent: 'center' }}>
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#0088cc' }}>
-                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
-              </svg>
-              <h3 style={{ margin: 0 }}>Telegram Recovery Account</h3>
-            </div>
-            <form onSubmit={handleTelegramUsernameSubmit} className="settings-form">
-              <label htmlFor="telegramUsername">
-                Telegram Username (for password recovery):
-                {telegramUsername && (
-                  <span style={{ fontSize: '0.85em', color: '#6b7280', marginLeft: '8px' }}>
-                    Current: @{telegramUsername}
-                  </span>
-                )}
-              </label>
-              <input
-                type="text"
-                id="telegramUsername"
-                value={newTelegramUsername}
-                onChange={(e) => setNewTelegramUsername(e.target.value)}
-                placeholder={telegramUsername ? `@${telegramUsername}` : 'Enter Telegram username (optional)'}
-              />
-              <p style={{ fontSize: '0.85em', color: '#6b7280', marginTop: '-10px', marginBottom: '20px' }}>
-                {telegramUsername 
-                  ? 'Leave empty to remove your Telegram username, or enter a new one to update it.'
-                  : 'Add your Telegram username to enable password recovery via Telegram. Leave empty to skip.'}
-              </p>
-              <button type="submit">{telegramUsername ? 'Update Telegram Username' : 'Add Telegram Username'}</button>
-            </form>
-          </Modal>
+          <SettingsDialog open onClose={closeModal} maxWidth="sm">
+            <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1.5, pb: 1 }}>
+              <Box sx={{ color: '#0088cc', display: 'flex' }}>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+                </svg>
+              </Box>
+              <Typography variant="h6" sx={{ fontWeight: 700 }}>Telegram Recovery Account</Typography>
+            </DialogTitle>
+            <DialogContent>
+              <Box component="form" onSubmit={handleTelegramUsernameSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
+                <TextField
+                  label="Telegram Username"
+                  value={newTelegramUsername}
+                  onChange={(e) => setNewTelegramUsername(e.target.value)}
+                  placeholder={telegramUsername ? `@${telegramUsername}` : 'Enter Telegram username (optional)'}
+                  fullWidth
+                  helperText={
+                    telegramUsername
+                      ? `Current: @${telegramUsername} — Leave empty to remove it, or enter a new one to update it.`
+                      : 'Add your Telegram username to enable password recovery via Telegram. Leave empty to skip.'
+                  }
+                />
+                <Button type="submit" variant="contained" fullWidth sx={{ bgcolor: '#2563eb', '&:hover': { bgcolor: '#1e40af' } }}>
+                  {telegramUsername ? 'Update Telegram Username' : 'Add Telegram Username'}
+                </Button>
+              </Box>
+            </DialogContent>
+          </SettingsDialog>
         )}
 
         {modalOpen === 'cell' && (
-          <Modal onClose={closeModal}>
-            <div style={{ textAlign: 'center', marginBottom: '28px' }}>
-              <div style={{
-                width: '64px',
-                height: '64px',
-                margin: '0 auto 16px',
-                background: 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)',
-                borderRadius: '50%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                border: '2px solid #93c5fd'
-              }}>
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#2563eb' }}>
+          <SettingsDialog open onClose={closeModal} maxWidth="md">
+            <DialogContent sx={{ pt: 3 }}>
+              <SettingsDialogHeader
+                icon={
+                  <Box sx={{
+                    width: 64,
+                    height: 64,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: '50%',
+                    background: 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)',
+                    border: '2px solid #93c5fd',
+                    color: '#2563eb',
+                    mx: 'auto',
+                  }}>
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                      <line x1="9" y1="3" x2="9" y2="21"/>
+                      <line x1="3" y1="9" x2="21" y2="9"/>
+                      <line x1="3" y1="15" x2="21" y2="15"/>
+                      <line x1="15" y1="3" x2="15" y2="21"/>
+                    </svg>
+                  </Box>
+                }
+                title="Manage Cells"
+                subtitle="Add, edit, or remove cell configurations"
+              />
+              <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
+                <Button
+                  variant="contained"
+                  startIcon={
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="12" y1="5" x2="12" y2="19"/>
+                      <line x1="5" y1="12" x2="19" y2="12"/>
+                    </svg>
+                  }
+                  onClick={() => {
+                    setEditingCell(null);
+                    setCellForm({
+                      cell_number: '',
+                      cell_name: '',
+                      capacity: 1,
+                      status: 'active'
+                    });
+                    setCustomCellName('');
+                    setModalOpen('editCell');
+                  }}
+                  sx={{ bgcolor: '#2563eb', '&:hover': { bgcolor: '#1e40af' } }}
+                >
+                  Add New Cell
+                </Button>
+              </Box>
+              <Box sx={{ maxHeight: 450, overflowY: 'auto', borderRadius: '12px', border: '1px solid #e5e7eb', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.05)' }}>
+                {cells.length === 0 ? (
+                  <Box sx={{ textAlign: 'center', py: 6, color: '#9ca3af' }}>
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ margin: '0 auto 16px', display: 'block', opacity: 0.5 }}>
+                      <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                      <line x1="9" y1="3" x2="9" y2="21"/>
+                      <line x1="3" y1="9" x2="21" y2="9"/>
+                    </svg>
+                    <Typography sx={{ fontSize: 16, fontWeight: 500, color: '#9ca3af' }}>No cells found</Typography>
+                    <Typography variant="body2" sx={{ mt: 1, opacity: 0.7 }}>Click "Add New Cell" to create your first cell</Typography>
+                  </Box>
+                ) : (
+                  <table className="cell-management-table">
+                    <thead>
+                      <tr>
+                        <th>Cell Name</th>
+                        <th>Cell Number</th>
+                        <th>Capacity</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {cells.map((cell) => (
+                        <tr key={cell.id}>
+                          <td style={{ fontWeight: '500', color: '#111827' }}>
+                            {cell.cell_name || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>-</span>}
+                          </td>
+                          <td style={{ fontWeight: '600', color: '#374151' }}>{cell.cell_number}</td>
+                          <td style={{ color: '#4b5563' }}>{cell.capacity}</td>
+                          <td>
+                            <span className={`status-badge ${cell.status}`}>
+                              {cell.status}
+                            </span>
+                          </td>
+                          <td>
+                            <div className="table-action-buttons">
+                              <button 
+                                className="edit-btn"
+                                onClick={() => handleEditCell(cell)}
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '4px'
+                                }}
+                              >
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                                </svg>
+                                Edit
+                              </button>
+                              <button 
+                                className="delete-btn"
+                                onClick={() => handleDeleteCell(cell.id)}
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '4px'
+                                }}
+                              >
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <path d="M3 6h18"/>
+                                  <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
+                                  <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+                                </svg>
+                                Delete
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </Box>
+            </DialogContent>
+          </SettingsDialog>
+        )}
+
+        {modalOpen === 'editCell' && (
+          <SettingsDialog open onClose={closeModal} maxWidth="xs">
+            <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1.5, pb: 1 }}>
+              <Box sx={{ color: '#2563eb', display: 'flex' }}>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
                   <line x1="9" y1="3" x2="9" y2="21"/>
                   <line x1="3" y1="9" x2="21" y2="9"/>
                   <line x1="3" y1="15" x2="21" y2="15"/>
                   <line x1="15" y1="3" x2="15" y2="21"/>
                 </svg>
-              </div>
-              <h3 style={{ margin: '0 0 8px 0', fontSize: '24px', fontWeight: '700', color: '#111827' }}>
-                Manage Cells
-              </h3>
-              <p style={{ margin: '0', fontSize: '14px', color: '#6b7280' }}>
-                Add, edit, or remove cell configurations
-              </p>
-            </div>
-
-            <div style={{ 
-              marginBottom: '20px', 
-              display: 'flex', 
-              justifyContent: 'center' 
-            }}>
-              <button 
-                className="add-cell-btn"
-                onClick={() => {
-                  setEditingCell(null);
-                  setCellForm({
-                    cell_number: '',
-                    cell_name: '',
-                    capacity: 1,
-                    status: 'active'
-                  });
-                  setCustomCellName('');
-                  setModalOpen('editCell');
-                }}
-              >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="12" y1="5" x2="12" y2="19"/>
-                  <line x1="5" y1="12" x2="19" y2="12"/>
-                </svg>
-                Add New Cell
-              </button>
-            </div>
-            
-            <div style={{ 
-              maxHeight: '450px', 
-              overflowY: 'auto',
-              borderRadius: '12px',
-              border: '1px solid #e5e7eb',
-              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.05)'
-            }}>
-              {cells.length === 0 ? (
-                <div style={{ 
-                  textAlign: 'center', 
-                  padding: '60px 20px',
-                  color: '#9ca3af'
-                }}>
-                  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ margin: '0 auto 16px', opacity: 0.5 }}>
-                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-                    <line x1="9" y1="3" x2="9" y2="21"/>
-                    <line x1="3" y1="9" x2="21" y2="9"/>
-                  </svg>
-                  <p style={{ margin: '0', fontSize: '16px', fontWeight: '500' }}>
-                    No cells found
-                  </p>
-                  <p style={{ margin: '8px 0 0 0', fontSize: '14px', opacity: 0.7 }}>
-                    Click "Add New Cell" to create your first cell
-                  </p>
-                </div>
-              ) : (
-                <table className="cell-management-table">
-                  <thead>
-                    <tr>
-                      <th>Cell Name</th>
-                      <th>Cell Number</th>
-                      <th>Capacity</th>
-                      <th>Status</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {cells.map((cell) => (
-                      <tr key={cell.id}>
-                        <td style={{ fontWeight: '500', color: '#111827' }}>
-                          {cell.cell_name || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>-</span>}
-                        </td>
-                        <td style={{ fontWeight: '600', color: '#374151' }}>{cell.cell_number}</td>
-                        <td style={{ color: '#4b5563' }}>{cell.capacity}</td>
-                        <td>
-                          <span className={`status-badge ${cell.status}`}>
-                            {cell.status}
-                          </span>
-                        </td>
-                        <td>
-                          <div className="table-action-buttons">
-                            <button 
-                              className="edit-btn"
-                              onClick={() => handleEditCell(cell)}
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '4px'
-                              }}
-                            >
-                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                              </svg>
-                              Edit
-                            </button>
-                            <button 
-                              className="delete-btn"
-                              onClick={() => handleDeleteCell(cell.id)}
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '4px'
-                              }}
-                            >
-                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M3 6h18"/>
-                                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
-                                <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
-                              </svg>
-                              Delete
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </div>
-          </Modal>
-        )}
-
-        {modalOpen === 'editCell' && (
-          <Modal onClose={closeModal}>
-            <h3>{editingCell ? 'Edit Cell' : 'Add New Cell'}</h3>
-            <form onSubmit={handleCellSubmit} className="settings-form">
-              <label htmlFor="cell_number">Cell Number *:</label>
-              <input
-                type="text"
-                id="cell_number"
-                value={cellForm.cell_number}
-                onChange={(e) => setCellForm({ ...cellForm, cell_number: e.target.value })}
-                required
-                placeholder="e.g., C1, C2, etc."
-              />
-              
-              <label htmlFor="cell_name">Cell Name:</label>
-              <select
-                id="cell_name"
-                value={cellForm.cell_name}
-                onChange={(e) => {
-                  setCellForm({ ...cellForm, cell_name: e.target.value });
-                  // Clear custom name when switching away from "Other"
-                  if (e.target.value !== 'Other') {
-                    setCustomCellName('');
-                  }
-                }}
-              >
-                <option value="">Select Cell Type</option>
-                <option value="Quarantine">Quarantine</option>
-                <option value="Cell">Cell</option>
-                <option value="Other">Other</option>
-              </select>
-              
-              {cellForm.cell_name === 'Other' && (
-                <>
-                  <label htmlFor="custom_cell_name">Custom Cell Name:</label>
-                  <input
-                    type="text"
-                    id="custom_cell_name"
+              </Box>
+              <Typography variant="h6" sx={{ fontWeight: 700 }}>{editingCell ? 'Edit Cell' : 'Add New Cell'}</Typography>
+            </DialogTitle>
+            <DialogContent>
+              <Box component="form" onSubmit={handleCellSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
+                <TextField
+                  label="Cell Number *"
+                  value={cellForm.cell_number}
+                  onChange={(e) => setCellForm({ ...cellForm, cell_number: e.target.value })}
+                  required
+                  fullWidth
+                  placeholder="e.g., C1, C2, etc."
+                  autoFocus
+                />
+                <FormControl fullWidth>
+                  <InputLabel>Cell Name</InputLabel>
+                  <Select
+                    label="Cell Name"
+                    value={cellForm.cell_name}
+                    onChange={(e) => {
+                      setCellForm({ ...cellForm, cell_name: e.target.value });
+                      if (e.target.value !== 'Other') {
+                        setCustomCellName('');
+                      }
+                    }}
+                  >
+                    <MenuItem value="">Select Cell Type</MenuItem>
+                    <MenuItem value="Quarantine">Quarantine</MenuItem>
+                    <MenuItem value="Cell">Cell</MenuItem>
+                    <MenuItem value="Other">Other</MenuItem>
+                  </Select>
+                </FormControl>
+                {cellForm.cell_name === 'Other' && (
+                  <TextField
+                    label="Custom Cell Name *"
                     value={customCellName}
                     onChange={(e) => setCustomCellName(e.target.value)}
-                    placeholder="Enter custom cell name"
                     required
+                    fullWidth
+                    placeholder="Enter custom cell name"
                   />
-                </>
-              )}
-              
-              <label htmlFor="capacity">Capacity:</label>
-              <input
-                type="number"
-                id="capacity"
-                value={cellForm.capacity}
-                onChange={(e) => setCellForm({ ...cellForm, capacity: parseInt(e.target.value) || 1 })}
-                min="1"
-              />
-              
-              <label htmlFor="status">Status:</label>
-              <select
-                id="status"
-                value={cellForm.status}
-                onChange={(e) => setCellForm({ ...cellForm, status: e.target.value })}
-              >
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-                <option value="maintenance">Maintenance</option>
-              </select>
-              
-              <div style={{ display: 'flex', gap: '12px', marginTop: '20px' }}>
-                <button type="submit" style={{ flex: 1 }}>
-                  {editingCell ? 'Update Cell' : 'Add Cell'}
-                </button>
-                <button 
-                  type="button" 
-                  onClick={closeModal} 
-                  className="common-button cancel"
-                  style={{ flex: 1 }}
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
-          </Modal>
+                )}
+                <TextField
+                  label="Capacity"
+                  type="number"
+                  value={cellForm.capacity}
+                  onChange={(e) => setCellForm({ ...cellForm, capacity: parseInt(e.target.value) || 1 })}
+                  fullWidth
+                  slotProps={{ htmlInput: { min: 1 } }}
+                />
+                <FormControl fullWidth>
+                  <InputLabel>Status</InputLabel>
+                  <Select
+                    label="Status"
+                    value={cellForm.status}
+                    onChange={(e) => setCellForm({ ...cellForm, status: e.target.value })}
+                  >
+                    <MenuItem value="active">Active</MenuItem>
+                    <MenuItem value="inactive">Inactive</MenuItem>
+                    <MenuItem value="maintenance">Maintenance</MenuItem>
+                  </Select>
+                </FormControl>
+                <Box sx={{ display: 'flex', gap: 1.5, mt: 1 }}>
+                  <Button type="submit" variant="contained" fullWidth sx={{ bgcolor: '#2563eb', '&:hover': { bgcolor: '#1e40af' } }}>
+                    {editingCell ? 'Update Cell' : 'Add Cell'}
+                  </Button>
+                  <Button type="button" onClick={closeModal} variant="outlined" color="inherit" fullWidth>
+                    Cancel
+                  </Button>
+                </Box>
+              </Box>
+            </DialogContent>
+          </SettingsDialog>
         )}
 
         {modalOpen === 'deleteAllPdls' && (
-          <Modal onClose={closeModal}>
-            <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-              <div style={{
-                width: '64px',
-                height: '64px',
-                margin: '0 auto 16px',
-                background: 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)',
-                borderRadius: '50%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                border: '2px solid #fca5a5'
-              }}>
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#dc2626' }}>
-                  <path d="M3 6h18"/>
-                  <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
-                  <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
-                  <line x1="10" y1="11" x2="10" y2="17"/>
-                  <line x1="14" y1="11" x2="14" y2="17"/>
-                </svg>
-              </div>
-              <h3 style={{ margin: '0 0 8px 0', fontSize: '24px', fontWeight: '700', color: '#dc2626' }}>
-                Delete All PDLs
-              </h3>
-            </div>
-            
-            <div style={{ marginBottom: '20px', textAlign: 'center' }}>
-              <p style={{ marginBottom: '15px', fontSize: '16px', color: '#374151' }}>
-                Are you sure you want to delete <strong>ALL PDLs</strong>?
-              </p>
-              <p style={{ marginBottom: '15px', fontSize: '14px', color: '#6b7280' }}>
-                This action will permanently remove all PDL records from the database.
-              </p>
-              <p style={{ fontSize: '14px', color: '#dc2626', fontWeight: '600', marginBottom: '20px' }}>
-                This action cannot be undone!
-              </p>
-              
-              <div style={{ marginTop: '20px' }}>
-                <label style={{ 
-                  display: 'block', 
-                  marginBottom: '8px', 
-                  fontSize: '14px', 
-                  fontWeight: '500', 
-                  color: '#374151',
-                  textAlign: 'left'
-                }}>
-                  Type <strong>"Yes Delete All"</strong> to confirm:
-                </label>
-                <input
-                  type="text"
-                  value={deleteAllPdlsConfirmation}
-                  onChange={(e) => setDeleteAllPdlsConfirmation(e.target.value)}
-                  placeholder="Yes Delete All"
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    border: '2px solid #d1d5db',
-                    borderRadius: '6px',
-                    fontSize: '14px',
-                    transition: 'border-color 0.2s ease'
-                  }}
-                  onFocus={(e) => {
-                    e.target.style.borderColor = '#dc2626';
-                  }}
-                  onBlur={(e) => {
-                    e.target.style.borderColor = '#d1d5db';
-                  }}
-                />
-              </div>
-            </div>
-            
-            <div style={{ display: 'flex', justifyContent: 'center', gap: '12px' }}>
-              <button
-                onClick={handleDeleteAllPdls}
-                disabled={deleteAllPdlsConfirmation !== 'Yes Delete All'}
-                className="common-button delete"
-              >
-                Yes, Delete All
-              </button>
-              <button
-                onClick={closeModal}
-                className="common-button cancel"
-              >
-                Cancel
-              </button>
-            </div>
-          </Modal>
-        )}
-
-        {modalOpen === 'deleteLogs' && (
-          <Modal onClose={closeModal}>
-            <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-              <div style={{
-                width: '64px',
-                height: '64px',
-                margin: '0 auto 16px',
-                background: 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)',
-                borderRadius: '50%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                border: '2px solid #fca5a5'
-              }}>
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#dc2626' }}>
-                  <path d="M3 6h18"/>
-                  <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
-                  <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
-                  <line x1="10" y1="11" x2="10" y2="17"/>
-                  <line x1="14" y1="11" x2="14" y2="17"/>
-                </svg>
-              </div>
-              <h3 style={{ margin: '0 0 8px 0', fontSize: '24px', fontWeight: '700', color: '#111827' }}>
-                Delete Logs
-              </h3>
-              <p style={{ margin: 0, fontSize: '14px', color: '#6b7280' }}>
-                Choose a deletion method below
-              </p>
-            </div>
-            
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px', marginBottom: '24px' }}>
-              {/* Delete All Logs Card */}
-              <div
-                onClick={() => setModalOpen('deleteAllLogsConfirm')}
-                style={{
-                  padding: '20px',
-                  background: 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)',
-                  border: '2px solid #fca5a5',
-                  borderRadius: '12px',
-                  cursor: 'pointer',
-                  transition: 'all 0.3s ease',
-                  boxShadow: '0 2px 8px rgba(220, 38, 38, 0.1)'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'translateY(-2px)';
-                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(220, 38, 38, 0.2)';
-                  e.currentTarget.style.borderColor = '#f87171';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = '0 2px 8px rgba(220, 38, 38, 0.1)';
-                  e.currentTarget.style.borderColor = '#fca5a5';
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
-                  <div style={{
-                    width: '40px',
-                    height: '40px',
-                    background: 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)',
-                    borderRadius: '10px',
+          <SettingsDialog open onClose={closeModal} maxWidth="xs">
+            <DialogContent sx={{ pt: 3 }}>
+              <SettingsDialogHeader
+                icon={
+                  <Box sx={{
+                    width: 64,
+                    height: 64,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    color: 'white'
+                    borderRadius: '50%',
+                    background: 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)',
+                    border: '2px solid #fca5a5',
+                    color: '#dc2626',
+                    mx: 'auto',
                   }}>
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M3 6h18"/>
                       <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
                       <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
                       <line x1="10" y1="11" x2="10" y2="17"/>
                       <line x1="14" y1="11" x2="14" y2="17"/>
                     </svg>
-                  </div>
-                  <h4 style={{ margin: 0, fontSize: '16px', fontWeight: '600', color: '#991b1b' }}>
-                    Delete All Logs
-                  </h4>
-                </div>
-                <p style={{ margin: '0 0 12px 0', fontSize: '13px', color: '#7f1d1d', lineHeight: '1.5' }}>
-                  Permanently remove all log records from the database
-                </p>
-                <div style={{
-                  padding: '8px 12px',
-                  background: 'rgba(220, 38, 38, 0.1)',
-                  borderRadius: '6px',
-                  fontSize: '12px',
-                  color: '#991b1b',
-                  fontWeight: '500',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px'
-                }}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
-                    <line x1="12" y1="9" x2="12" y2="13"/>
-                    <line x1="12" y1="17" x2="12.01" y2="17"/>
-                  </svg>
-                  Irreversible action
-                </div>
-              </div>
-
-              {/* Delete by Specific Date Card */}
-              <div style={{ 
-                padding: '20px', 
-                background: 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)',
-                border: '2px solid #93c5fd',
-                borderRadius: '12px',
-                boxShadow: '0 2px 8px rgba(59, 130, 246, 0.1)'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
-                  <div style={{
-                    width: '40px',
-                    height: '40px',
-                    background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
-                    borderRadius: '10px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: 'white'
-                  }}>
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-                      <line x1="16" y1="2" x2="16" y2="6"/>
-                      <line x1="8" y1="2" x2="8" y2="6"/>
-                      <line x1="3" y1="10" x2="21" y2="10"/>
-                    </svg>
-                  </div>
-                  <h4 style={{ margin: 0, fontSize: '16px', fontWeight: '600', color: '#1e40af' }}>
-                    Delete by Date
-                  </h4>
-                </div>
-                <p style={{ margin: '0 0 16px 0', fontSize: '13px', color: '#1e3a8a', lineHeight: '1.5' }}>
-                  Remove logs for a specific date
-                </p>
-                <input
-                  type="date"
-                  id="deleteDate"
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    border: '2px solid #93c5fd',
-                    borderRadius: '8px',
-                    fontSize: '14px',
-                    marginBottom: '12px',
-                    background: 'white',
-                    transition: 'border-color 0.2s ease',
-                    boxSizing: 'border-box'
-                  }}
-                  onFocus={(e) => {
-                    e.target.style.borderColor = '#3b82f6';
-                    e.target.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)';
-                  }}
-                  onBlur={(e) => {
-                    e.target.style.borderColor = '#93c5fd';
-                    e.target.style.boxShadow = 'none';
-                  }}
-                />
-                <button
-                  onClick={() => {
-                    const date = document.getElementById('deleteDate').value;
-                    if (date) {
-                      handleDeleteLogsByDate(date);
-                    } else {
-                      alert('Please select a date');
-                    }
-                  }}
-                  style={{
-                    width: '100%',
-                    background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
-                    color: 'white',
-                    border: 'none',
-                    padding: '10px 16px',
-                    borderRadius: '8px',
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease',
-                    boxShadow: '0 2px 4px rgba(59, 130, 246, 0.2)'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.target.style.transform = 'translateY(-1px)';
-                    e.target.style.boxShadow = '0 4px 8px rgba(59, 130, 246, 0.3)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.target.style.transform = 'translateY(0)';
-                    e.target.style.boxShadow = '0 2px 4px rgba(59, 130, 246, 0.2)';
-                  }}
+                  </Box>
+                }
+                title="Delete All PDLs"
+              />
+              <Box sx={{ textAlign: 'center', mt: 2 }}>
+                <Typography sx={{ fontSize: 16, color: '#374151', mb: 1.5 }}>
+                  Are you sure you want to delete <strong>ALL PDLs</strong>?
+                </Typography>
+                <Typography variant="body2" sx={{ color: '#6b7280', mb: 1.5 }}>
+                  This action will permanently remove all PDL records from the database.
+                </Typography>
+                <Typography sx={{ fontSize: 14, color: '#dc2626', fontWeight: 600, mb: 2.5 }}>
+                  This action cannot be undone!
+                </Typography>
+              </Box>
+              <TextField
+                label='Type "Yes Delete All" to confirm'
+                value={deleteAllPdlsConfirmation}
+                onChange={(e) => setDeleteAllPdlsConfirmation(e.target.value)}
+                placeholder="Yes Delete All"
+                fullWidth
+                sx={{ mb: 2.5 }}
+              />
+              <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1.5 }}>
+                <Button
+                  onClick={handleDeleteAllPdls}
+                  disabled={deleteAllPdlsConfirmation !== 'Yes Delete All'}
+                  variant="contained"
+                  color="error"
+                  sx={{ bgcolor: '#dc2626', '&:hover': { bgcolor: '#b91c1c' } }}
                 >
-                  Delete Logs
-                </button>
-              </div>
-
-              {/* Delete by Date Range Card */}
-              <div style={{ 
-                padding: '20px', 
-                background: 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)',
-                border: '2px solid #93c5fd',
-                borderRadius: '12px',
-                boxShadow: '0 2px 8px rgba(59, 130, 246, 0.1)'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
-                  <div style={{
-                    width: '40px',
-                    height: '40px',
-                    background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
-                    borderRadius: '10px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: 'white'
-                  }}>
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-                      <line x1="16" y1="2" x2="16" y2="6"/>
-                      <line x1="8" y1="2" x2="8" y2="6"/>
-                      <line x1="3" y1="10" x2="21" y2="10"/>
-                      <path d="M8 14h.01"/>
-                      <path d="M12 14h.01"/>
-                      <path d="M16 14h.01"/>
-                      <path d="M8 18h.01"/>
-                      <path d="M12 18h.01"/>
-                      <path d="M16 18h.01"/>
-                    </svg>
-                  </div>
-                  <h4 style={{ margin: 0, fontSize: '16px', fontWeight: '600', color: '#1e40af' }}>
-                    Delete by Range
-                  </h4>
-                </div>
-                <p style={{ margin: '0 0 16px 0', fontSize: '13px', color: '#1e3a8a', lineHeight: '1.5' }}>
-                  Remove logs within a date range
-                </p>
-                <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', flexWrap: 'wrap' }}>
-                  <div style={{ flex: '1 1 calc(50% - 4px)', minWidth: '120px' }}>
-                    <label style={{ display: 'block', fontSize: '11px', color: '#1e40af', marginBottom: '4px', fontWeight: '500' }}>
-                      Start Date
-                    </label>
-                    <input
-                      type="date"
-                      id="startDate"
-                      style={{
-                        width: '100%',
-                        padding: '8px 10px',
-                        border: '2px solid #93c5fd',
-                        borderRadius: '6px',
-                        fontSize: '13px',
-                        background: 'white',
-                        transition: 'border-color 0.2s ease',
-                        boxSizing: 'border-box'
-                      }}
-                      onFocus={(e) => {
-                        e.target.style.borderColor = '#3b82f6';
-                        e.target.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)';
-                      }}
-                      onBlur={(e) => {
-                        e.target.style.borderColor = '#93c5fd';
-                        e.target.style.boxShadow = 'none';
-                      }}
-                    />
-                  </div>
-                  <div style={{ flex: '1 1 calc(50% - 4px)', minWidth: '120px' }}>
-                    <label style={{ display: 'block', fontSize: '11px', color: '#1e40af', marginBottom: '4px', fontWeight: '500' }}>
-                      End Date
-                    </label>
-                    <input
-                      type="date"
-                      id="endDate"
-                      style={{
-                        width: '100%',
-                        padding: '8px 10px',
-                        border: '2px solid #93c5fd',
-                        borderRadius: '6px',
-                        fontSize: '13px',
-                        background: 'white',
-                        transition: 'border-color 0.2s ease',
-                        boxSizing: 'border-box'
-                      }}
-                      onFocus={(e) => {
-                        e.target.style.borderColor = '#3b82f6';
-                        e.target.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)';
-                      }}
-                      onBlur={(e) => {
-                        e.target.style.borderColor = '#93c5fd';
-                        e.target.style.boxShadow = 'none';
-                      }}
-                    />
-                  </div>
-                </div>
-                <button
-                  onClick={() => {
-                    const startDate = document.getElementById('startDate').value;
-                    const endDate = document.getElementById('endDate').value;
-                    if (startDate && endDate) {
-                      if (new Date(startDate) <= new Date(endDate)) {
-                        handleDeleteLogsByDateRange(startDate, endDate);
-                      } else {
-                        alert('Start date must be before or equal to end date');
-                      }
-                    } else {
-                      alert('Please select both start and end dates');
-                    }
-                  }}
-                  style={{
-                    width: '100%',
-                    background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
-                    color: 'white',
-                    border: 'none',
-                    padding: '10px 16px',
-                    borderRadius: '8px',
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease',
-                    boxShadow: '0 2px 4px rgba(59, 130, 246, 0.2)'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.target.style.transform = 'translateY(-1px)';
-                    e.target.style.boxShadow = '0 4px 8px rgba(59, 130, 246, 0.3)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.target.style.transform = 'translateY(0)';
-                    e.target.style.boxShadow = '0 2px 4px rgba(59, 130, 246, 0.2)';
-                  }}
-                >
-                  Delete Logs
-                </button>
-              </div>
-
-              {/* Select Specific Logs Card */}
-              <div
-                onClick={openLogsSelectionModal}
-                style={{ 
-                  padding: '20px', 
-                  background: 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)',
-                  border: '2px solid #93c5fd',
-                  borderRadius: '12px',
-                  cursor: 'pointer',
-                  transition: 'all 0.3s ease',
-                  boxShadow: '0 2px 8px rgba(59, 130, 246, 0.1)'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'translateY(-2px)';
-                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.2)';
-                  e.currentTarget.style.borderColor = '#60a5fa';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = '0 2px 8px rgba(59, 130, 246, 0.1)';
-                  e.currentTarget.style.borderColor = '#93c5fd';
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
-                  <div style={{
-                    width: '40px',
-                    height: '40px',
-                    background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
-                    borderRadius: '10px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: 'white'
-                  }}>
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <polyline points="9 11 12 14 22 4"/>
-                      <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
-                    </svg>
-                  </div>
-                  <h4 style={{ margin: 0, fontSize: '16px', fontWeight: '600', color: '#1e40af' }}>
-                    Select Logs
-                  </h4>
-                </div>
-                <p style={{ margin: '0 0 12px 0', fontSize: '13px', color: '#1e3a8a', lineHeight: '1.5' }}>
-                  Choose specific logs from a list to delete
-                </p>
-                <div style={{
-                  padding: '8px 12px',
-                  background: 'rgba(59, 130, 246, 0.1)',
-                  borderRadius: '6px',
-                  fontSize: '12px',
-                  color: '#1e40af',
-                  fontWeight: '500'
-                }}>
-                  Click to open selection
-                </div>
-              </div>
-            </div>
-            
-            <div style={{ display: 'flex', justifyContent: 'center', paddingTop: '16px', borderTop: '1px solid #e5e7eb' }}>
-              <button
-                onClick={closeModal}
-                style={{
-                  background: '#f3f4f6',
-                  color: '#374151',
-                  border: '2px solid #e5e7eb',
-                  padding: '10px 24px',
-                  borderRadius: '8px',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease'
-                }}
-                onMouseEnter={(e) => {
-                  e.target.style.background = '#e5e7eb';
-                  e.target.style.borderColor = '#d1d5db';
-                }}
-                onMouseLeave={(e) => {
-                  e.target.style.background = '#f3f4f6';
-                  e.target.style.borderColor = '#e5e7eb';
-                }}
-              >
-                Cancel
-              </button>
-            </div>
-          </Modal>
+                  Yes, Delete All
+                </Button>
+                <Button onClick={closeModal} variant="outlined" color="inherit">
+                  Cancel
+                </Button>
+              </Box>
+            </DialogContent>
+          </SettingsDialog>
         )}
 
-        {modalOpen === 'deleteAllLogsConfirm' && (
-          <Modal onClose={closeModal}>
-            <h3 style={{ color: '#dc2626', textAlign: 'center' }}>⚠️ Delete All Logs</h3>
-            
-            <div style={{ marginBottom: '20px', textAlign: 'center' }}>
-              <p style={{ marginBottom: '15px', fontSize: '16px', color: '#374151' }}>
-                Are you sure you want to delete <strong>ALL LOGS</strong>?
-              </p>
-              <p style={{ marginBottom: '15px', fontSize: '14px', color: '#6b7280' }}>
-                This action will permanently remove all log records from the database.
-              </p>
-              <p style={{ fontSize: '14px', color: '#dc2626', fontWeight: '600', marginBottom: '20px' }}>
-                This action cannot be undone!
-              </p>
-              
-              <div style={{ marginTop: '20px' }}>
-                <label style={{ 
-                  display: 'block', 
-                  marginBottom: '8px', 
-                  fontSize: '14px', 
-                  fontWeight: '500', 
-                  color: '#374151',
-                  textAlign: 'left'
-                }}>
-                  Type <strong>"Yes Delete All"</strong> to confirm:
-                </label>
-                <input
-                  type="text"
-                  value={deleteAllLogsConfirmation}
-                  onChange={(e) => setDeleteAllLogsConfirmation(e.target.value)}
-                  placeholder="Yes Delete All"
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    border: '2px solid #d1d5db',
-                    borderRadius: '6px',
-                    fontSize: '14px',
-                    transition: 'border-color 0.2s ease'
-                  }}
-                  onFocus={(e) => {
-                    e.target.style.borderColor = '#dc2626';
-                  }}
-                  onBlur={(e) => {
-                    e.target.style.borderColor = '#d1d5db';
-                  }}
-                />
-              </div>
-            </div>
-            
-            <div style={{ display: 'flex', justifyContent: 'center', gap: '12px' }}>
-              <button
-                onClick={handleDeleteAllLogs}
-                disabled={deleteAllLogsConfirmation !== 'Yes Delete All'}
-                className="common-button delete"
-              >
-                Yes, Delete All
-              </button>
-              <button
-                onClick={closeModal}
-                className="common-button cancel"
-              >
-                Cancel
-              </button>
-            </div>
-          </Modal>
-        )}
-
-        {modalOpen === 'selectLogs' && (
-          <Modal onClose={closeModal}>
-            <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-              <div style={{
-                width: '64px',
-                height: '64px',
-                margin: '0 auto 16px',
-                background: 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)',
-                borderRadius: '50%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                border: '2px solid #fca5a5'
-              }}>
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#dc2626' }}>
+        {modalOpen === 'deleteLogs' && (
+          <SettingsDialog open onClose={closeModal} maxWidth="md">
+            <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1.5, pb: 1 }}>
+              <Box sx={{ color: '#dc2626', display: 'flex' }}>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M3 6h18"/>
                   <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
                   <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
                   <line x1="10" y1="11" x2="10" y2="17"/>
                   <line x1="14" y1="11" x2="14" y2="17"/>
                 </svg>
-              </div>
-              <h3 style={{ margin: '0 0 8px 0', fontSize: '24px', fontWeight: '700', color: '#111827' }}>
-                Select Logs to Delete
-              </h3>
-            </div>
-            
-            <div style={{ marginBottom: '20px', textAlign: 'center' }}>
-              <p style={{ marginBottom: '15px', fontSize: '16px', color: '#374151' }}>
-                Select the logs you want to delete:
-              </p>
-              <p style={{ marginBottom: '15px', fontSize: '14px', color: '#6b7280' }}>
-                {selectedLogs.length} of {logs.length} logs selected
-              </p>
-            </div>
+              </Box>
+              <Box>
+                <Typography variant="h6" sx={{ fontWeight: 700 }}>Delete Logs</Typography>
+                <Typography variant="body2" sx={{ color: '#6b7280' }}>Choose a deletion method below</Typography>
+              </Box>
+            </DialogTitle>
+            <DialogContent>
+              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)' }, gap: 2 }}>
+                {/* Delete All Logs Card */}
+                <Box
+                  onClick={() => setModalOpen('deleteAllLogsConfirm')}
+                  sx={{
+                    p: 2.5,
+                    background: 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)',
+                    border: '2px solid #fca5a5',
+                    borderRadius: '12px',
+                    cursor: 'pointer',
+                    boxShadow: '0 2px 8px rgba(220, 38, 38, 0.1)',
+                    transition: 'all 0.3s ease',
+                    '&:hover': {
+                      transform: 'translateY(-2px)',
+                      boxShadow: '0 4px 12px rgba(220, 38, 38, 0.2)',
+                      borderColor: '#f87171'
+                    }
+                  }}
+                >
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1.5 }}>
+                    <Box sx={{
+                      width: 40,
+                      height: 40,
+                      background: 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)',
+                      borderRadius: '10px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: 'white'
+                    }}>
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M3 6h18"/>
+                        <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
+                        <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+                        <line x1="10" y1="11" x2="10" y2="17"/>
+                        <line x1="14" y1="11" x2="14" y2="17"/>
+                      </svg>
+                    </Box>
+                    <Typography sx={{ fontSize: 16, fontWeight: 600, color: '#991b1b' }}>Delete All Logs</Typography>
+                  </Box>
+                  <Typography sx={{ fontSize: 13, color: '#7f1d1d', lineHeight: 1.5, mb: 1.5 }}>
+                    Permanently remove all log records from the database
+                  </Typography>
+                  <Box sx={{
+                    p: 1,
+                    background: 'rgba(220, 38, 38, 0.1)',
+                    borderRadius: '6px',
+                    fontSize: 12,
+                    color: '#991b1b',
+                    fontWeight: 500,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 0.75
+                  }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                      <line x1="12" y1="9" x2="12" y2="13"/>
+                      <line x1="12" y1="17" x2="12.01" y2="17"/>
+                    </svg>
+                    Irreversible action
+                  </Box>
+                </Box>
 
-            {loadingLogs ? (
-              <div style={{ textAlign: 'center', padding: '40px' }}>
-                <div style={{ fontSize: '16px', color: '#6b7280' }}>Loading logs...</div>
-              </div>
-            ) : logs.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '40px' }}>
-                <div style={{ fontSize: '16px', color: '#6b7280' }}>No logs found</div>
-              </div>
-            ) : (
-              <>
-                {/* Select All Checkbox */}
-                <div style={{ 
-                  padding: '12px 16px', 
-                  borderBottom: '1px solid #e5e7eb',
-                  backgroundColor: '#f9fafb',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px'
+                {/* Delete by Specific Date Card */}
+                <Box sx={{
+                  p: 2.5,
+                  background: 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)',
+                  border: '2px solid #93c5fd',
+                  borderRadius: '12px',
+                  boxShadow: '0 2px 8px rgba(59, 130, 246, 0.1)'
                 }}>
-                  <input
-                    type="checkbox"
-                    id="selectAll"
-                    checked={selectedLogs.length === logs.length && logs.length > 0}
-                    onChange={(e) => handleSelectAllLogs(e.target.checked)}
-                    style={{ transform: 'scale(1.2)' }}
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1.5 }}>
+                    <Box sx={{
+                      width: 40,
+                      height: 40,
+                      background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+                      borderRadius: '10px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: 'white'
+                    }}>
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                        <line x1="16" y1="2" x2="16" y2="6"/>
+                        <line x1="8" y1="2" x2="8" y2="6"/>
+                        <line x1="3" y1="10" x2="21" y2="10"/>
+                      </svg>
+                    </Box>
+                    <Typography sx={{ fontSize: 16, fontWeight: 600, color: '#1e40af' }}>Delete by Date</Typography>
+                  </Box>
+                  <Typography sx={{ fontSize: 13, color: '#1e3a8a', lineHeight: 1.5, mb: 2 }}>
+                    Remove logs for a specific date
+                  </Typography>
+                  <TextField
+                    type="date"
+                    id="deleteDate"
+                    size="small"
+                    fullWidth
+                    sx={{ mb: 1.5, bgcolor: 'white' }}
                   />
-                  <label htmlFor="selectAll" style={{ fontWeight: '600', color: '#374151', cursor: 'pointer' }}>
-                    Select All ({logs.length} logs)
-                  </label>
-                </div>
+                  <Button
+                    onClick={() => {
+                      const date = document.getElementById('deleteDate').value;
+                      if (date) {
+                        handleDeleteLogsByDate(date);
+                      } else {
+                        alert('Please select a date');
+                      }
+                    }}
+                    variant="contained"
+                    fullWidth
+                    sx={{ bgcolor: '#2563eb', '&:hover': { bgcolor: '#1e40af' }, boxShadow: '0 2px 4px rgba(59, 130, 246, 0.2)' }}
+                  >
+                    Delete Logs
+                  </Button>
+                </Box>
 
-                {/* Logs List */}
-                <div style={{ 
-                  maxHeight: '400px', 
-                  overflowY: 'auto',
-                  border: '1px solid #e5e7eb',
-                  borderRadius: '8px'
+                {/* Delete by Date Range Card */}
+                <Box sx={{
+                  p: 2.5,
+                  background: 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)',
+                  border: '2px solid #93c5fd',
+                  borderRadius: '12px',
+                  boxShadow: '0 2px 8px rgba(59, 130, 246, 0.1)'
                 }}>
-                  {logs.map((log) => (
-                    <div
-                      key={log.id}
-                      style={{
-                        padding: '12px 16px',
-                        borderBottom: '1px solid #f3f4f6',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '12px',
-                        backgroundColor: selectedLogs.includes(log.id) ? '#fef2f2' : 'white',
-                        transition: 'background-color 0.2s ease'
-                      }}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={selectedLogs.includes(log.id)}
-                        onChange={(e) => handleLogSelection(log.id, e.target.checked)}
-                        style={{ transform: 'scale(1.1)' }}
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1.5 }}>
+                    <Box sx={{
+                      width: 40,
+                      height: 40,
+                      background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+                      borderRadius: '10px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: 'white'
+                    }}>
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                        <line x1="16" y1="2" x2="16" y2="6"/>
+                        <line x1="8" y1="2" x2="8" y2="6"/>
+                        <line x1="3" y1="10" x2="21" y2="10"/>
+                        <path d="M8 14h.01"/>
+                        <path d="M12 14h.01"/>
+                        <path d="M16 14h.01"/>
+                        <path d="M8 18h.01"/>
+                        <path d="M12 18h.01"/>
+                        <path d="M16 18h.01"/>
+                      </svg>
+                    </Box>
+                    <Typography sx={{ fontSize: 16, fontWeight: 600, color: '#1e40af' }}>Delete by Range</Typography>
+                  </Box>
+                  <Typography sx={{ fontSize: 13, color: '#1e3a8a', lineHeight: 1.5, mb: 2 }}>
+                    Remove logs within a date range
+                  </Typography>
+                  <Box sx={{ display: 'flex', gap: 1, mb: 1.5 }}>
+                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                      <Typography sx={{ fontSize: 11, color: '#1e40af', mb: 0.5, fontWeight: 500 }}>Start Date</Typography>
+                      <TextField type="date" id="startDate" size="small" fullWidth sx={{ bgcolor: 'white' }} />
+                    </Box>
+                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                      <Typography sx={{ fontSize: 11, color: '#1e40af', mb: 0.5, fontWeight: 500 }}>End Date</Typography>
+                      <TextField type="date" id="endDate" size="small" fullWidth sx={{ bgcolor: 'white' }} />
+                    </Box>
+                  </Box>
+                  <Button
+                    onClick={() => {
+                      const startDate = document.getElementById('startDate').value;
+                      const endDate = document.getElementById('endDate').value;
+                      if (startDate && endDate) {
+                        if (new Date(startDate) <= new Date(endDate)) {
+                          handleDeleteLogsByDateRange(startDate, endDate);
+                        } else {
+                          alert('Start date must be before or equal to end date');
+                        }
+                      } else {
+                        alert('Please select both start and end dates');
+                      }
+                    }}
+                    variant="contained"
+                    fullWidth
+                    sx={{ bgcolor: '#2563eb', '&:hover': { bgcolor: '#1e40af' }, boxShadow: '0 2px 4px rgba(59, 130, 246, 0.2)' }}
+                  >
+                    Delete Logs
+                  </Button>
+                </Box>
+
+                {/* Select Specific Logs Card */}
+                <Box
+                  onClick={openLogsSelectionModal}
+                  sx={{
+                    p: 2.5,
+                    background: 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)',
+                    border: '2px solid #93c5fd',
+                    borderRadius: '12px',
+                    cursor: 'pointer',
+                    boxShadow: '0 2px 8px rgba(59, 130, 246, 0.1)',
+                    transition: 'all 0.3s ease',
+                    '&:hover': {
+                      transform: 'translateY(-2px)',
+                      boxShadow: '0 4px 12px rgba(59, 130, 246, 0.2)',
+                      borderColor: '#60a5fa'
+                    }
+                  }}
+                >
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1.5 }}>
+                    <Box sx={{
+                      width: 40,
+                      height: 40,
+                      background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+                      borderRadius: '10px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: 'white'
+                    }}>
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="9 11 12 14 22 4"/>
+                        <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+                      </svg>
+                    </Box>
+                    <Typography sx={{ fontSize: 16, fontWeight: 600, color: '#1e40af' }}>Select Logs</Typography>
+                  </Box>
+                  <Typography sx={{ fontSize: 13, color: '#1e3a8a', lineHeight: 1.5, mb: 1.5 }}>
+                    Choose specific logs from a list to delete
+                  </Typography>
+                  <Box sx={{
+                    p: 1,
+                    background: 'rgba(59, 130, 246, 0.1)',
+                    borderRadius: '6px',
+                    fontSize: 12,
+                    color: '#1e40af',
+                    fontWeight: 500
+                  }}>
+                    Click to open selection
+                  </Box>
+                </Box>
+              </Box>
+            </DialogContent>
+            <DialogActions sx={{ justifyContent: 'center', borderTop: '1px solid #e5e7eb', px: 3, py: 2 }}>
+              <Button onClick={closeModal} variant="outlined" color="inherit">
+                Cancel
+              </Button>
+            </DialogActions>
+          </SettingsDialog>
+        )}
+
+        {modalOpen === 'deleteAllLogsConfirm' && (
+          <SettingsDialog open onClose={closeModal} maxWidth="xs">
+            <DialogContent sx={{ pt: 3 }}>
+              <SettingsDialogHeader
+                icon={
+                  <Box sx={{
+                    width: 64,
+                    height: 64,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: '50%',
+                    background: 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)',
+                    border: '2px solid #fca5a5',
+                    color: '#dc2626',
+                    mx: 'auto',
+                  }}>
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M3 6h18"/>
+                      <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
+                      <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+                      <line x1="10" y1="11" x2="10" y2="17"/>
+                      <line x1="14" y1="11" x2="14" y2="17"/>
+                    </svg>
+                  </Box>
+                }
+                title="Delete All Logs"
+              />
+              <Box sx={{ textAlign: 'center', mt: 2 }}>
+                <Typography sx={{ fontSize: 16, color: '#374151', mb: 1.5 }}>
+                  Are you sure you want to delete <strong>ALL LOGS</strong>?
+                </Typography>
+                <Typography variant="body2" sx={{ color: '#6b7280', mb: 1.5 }}>
+                  This action will permanently remove all log records from the database.
+                </Typography>
+                <Typography sx={{ fontSize: 14, color: '#dc2626', fontWeight: 600, mb: 2.5 }}>
+                  This action cannot be undone!
+                </Typography>
+              </Box>
+              <TextField
+                label='Type "Yes Delete All" to confirm'
+                value={deleteAllLogsConfirmation}
+                onChange={(e) => setDeleteAllLogsConfirmation(e.target.value)}
+                placeholder="Yes Delete All"
+                fullWidth
+                sx={{ mb: 2.5 }}
+              />
+              <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1.5 }}>
+                <Button
+                  onClick={handleDeleteAllLogs}
+                  disabled={deleteAllLogsConfirmation !== 'Yes Delete All'}
+                  variant="contained"
+                  color="error"
+                  sx={{ bgcolor: '#dc2626', '&:hover': { bgcolor: '#b91c1c' } }}
+                >
+                  Yes, Delete All
+                </Button>
+                <Button onClick={closeModal} variant="outlined" color="inherit">
+                  Cancel
+                </Button>
+              </Box>
+            </DialogContent>
+          </SettingsDialog>
+        )}
+
+        {modalOpen === 'selectLogs' && (
+          <SettingsDialog open onClose={closeModal} maxWidth="sm">
+            <DialogContent sx={{ pt: 3 }}>
+              <SettingsDialogHeader
+                icon={
+                  <Box sx={{
+                    width: 64,
+                    height: 64,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: '50%',
+                    background: 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)',
+                    border: '2px solid #fca5a5',
+                    color: '#dc2626',
+                    mx: 'auto',
+                  }}>
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M3 6h18"/>
+                      <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
+                      <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+                      <line x1="10" y1="11" x2="10" y2="17"/>
+                      <line x1="14" y1="11" x2="14" y2="17"/>
+                    </svg>
+                  </Box>
+                }
+                title="Select Logs to Delete"
+              />
+              <Typography sx={{ fontSize: 16, color: '#374151', textAlign: 'center', mb: 1 }}>
+                Select the logs you want to delete:
+              </Typography>
+              <Typography variant="body2" sx={{ color: '#6b7280', textAlign: 'center', mb: 2 }}>
+                {selectedLogs.length} of {logs.length} logs selected
+              </Typography>
+
+              {loadingLogs ? (
+                <Box sx={{ textAlign: 'center', py: 5 }}>
+                  <CircularProgress size={28} sx={{ color: '#2563eb' }} />
+                  <Typography sx={{ fontSize: 16, color: '#6b7280', mt: 2 }}>Loading logs...</Typography>
+                </Box>
+              ) : logs.length === 0 ? (
+                <Box sx={{ textAlign: 'center', py: 5 }}>
+                  <Typography sx={{ fontSize: 16, color: '#6b7280' }}>No logs found</Typography>
+                </Box>
+              ) : (
+                <>
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        checked={selectedLogs.length === logs.length && logs.length > 0}
+                        onChange={(e) => handleSelectAllLogs(e.target.checked)}
                       />
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ 
-                          display: 'flex', 
-                          justifyContent: 'space-between', 
-                          alignItems: 'flex-start',
-                          marginBottom: '4px'
-                        }}>
-                          <div style={{ fontWeight: '600', color: '#111827', fontSize: '14px' }}>
-                            ID: {log.id} | {log.visitor_name}
-                          </div>
-                          <div style={{ fontSize: '12px', color: '#6b7280' }}>
-                            {new Date(log.scan_date).toLocaleDateString()}
-                          </div>
-                        </div>
-                        <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '2px' }}>
-                          PDL: {log.pdl_name} | Cell: {log.cell}
-                        </div>
-                        <div style={{ fontSize: '12px', color: '#6b7280' }}>
-                          Time In: {log.time_in ? new Date(log.time_in).toLocaleTimeString() : 'N/A'} | 
-                          Time Out: {log.time_out ? new Date(log.time_out).toLocaleTimeString() : 'Open'}
-                        </div>
-                        {log.relationship && (
-                          <div style={{ fontSize: '12px', color: '#6b7280' }}>
-                            Relationship: {log.relationship}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                    }
+                    label={`Select All (${logs.length} logs)`}
+                    sx={{
+                      px: 2,
+                      py: 1,
+                      m: 0,
+                      borderBottom: '1px solid #e5e7eb',
+                      backgroundColor: '#f9fafb',
+                      '& .MuiTypography-root': { fontWeight: 600, color: '#374151' }
+                    }}
+                  />
 
-                {/* Action Buttons */}
-                <div style={{ 
-                  display: 'flex', 
-                  justifyContent: 'space-between', 
-                  alignItems: 'center',
-                  marginTop: '20px',
-                  padding: '16px',
-                  backgroundColor: '#f9fafb',
-                  borderRadius: '8px'
-                }}>
-                  <div style={{ fontSize: '14px', color: '#374151' }}>
-                    {selectedLogs.length} log(s) selected
-                  </div>
-                  <div style={{ display: 'flex', gap: '12px' }}>
-                    <button
-                      onClick={closeModal}
-                      className="common-button cancel"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      onClick={handleDeleteSelectedLogs}
-                      disabled={selectedLogs.length === 0}
-                      className="common-button delete"
-                    >
-                      Delete Selected ({selectedLogs.length})
-                    </button>
-                  </div>
-                </div>
-              </>
-            )}
-          </Modal>
+                  <Box sx={{ maxHeight: 400, overflowY: 'auto', border: '1px solid #e5e7eb', borderRadius: '8px' }}>
+                    {logs.map((log) => (
+                      <Box
+                        key={log.id}
+                        sx={{
+                          p: '12px 16px',
+                          borderBottom: '1px solid #f3f4f6',
+                          display: 'flex',
+                          alignItems: 'flex-start',
+                          gap: 1.5,
+                          backgroundColor: selectedLogs.includes(log.id) ? '#fef2f2' : 'white',
+                          transition: 'background-color 0.2s ease'
+                        }}
+                      >
+                        <Checkbox
+                          checked={selectedLogs.includes(log.id)}
+                          onChange={(e) => handleLogSelection(log.id, e.target.checked)}
+                          sx={{ pt: 0 }}
+                        />
+                        <Box sx={{ flex: 1, minWidth: 0 }}>
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 0.5 }}>
+                            <Typography sx={{ fontWeight: 600, color: '#111827', fontSize: 14 }}>
+                              ID: {log.id} | {log.visitor_name}
+                            </Typography>
+                            <Typography sx={{ fontSize: 12, color: '#6b7280' }}>
+                              {new Date(log.scan_date).toLocaleDateString()}
+                            </Typography>
+                          </Box>
+                          <Typography sx={{ fontSize: 12, color: '#6b7280', mb: 0.25 }}>
+                            PDL: {log.pdl_name} | Cell: {log.cell}
+                          </Typography>
+                          <Typography sx={{ fontSize: 12, color: '#6b7280' }}>
+                            Time In: {log.time_in ? new Date(log.time_in).toLocaleTimeString() : 'N/A'} |
+                            Time Out: {log.time_out ? new Date(log.time_out).toLocaleTimeString() : 'Open'}
+                          </Typography>
+                          {log.relationship && (
+                            <Typography sx={{ fontSize: 12, color: '#6b7280' }}>
+                              Relationship: {log.relationship}
+                            </Typography>
+                          )}
+                        </Box>
+                      </Box>
+                    ))}
+                  </Box>
+
+                  <Box sx={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    mt: 2.5,
+                    p: 2,
+                    backgroundColor: '#f9fafb',
+                    borderRadius: '8px'
+                  }}>
+                    <Typography sx={{ fontSize: 14, color: '#374151' }}>
+                      {selectedLogs.length} log(s) selected
+                    </Typography>
+                    <Box sx={{ display: 'flex', gap: 1.5 }}>
+                      <Button onClick={closeModal} variant="outlined" color="inherit">
+                        Cancel
+                      </Button>
+                      <Button
+                        onClick={handleDeleteSelectedLogs}
+                        disabled={selectedLogs.length === 0}
+                        variant="contained"
+                        color="error"
+                        sx={{ bgcolor: '#dc2626', '&:hover': { bgcolor: '#b91c1c' } }}
+                      >
+                        Delete Selected ({selectedLogs.length})
+                      </Button>
+                    </Box>
+                  </Box>
+                </>
+              )}
+            </DialogContent>
+          </SettingsDialog>
         )}
 
         {/* Registration Codes Modal */}
         {modalOpen === 'registrationCodes' && (
-          <Modal onClose={closeModal}>
-            <h2 style={{ marginTop: 0, marginBottom: '24px', color: '#111827' }}>Registration Codes</h2>
-            
-            {/* Create New Code Form */}
-            <div style={{
-              padding: '20px',
-              background: '#f9fafb',
-              borderRadius: '8px',
-              marginBottom: '24px',
-              border: '1px solid #e5e7eb'
-            }}>
-              <h3 style={{ marginTop: 0, marginBottom: '16px', fontSize: '16px', color: '#111827' }}>Create New Code</h3>
-              <form onSubmit={handleCreateRegistrationCode} style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'flex-end' }}>
-                <div style={{ flex: '1 1 200px' }}>
-                  <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: '500', color: '#374151' }}>
-                    Code (leave empty to auto-generate)
-                  </label>
-                  <input
-                    type="text"
+          <SettingsDialog open onClose={closeModal} maxWidth="md">
+            <DialogContent sx={{ pt: 3 }}>
+              <SettingsDialogHeader
+                icon={
+                  <Box sx={{
+                    width: 64,
+                    height: 64,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: '50%',
+                    background: 'linear-gradient(135deg, #cffafe 0%, #a5f3fc 100%)',
+                    border: '2px solid #67e8f9',
+                    color: '#0891b2',
+                    mx: 'auto',
+                  }}>
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                      <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                    </svg>
+                  </Box>
+                }
+                title="Registration Codes"
+                subtitle="Generate and manage registration codes"
+              />
+
+              {/* Create New Code Form */}
+              <Box component="form" onSubmit={handleCreateRegistrationCode} sx={{
+                p: 2.5,
+                background: '#f9fafb',
+                borderRadius: '8px',
+                mb: 3,
+                border: '1px solid #e5e7eb'
+              }}>
+                <Typography sx={{ fontSize: 16, color: '#111827', mb: 2, fontWeight: 600 }}>Create New Code</Typography>
+                <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+                  <TextField
+                    label="Code (leave empty to auto-generate)"
                     value={newCode}
                     onChange={(e) => setNewCode(e.target.value.toUpperCase())}
                     placeholder="e.g., STAFF2024"
-                    style={{
-                      width: '100%',
-                      padding: '8px 12px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      fontSize: '14px'
-                    }}
+                    size="small"
+                    sx={{ flex: '1 1 200px', minWidth: 180 }}
                   />
-                </div>
-                <div style={{ flex: '0 1 120px' }}>
-                  <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: '500', color: '#374151' }}>
-                    Valid for (days)
-                  </label>
-                  <input
+                  <TextField
+                    label="Valid for (days)"
                     type="number"
                     value={newCodeDays}
                     onChange={(e) => setNewCodeDays(e.target.value)}
-                    min="1"
+                    size="small"
+                    slotProps={{ htmlInput: { min: 1 } }}
                     placeholder="90"
-                    style={{
-                      width: '100%',
-                      padding: '8px 12px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      fontSize: '14px'
-                    }}
+                    sx={{ flex: '0 1 120px' }}
                   />
-                </div>
-                <div style={{ flex: '0 1 120px' }}>
-                  <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: '500', color: '#374151' }}>
-                    Usage limit
-                  </label>
-                  <input
+                  <TextField
+                    label="Usage limit"
                     type="number"
                     value={newCodeLimit}
                     onChange={(e) => setNewCodeLimit(e.target.value)}
-                    min="1"
+                    size="small"
+                    slotProps={{ htmlInput: { min: 1 } }}
                     placeholder="1"
-                    style={{
-                      width: '100%',
-                      padding: '8px 12px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      fontSize: '14px'
-                    }}
+                    sx={{ flex: '0 1 120px' }}
                   />
-                </div>
-                <button
-                  type="submit"
-                  className="common-button cyan"
-                >
-                  Generate Code
-                </button>
-              </form>
-            </div>
+                  <Button
+                    type="submit"
+                    variant="contained"
+                    sx={{ bgcolor: '#0891b2', '&:hover': { bgcolor: '#0e7490' } }}
+                  >
+                    Generate Code
+                  </Button>
+                </Box>
+              </Box>
 
-            {/* Codes List */}
-            {loadingCodes ? (
-              <div style={{ textAlign: 'center', padding: '40px' }}>
-                <div style={{ fontSize: '16px', color: '#6b7280' }}>Loading codes...</div>
-              </div>
-            ) : registrationCodes.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '40px' }}>
-                <div style={{ fontSize: '16px', color: '#6b7280' }}>No registration codes found</div>
-                <div style={{ fontSize: '14px', color: '#9ca3af', marginTop: '8px' }}>Create your first code above</div>
-              </div>
-            ) : (
-              <div style={{
-                maxHeight: '400px',
-                overflowY: 'auto',
-                border: '1px solid #e5e7eb',
-                borderRadius: '8px'
-              }}>
-                {registrationCodes.map((codeRow, index) => {
-                  const isUsed = codeRow.is_used === 1 || codeRow.is_used === true;
-                  const expiresAt = codeRow.expires_at ? new Date(codeRow.expires_at) : null;
-                  const usedAt = codeRow.used_at ? new Date(codeRow.used_at) : null;
-                  const now = new Date();
-                  
-                  let status = 'Available';
-                  let statusColor = '#10b981';
-                  if (isUsed) {
-                    status = 'Used';
-                    statusColor = '#6b7280';
-                  } else if (expiresAt && expiresAt < now) {
-                    status = 'Expired';
-                    statusColor = '#ef4444';
-                  }
+              {/* Codes List */}
+              {loadingCodes ? (
+                <Box sx={{ textAlign: 'center', py: 5 }}>
+                  <CircularProgress size={28} sx={{ color: '#0891b2' }} />
+                  <Typography sx={{ fontSize: 16, color: '#6b7280', mt: 2 }}>Loading codes...</Typography>
+                </Box>
+              ) : registrationCodes.length === 0 ? (
+                <Box sx={{ textAlign: 'center', py: 5 }}>
+                  <Typography sx={{ fontSize: 16, color: '#6b7280' }}>No registration codes found</Typography>
+                  <Typography sx={{ fontSize: 14, color: '#9ca3af', mt: 1 }}>Create your first code above</Typography>
+                </Box>
+              ) : (
+                <Box sx={{ maxHeight: 400, overflowY: 'auto', border: '1px solid #e5e7eb', borderRadius: '8px' }}>
+                  {registrationCodes.map((codeRow, index) => {
+                    const isUsed = codeRow.is_used === 1 || codeRow.is_used === true;
+                    const expiresAt = codeRow.expires_at ? new Date(codeRow.expires_at) : null;
+                    const usedAt = codeRow.used_at ? new Date(codeRow.used_at) : null;
+                    const now = new Date();
 
-                  return (
-                    <div
-                      key={codeRow.id || index}
-                      style={{
-                        padding: '16px',
-                        borderBottom: '1px solid #f3f4f6',
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        backgroundColor: isUsed ? '#f9fafb' : 'white'
-                      }}
-                    >
-                      <div style={{ flex: 1 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-                          <div style={{
-                            fontWeight: '600',
-                            fontSize: '16px',
-                            color: '#111827',
-                            fontFamily: 'monospace',
-                            letterSpacing: '1px'
-                          }}>
-                            {codeRow.code}
-                          </div>
-                          <span style={{
-                            padding: '4px 10px',
-                            borderRadius: '12px',
-                            fontSize: '12px',
-                            fontWeight: '600',
-                            backgroundColor: statusColor + '20',
-                            color: statusColor
-                          }}>
-                            {status}
-                          </span>
-                        </div>
-                        <div style={{ fontSize: '12px', color: '#6b7280' }}>
-                          Created: {new Date(codeRow.created_at).toLocaleString()}
-                        </div>
-                        <div style={{ fontSize: '12px', color: '#6b7280' }}>
-                          Usage: {codeRow.used_count || 0} / {codeRow.use_limit || 1}
-                        </div>
-                        {expiresAt && (
-                          <div style={{ fontSize: '12px', color: '#6b7280' }}>
-                            Expires: {expiresAt.toLocaleString()}
-                            {expiresAt < now && <span style={{ color: '#ef4444', marginLeft: '8px' }}>(EXPIRED)</span>}
-                          </div>
+                    let status = 'Available';
+                    let statusColor = '#10b981';
+                    if (isUsed) {
+                      status = 'Used';
+                      statusColor = '#6b7280';
+                    } else if (expiresAt && expiresAt < now) {
+                      status = 'Expired';
+                      statusColor = '#ef4444';
+                    }
+
+                    return (
+                      <Box
+                        key={codeRow.id || index}
+                        sx={{
+                          p: 2,
+                          borderBottom: '1px solid #f3f4f6',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          backgroundColor: isUsed ? '#f9fafb' : 'white'
+                        }}
+                      >
+                        <Box sx={{ flex: 1, minWidth: 0 }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1 }}>
+                            <Typography sx={{
+                              fontWeight: 600,
+                              fontSize: 16,
+                              color: '#111827',
+                              fontFamily: 'monospace',
+                              letterSpacing: '1px'
+                            }}>
+                              {codeRow.code}
+                            </Typography>
+                            <Typography sx={{
+                              px: 1,
+                              py: 0.25,
+                              borderRadius: '12px',
+                              fontSize: 12,
+                              fontWeight: 600,
+                              backgroundColor: statusColor + '20',
+                              color: statusColor
+                            }}>
+                              {status}
+                            </Typography>
+                          </Box>
+                          <Typography sx={{ fontSize: 12, color: '#6b7280' }}>
+                            Created: {new Date(codeRow.created_at).toLocaleString()}
+                          </Typography>
+                          <Typography sx={{ fontSize: 12, color: '#6b7280' }}>
+                            Usage: {codeRow.used_count || 0} / {codeRow.use_limit || 1}
+                          </Typography>
+                          {expiresAt && (
+                            <Typography sx={{ fontSize: 12, color: '#6b7280' }}>
+                              Expires: {expiresAt.toLocaleString()}
+                              {expiresAt < now && <Box component="span" sx={{ color: '#ef4444', ml: 1 }}>(EXPIRED)</Box>}
+                            </Typography>
+                          )}
+                          {usedAt && (
+                            <Typography sx={{ fontSize: 12, color: '#6b7280' }}>
+                              Used: {usedAt.toLocaleString()}
+                            </Typography>
+                          )}
+                        </Box>
+                        {!isUsed && expiresAt && expiresAt > now && (
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            color="inherit"
+                            onClick={() => {
+                              navigator.clipboard.writeText(codeRow.code);
+                              alert(`Code "${codeRow.code}" copied to clipboard!`);
+                            }}
+                            sx={{ ml: 2 }}
+                          >
+                            Copy
+                          </Button>
                         )}
-                        {usedAt && (
-                          <div style={{ fontSize: '12px', color: '#6b7280' }}>
-                            Used: {usedAt.toLocaleString()}
-                          </div>
-                        )}
-                      </div>
-                      {!isUsed && expiresAt && expiresAt > now && (
-                        <button
-                          onClick={() => {
-                            navigator.clipboard.writeText(codeRow.code);
-                            alert(`Code "${codeRow.code}" copied to clipboard!`);
-                          }}
-                          style={{
-                            padding: '6px 12px',
-                            background: '#f3f4f6',
-                            color: '#374151',
-                            border: '1px solid #d1d5db',
-                            borderRadius: '6px',
-                            fontSize: '12px',
-                            fontWeight: '500',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          Copy
-                        </button>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-
-            {/* Close Button */}
-            <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'flex-end' }}>
-              <button
-                onClick={closeModal}
-                className="common-button cancel"
-              >
+                      </Box>
+                    );
+                  })}
+                </Box>
+              )}
+            </DialogContent>
+            <DialogActions sx={{ justifyContent: 'flex-end', px: 3, py: 2 }}>
+              <Button onClick={closeModal} variant="outlined" color="inherit">
                 Close
-              </button>
-            </div>
-          </Modal>
+              </Button>
+            </DialogActions>
+          </SettingsDialog>
         )}
 
       </div>

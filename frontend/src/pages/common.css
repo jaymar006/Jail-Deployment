@@ -50,7 +50,7 @@ body, .common-container {
   margin-bottom: 20px;
   border-radius: 0;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  border: 1px solid #e5e7eb;
+  border: 1px solid #bfdbfe;
   background-color: #fff;
   position: relative;
 }
@@ -65,14 +65,89 @@ body, .common-container {
 /* Table styles */
 .common-table {
   width: 100%;
-  max-width: 1400px;
+  max-width: none;
+  min-width: 900px;
   border-collapse: separate;
   border-spacing: 0;
   background-color: #fff;
   border-radius: 0;
   table-layout: auto;
   word-wrap: break-word;
+  overflow-wrap: break-word;
   margin: 0;
+}
+
+/* Datas PDL table - fixed column widths so headers never get squeezed
+   regardless of how many rows (or how long the cell content) are shown */
+.common-table.datas-table {
+  table-layout: fixed;
+  min-width: 1100px;
+}
+
+.common-table.datas-table th,
+.common-table.datas-table td {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.common-table.datas-table thead th:nth-child(1),
+.common-table.datas-table tbody td:nth-child(1) {
+  width: 36px;
+}
+
+.common-table.datas-table thead th:nth-child(2),
+.common-table.datas-table tbody td:nth-child(2) {
+  width: 10%;
+}
+
+.common-table.datas-table thead th:nth-child(3),
+.common-table.datas-table tbody td:nth-child(3) {
+  width: 10%;
+}
+
+.common-table.datas-table thead th:nth-child(4),
+.common-table.datas-table tbody td:nth-child(4) {
+  width: 10%;
+}
+
+.common-table.datas-table thead th:nth-child(5),
+.common-table.datas-table tbody td:nth-child(5) {
+  width: 9%;
+}
+
+.common-table.datas-table thead th:nth-child(6),
+.common-table.datas-table tbody td:nth-child(6) {
+  width: 10%;
+}
+
+.common-table.datas-table thead th:nth-child(7),
+.common-table.datas-table tbody td:nth-child(7) {
+  width: 12%;
+}
+
+.common-table.datas-table thead th:nth-child(8),
+.common-table.datas-table tbody td:nth-child(8) {
+  width: 9%;
+}
+
+.common-table.datas-table thead th:nth-child(9),
+.common-table.datas-table tbody td:nth-child(9) {
+  width: 9%;
+}
+
+.common-table.datas-table thead th:nth-child(10),
+.common-table.datas-table tbody td:nth-child(10) {
+  width: 9%;
+}
+
+.common-table.datas-table thead th:nth-child(11),
+.common-table.datas-table tbody td:nth-child(11) {
+  width: 8%;
+}
+
+.common-table.datas-table thead th:nth-child(12),
+.common-table.datas-table tbody td:nth-child(12) {
+  width: 84px;
 }
 
 .common-table th, .common-table td {
@@ -83,19 +158,22 @@ body, .common-container {
   font-size: 12px;
   vertical-align: middle;
   transition: background-color 0.15s ease;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .common-table thead {
-  background: linear-gradient(135deg, #4b5563 0%, #374151 100%);
+  background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
   color: white;
-  font-weight: 600;
+  font-weight: 500;
   position: relative;
 }
 
 .common-table thead th {
-  padding: 12px 14px;
-  font-size: 13px;
-  letter-spacing: 0.2px;
+  padding: 10px 12px;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.6px;
   text-transform: uppercase;
   border-bottom: none;
   position: relative;
@@ -107,7 +185,7 @@ body, .common-container {
 }
 
 .common-table tbody tr:hover {
-  background-color: #f8fafc;
+  background-color: #eff6ff;
   cursor: pointer;
 }
 
@@ -124,7 +202,7 @@ body, .common-container {
 }
 
 .sortable-th:hover {
-  background: linear-gradient(135deg, #374151 0%, #1f2937 100%);
+  background: linear-gradient(135deg, #1e40af 0%, #1d4ed8 100%);
 }
 
 /* Enhanced checkbox styling */
@@ -143,13 +221,13 @@ body, .common-container {
 }
 
 .common-table input[type="checkbox"]:hover {
-  border-color: #4b5563;
+  border-color: #2563eb;
   transform: scale(1.1);
 }
 
 .common-table input[type="checkbox"]:checked {
-  background: linear-gradient(135deg, #4b5563 0%, #374151 100%);
-  border-color: #4b5563;
+  background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+  border-color: #2563eb;
   transform: scale(1.1);
 }
 
@@ -202,11 +280,11 @@ body, .common-container {
 
 /* Specific button variants */
 .common-button.add {
-  background-color: #10b981;
+  background-color: #2563eb;
 }
 
 .common-button.add:hover {
-  background-color: #059669;
+  background-color: #1e40af;
 }
 
 .common-button.edit {
@@ -226,11 +304,11 @@ body, .common-container {
 }
 
 .common-button.export {
-  background-color: #4b5563;
+  background-color: #2563eb;
 }
 
 .common-button.export:hover {
-  background-color: #374151;
+  background-color: #1e40af;
 }
 
 .common-button.save {
@@ -255,6 +333,18 @@ body, .common-container {
 
 .common-button.cyan:hover {
   background-color: #0e7490;
+}
+
+.common-button.secondary {
+  background-color: #ffffff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+}
+
+.common-button.secondary:hover {
+  background-color: #eff6ff;
+  border-color: #93c5fd;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
 }
 
 /* Modal styles */
@@ -353,12 +443,12 @@ body, .common-container {
 }
 
 .no-data {
-  color: #6b7280;
+  color: #1d4ed8;
   font-style: italic;
   padding: 40px 20px;
   text-align: center;
   font-size: 16px;
-  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
   border-radius: 12px;
   margin: 20px 0;
 }
@@ -435,11 +525,12 @@ body, .common-container {
 /* Enhanced table wrapper for better spacing */
 .visitor-table-wrapper {
   background: #fff;
-  border-radius: 16px;
+  border-radius: 0;
   padding: 0;
   margin: 16px auto;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  border: 1px solid #bfdbfe;
+  overflow-x: auto;
 }
 
 /* Search and filter styling */
@@ -448,7 +539,7 @@ body, .common-container {
   gap: 12px;
   margin-bottom: 20px;
   padding: 16px;
-  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
   border-radius: 10px;
   align-items: center;
   flex-wrap: wrap;
@@ -456,7 +547,7 @@ body, .common-container {
 
 .search-filter-container input[type="text"] {
   padding: 8px 12px;
-  border: 2px solid #e5e7eb;
+  border: 2px solid #bfdbfe;
   border-radius: 6px;
   font-size: 12px;
   transition: all 0.2s ease;
@@ -466,13 +557,13 @@ body, .common-container {
 
 .search-filter-container input[type="text"]:focus {
   outline: none;
-  border-color: #4b5563;
-  box-shadow: 0 0 0 3px rgba(75, 85, 99, 0.1);
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
 }
 
 .search-filter-container select {
   padding: 8px 12px;
-  border: 2px solid #e5e7eb;
+  border: 2px solid #bfdbfe;
   border-radius: 6px;
   font-size: 12px;
   background: #fff;
@@ -482,8 +573,8 @@ body, .common-container {
 
 .search-filter-container select:focus {
   outline: none;
-  border-color: #4b5563;
-  box-shadow: 0 0 0 3px rgba(75, 85, 99, 0.1);
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
 }
 
 /* Search clear icon button */
@@ -522,9 +613,9 @@ body, .common-container {
 
 .pagination-button {
   padding: 8px 12px;
-  border: 2px solid #e5e7eb;
+  border: 2px solid #bfdbfe;
   background: #fff;
-  color: #4b5563;
+  color: #1d4ed8;
   border-radius: 4px;
   cursor: pointer;
   font-weight: 600;
@@ -535,18 +626,18 @@ body, .common-container {
 }
 
 .pagination-button:hover {
-  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-  border-color: #4b5563;
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+  border-color: #2563eb;
   transform: translateY(-1px);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.15);
 }
 
 .pagination-button.active {
-  background: linear-gradient(135deg, #4b5563 0%, #374151 100%);
-  border-color: #4b5563;
+  background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+  border-color: #2563eb;
   color: white;
   transform: translateY(-1px);
-  box-shadow: 0 3px 10px rgba(75, 85, 99, 0.3);
+  box-shadow: 0 3px 10px rgba(37, 99, 235, 0.35);
 }
 
 .pagination-button:disabled {
@@ -589,6 +680,29 @@ body, .common-container {
   font-size: 13px;
   font-weight: 500;
   white-space: nowrap;
+}
+
+.pagination-size-select {
+  padding: 5px 8px;
+  border: 2px solid #bfdbfe;
+  background: #fff;
+  color: #1d4ed8;
+  border-radius: 4px;
+  font-weight: 500;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-right: 4px;
+}
+
+.pagination-size-select:hover {
+  border-color: #2563eb;
+}
+
+.pagination-size-select:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
 }
 
 /* Form grid utilities for better UX in modals */
@@ -649,6 +763,7 @@ body, .common-container {
     font-size: 11px;
     display: table;
     width: 100%;
+    min-width: 760px;
   }
 
   .common-table th, .common-table td {
@@ -659,24 +774,6 @@ body, .common-container {
   .common-table thead th {
     padding: 10px 8px;
     font-size: 11px;
-  }
-
-  /* Hide less important columns on mobile - show only essential ones */
-  .common-table th:nth-child(n+6),
-  .common-table td:nth-child(n+6) {
-    display: none;
-  }
-
-  /* Always show first 5 columns: checkbox, name fields, and actions */
-  .common-table th:nth-child(-n+5),
-  .common-table td:nth-child(-n+5) {
-    display: table-cell;
-  }
-
-  /* Show actions column (usually last) */
-  .common-table th:last-child,
-  .common-table td:last-child {
-    display: table-cell;
   }
 
   .search-filter-container {
@@ -784,6 +881,7 @@ body, .common-container {
 
   .common-table {
     width: 100%;
+    min-width: 700px;
   }
 
   .common-table th, .common-table td {
@@ -794,20 +892,6 @@ body, .common-container {
   .common-table thead th {
     padding: 8px 6px;
     font-size: 10px;
-  }
-
-  /* On very small screens, show even fewer columns */
-  .common-table th:nth-child(n+5),
-  .common-table td:nth-child(n+5) {
-    display: none;
-  }
-
-  /* Show only: checkbox, first name, last name, and actions */
-  .common-table th:nth-child(-n+4),
-  .common-table td:nth-child(-n+4),
-  .common-table th:last-child,
-  .common-table td:last-child {
-    display: table-cell;
   }
 }
 

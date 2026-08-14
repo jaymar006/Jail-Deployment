@@ -32,7 +32,7 @@ const AuthShell = ({ title, children }) => {
       </Typography>
       <Paper
         elevation={4}
-        sx={{ width: '100%', maxWidth: 440, borderRadius: 3, p: { xs: 3, sm: 4 } }}
+        sx={{ width: '100%', maxWidth: 440, borderRadius: 1.5, p: { xs: 3, sm: 4 } }}
       >
         {title && (
           <Typography variant="h6" align="center" sx={{ mb: 2 }}>

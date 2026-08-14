@@ -21,15 +21,6 @@
   }
 }
 
-.settings-container h2 {
-  margin-bottom: 24px;
-  color: #111827;
-  font-size: 1.8rem;
-  font-weight: 700;
-  text-align: center;
-  letter-spacing: 0.5px;
-}
-
 .username-card {
   background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
   border: 2px solid #e5e7eb;
@@ -180,146 +171,6 @@
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
-}
-
-/* Modal styling to match common.css */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  width: 100%;
-  height: 100vh;
-  min-height: 100vh;
-  background-color: rgba(0,0,0,0.4);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 9999;
-  overflow-y: auto;
-  overflow-x: hidden;
-  -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
-  /* Ensure overlay covers entire viewport even when scrolled */
-  margin: 0;
-  padding: 0;
-  /* Center modal in current viewport */
-  padding-top: env(safe-area-inset-top);
-  padding-bottom: env(safe-area-inset-bottom);
-}
-
-.modal-content {
-  background: white;
-  padding: 25px 30px;
-  border-radius: 12px;
-  max-width: 90%;
-  width: 60%;
-  position: relative;
-  z-index: 10000;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.15);
-  border: 1px solid rgba(0, 0, 0, 0.05);
-}
-
-.modal-close {
-  position: absolute;
-  top: 15px;
-  right: 20px;
-  background: transparent;
-  border: none;
-  font-size: 24px;
-  cursor: pointer;
-  color: #6b7280;
-  transition: color 0.2s ease;
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 6px;
-}
-
-.modal-close:hover {
-  color: #374151;
-  background: #f3f4f6;
-}
-
-.modal-content h3 {
-  margin-top: 0;
-  margin-bottom: 20px;
-  color: #111827;
-  font-size: 1.4rem;
-  font-weight: 700;
-  text-align: center;
-  letter-spacing: 0.3px;
-}
-
-.settings-form {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.settings-form label {
-  display: block;
-  margin-bottom: 6px;
-  font-weight: 600;
-  color: #374151;
-  font-size: 14px;
-  letter-spacing: 0.2px;
-}
-
-.settings-form input,
-.settings-form select {
-  width: 100%;
-  padding: 12px 16px;
-  border: 2px solid #e5e7eb;
-  border-radius: 8px;
-  font-size: 14px;
-  transition: all 0.2s ease;
-  background: #fff;
-  color: #111827;
-  box-sizing: border-box;
-}
-
-.settings-form input:focus,
-.settings-form select:focus {
-  outline: none;
-  border-color: #4b5563;
-  box-shadow: 0 0 0 3px rgba(75, 85, 99, 0.1);
-}
-
-.settings-form input:hover,
-.settings-form select:hover {
-  border-color: #9ca3af;
-}
-
-.settings-form button {
-  padding: 12px 24px;
-  background: #2563eb;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  border-radius: 4px;
-  color: white;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-top: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
-}
-
-.settings-form button:hover {
-  background: #1e40af;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
-}
-
-.settings-form button:active {
-  transform: translateY(0);
 }
 
 /* Cell management table styling */
@@ -494,45 +345,6 @@
     font-size: 13px;
   }
   
-  .modal-overlay {
-    align-items: center;
-    justify-content: center;
-    padding: 20px;
-    /* Ensure full coverage on mobile - height will be set dynamically via JS */
-    top: 0 !important;
-    left: 0 !important;
-    right: 0 !important;
-    width: 100% !important;
-    /* Height is set dynamically to cover full document */
-    /* Ensure overlay can scroll when content is taller */
-    overflow-y: auto !important;
-    overflow-x: hidden !important;
-    -webkit-overflow-scrolling: touch;
-    scroll-behavior: smooth;
-    /* Center modal in current viewport */
-    position: fixed;
-  }
-
-  .modal-content {
-    width: 100%;
-    max-width: 100%;
-    padding: 20px 16px;
-    padding-bottom: 40px; /* Extra padding at bottom for scrolling */
-    margin: auto;
-    border-radius: 12px;
-    /* Remove min-height to allow content to be scrollable */
-    min-height: auto;
-    /* Center the modal content vertically in viewport */
-    align-self: center;
-    /* Allow content to grow beyond viewport */
-    height: auto;
-    /* Ensure modal appears at current viewport position */
-    position: relative;
-    /* Ensure modal is visible and centered */
-    max-height: calc(100vh - 40px);
-    overflow-y: auto;
-  }
-  
   .cell-management-table {
     font-size: 11px;
     display: table;
@@ -570,21 +382,6 @@
     font-size: 14px;
     min-height: 44px;
   }
-
-  /* Form inputs */
-  .modal-content input,
-  .modal-content select,
-  .modal-content textarea {
-    font-size: 16px; /* Prevent iOS zoom */
-    padding: 12px;
-    min-height: 44px;
-  }
-
-  /* Form labels */
-  .modal-content label {
-    font-size: 14px;
-    margin-bottom: 6px;
-  }
 }
 
 @media (max-width: 480px) {
@@ -601,41 +398,5 @@
   .cell-management-table td {
     padding: 6px 8px;
     font-size: 10px;
-  }
-
-  .modal-overlay {
-    padding: 16px;
-    /* Ensure full coverage on small mobile - height will be set dynamically via JS */
-    top: 0 !important;
-    left: 0 !important;
-    right: 0 !important;
-    width: 100% !important;
-    /* Height is set dynamically to cover full document */
-    /* Ensure overlay can scroll when content is taller */
-    overflow-y: auto !important;
-    overflow-x: hidden !important;
-    -webkit-overflow-scrolling: touch;
-    scroll-behavior: smooth;
-    align-items: center;
-    justify-content: center;
-    position: fixed;
-  }
-
-  .modal-content {
-    padding: 16px 12px;
-    padding-bottom: 40px; /* Extra padding at bottom for scrolling */
-    margin: auto;
-    border-radius: 12px;
-    /* Remove min-height to allow content to be scrollable */
-    min-height: auto;
-    /* Center the modal content vertically in viewport */
-    align-self: center;
-    /* Allow content to grow beyond viewport */
-    height: auto;
-    /* Ensure modal appears at current viewport position */
-    position: relative;
-    /* Ensure modal is visible and centered */
-    max-height: calc(100vh - 32px);
-    overflow-y: auto;
   }
 }

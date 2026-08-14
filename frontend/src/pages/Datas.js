@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import axios from '../services/api';
 import * as XLSX from 'xlsx';
+import SkeletonTable from '../components/SkeletonTable';
 import './common.css';
 
 const Modal = ({ children, onClose, wide = false }) => {
@@ -112,7 +113,7 @@ const Datas = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortOption, setSortOption] = useState('none');
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 20;
+  const [pageSize, setPageSize] = useState(20);
 
   // New: track column and direction for header sorting
   const [sortColumn, setSortColumn] = useState(null); // e.g., 'last_name'
@@ -192,9 +193,32 @@ const Datas = () => {
   const [availableCells, setAvailableCells] = useState([]);
   
   // Dropdown states
-  const [exportDropdownOpen, setExportDropdownOpen] = useState(false);
-  const [importDropdownOpen, setImportDropdownOpen] = useState(false);
-  const [templateDropdownOpen, setTemplateDropdownOpen] = useState(false);
+  const [dataToolsOpen, setDataToolsOpen] = useState(false);
+
+  // Data Tools dropdown menu item styles
+  const dataToolsItemStyle = {
+    width: '100%',
+    padding: '10px 16px',
+    border: 'none',
+    background: 'white',
+    textAlign: 'left',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+    fontSize: '14px',
+    color: '#374151',
+    transition: 'background 0.2s ease'
+  };
+  const dataToolsSectionStyle = {
+    padding: '8px 16px 4px',
+    fontSize: '11px',
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: '0.5px',
+    color: '#9ca3af',
+    background: '#f9fafb'
+  };
 
   const openEditModal = (pdl) => {
     const normalizedPdl = {
@@ -211,23 +235,21 @@ const Datas = () => {
     fetchAvailableCells();
   }, []);
 
-  // Close dropdowns when clicking outside
+  // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (!event.target.closest('[data-dropdown]')) {
-        setExportDropdownOpen(false);
-        setImportDropdownOpen(false);
-        setTemplateDropdownOpen(false);
+        setDataToolsOpen(false);
       }
     };
 
-    if (exportDropdownOpen || importDropdownOpen || templateDropdownOpen) {
+    if (dataToolsOpen) {
       document.addEventListener('mousedown', handleClickOutside);
       return () => {
         document.removeEventListener('mousedown', handleClickOutside);
       };
     }
-  }, [exportDropdownOpen, importDropdownOpen, templateDropdownOpen]);
+  }, [dataToolsOpen]);
 
   const fetchAvailableCells = async () => {
     try {
@@ -1238,9 +1260,16 @@ const Datas = () => {
       return 0;
     });
 
-  const totalPages = Math.ceil(filteredSortedPdls.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const currentPdls = filteredSortedPdls.slice(startIndex, startIndex + itemsPerPage);
+  const resolvedPageSize = pageSize === 'all' ? filteredSortedPdls.length : pageSize;
+  const totalPages = Math.max(1, Math.ceil(filteredSortedPdls.length / (resolvedPageSize || 1)));
+  const startIndex = (currentPage - 1) * resolvedPageSize;
+  const currentPdls = filteredSortedPdls.slice(startIndex, startIndex + resolvedPageSize);
+
+  const handlePageSizeChange = (e) => {
+    const val = e.target.value;
+    setPageSize(val === 'all' ? 'all' : Number(val));
+    setCurrentPage(1);
+  };
 
   // Smart pagination: Generate page numbers with ellipsis
   const getPaginationPages = () => {
@@ -1443,366 +1472,201 @@ const exportPdlsWithVisitorsToExcel = async () => {
       </style>
 
       <main>
-        <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-          <h2 style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: 'center', 
-            gap: '12px',
-            margin: '0 0 16px 0',
-            fontSize: '28px',
-            fontWeight: '700',
-            color: '#111827'
-          }}>
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
-              <rect x="8" y="2" width="8" height="4" rx="1" ry="1"/>
-              <path d="M12 11h4"/>
-              <path d="M12 16h4"/>
-              <path d="M8 11h.01"/>
-              <path d="M8 16h.01"/>
-            </svg>
-            PDL Visitors Management
-          </h2>
-          
-          <div style={{ display: 'flex', justifyContent: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '24px' }}>
-            {/* Add PDL Button */}
-            <button className="common-button add" type="button" onClick={() => setShowAddModal(true)}>
-              <svg className="button-icon" viewBox="0 0 24 24">
-                <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
-              </svg>
-              Add a PDL
-            </button>
-
-            {/* Delete Selected Button (conditional) */}
-            {selectedPdlIds.length > 0 && (
-              <button className="common-button delete" type="button" onClick={handleBulkDelete}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '24px' }}>
+            {/* Left group */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+              {/* Add PDL Button */}
+              <button className="common-button add" type="button" onClick={() => setShowAddModal(true)}>
                 <svg className="button-icon" viewBox="0 0 24 24">
-                  <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+                  <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
                 </svg>
-                Delete Selected ({selectedPdlIds.length})
+                Add a PDL
               </button>
-            )}
 
-            {/* Export Dropdown */}
-            <div style={{ position: 'relative', display: 'inline-block' }} data-dropdown>
-              <button 
-                className="common-button export" 
-                type="button" 
-                onClick={() => {
-                  setExportDropdownOpen(!exportDropdownOpen);
-                  setImportDropdownOpen(false);
-                  setTemplateDropdownOpen(false);
-                }}
-                style={{ position: 'relative' }}
-              >
-                <svg className="button-icon" viewBox="0 0 24 24">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                  <polyline points="7 10 12 15 17 10"/>
-                  <line x1="12" y1="15" x2="12" y2="3"/>
-                </svg>
-                Export
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginLeft: '4px' }}>
-                  <polyline points="6 9 12 15 18 9"/>
-                </svg>
-              </button>
-              {exportDropdownOpen && (
-                <div style={{
-                  position: 'absolute',
-                  top: '100%',
-                  left: 0,
-                  marginTop: '4px',
-                  background: 'white',
-                  border: '1px solid #e5e7eb',
-                  borderRadius: '8px',
-                  boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-                  zIndex: 1000,
-                  minWidth: '220px',
-                  overflow: 'hidden'
-                }}>
-                  <button
-                    onClick={() => {
-                      exportToExcel();
-                      setExportDropdownOpen(false);
-                    }}
-                    style={{
-                      width: '100%',
-                      padding: '12px 16px',
-                      border: 'none',
-                      background: 'white',
-                      textAlign: 'left',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '12px',
-                      fontSize: '14px',
-                      color: '#374151',
-                      transition: 'background 0.2s ease'
-                    }}
-                    onMouseEnter={(e) => e.target.style.background = '#f9fafb'}
-                    onMouseLeave={(e) => e.target.style.background = 'white'}
-                  >
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
-                    </svg>
-                    Export PDL
-                  </button>
-                  <button
-                    onClick={() => {
-                      exportVisitorsToExcelLinkHandler();
-                      setExportDropdownOpen(false);
-                    }}
-                    style={{
-                      width: '100%',
-                      padding: '12px 16px',
-                      border: 'none',
-                      background: 'white',
-                      textAlign: 'left',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '12px',
-                      fontSize: '14px',
-                      color: '#374151',
-                      borderTop: '1px solid #f3f4f6',
-                      transition: 'background 0.2s ease'
-                    }}
-                    onMouseEnter={(e) => e.target.style.background = '#f9fafb'}
-                    onMouseLeave={(e) => e.target.style.background = 'white'}
-                  >
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
-                    </svg>
-                    Export PDL with Visitors
-                  </button>
-                </div>
+              {/* Delete Selected Button (conditional) */}
+              {selectedPdlIds.length > 0 && (
+                <button className="common-button delete" type="button" onClick={handleBulkDelete}>
+                  <svg className="button-icon" viewBox="0 0 24 24">
+                    <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+                  </svg>
+                  Delete Selected ({selectedPdlIds.length})
+                </button>
               )}
             </div>
 
-            {/* Import Dropdown */}
-            <div style={{ position: 'relative', display: 'inline-block' }} data-dropdown>
-              <button 
-                className="common-button export" 
-                type="button" 
-                onClick={() => {
-                  if (!isImportingPdls && !isImporting) {
-                    setImportDropdownOpen(!importDropdownOpen);
-                    setExportDropdownOpen(false);
-                    setTemplateDropdownOpen(false);
-                  }
-                }}
-                disabled={isImportingPdls || isImporting}
-                style={{ 
-                  opacity: (isImportingPdls || isImporting) ? 0.6 : 1,
-                  cursor: (isImportingPdls || isImporting) ? 'not-allowed' : 'pointer',
-                  position: 'relative'
-                }}
-              >
-                {(isImportingPdls || isImporting) ? (
-                  <>
-                    <svg className="button-icon" viewBox="0 0 24 24" style={{ 
-                      animation: 'spin 1s linear infinite',
-                      transformOrigin: 'center'
-                    }}>
-                      <path d="M12,4V2A10,10 0 0,0 2,12H4A8,8 0 0,1 12,4Z"/>
-                    </svg>
-                    Importing... ({isImportingPdls ? pdlImportProgress.current : importProgress.current}/{isImportingPdls ? pdlImportProgress.total : importProgress.total})
-                  </>
-                ) : (
-                  <>
-                    <svg className="button-icon" viewBox="0 0 24 24">
-                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                      <polyline points="17 8 12 3 7 8"/>
-                      <line x1="12" y1="3" x2="12" y2="15"/>
-                    </svg>
-                    Import
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginLeft: '4px' }}>
-                      <polyline points="6 9 12 15 18 9"/>
-                    </svg>
-                  </>
+            {/* Right group: Data Tools */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+              {(isImportingPdls || isImporting) && (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  fontSize: '13px',
+                  fontWeight: '600',
+                  color: '#374151',
+                  background: '#eff6ff',
+                  border: '1px solid #bfdbfe',
+                  borderRadius: '4px',
+                  padding: '8px 14px'
+                }}>
+                  <svg className="button-icon" viewBox="0 0 24 24" style={{ animation: 'spin 1s linear infinite', transformOrigin: 'center', width: '16px', height: '16px' }}>
+                    <path d="M12,4V2A10,10 0 0,0 2,12H4A8,8 0 0,1 12,4Z"/>
+                  </svg>
+                  Importing... ({isImportingPdls ? pdlImportProgress.current : importProgress.current}/{isImportingPdls ? pdlImportProgress.total : importProgress.total})
+                </div>
+              )}
+              <div style={{ position: 'relative', display: 'inline-block' }} data-dropdown>
+                <button
+                  className="common-button secondary"
+                  type="button"
+                  onClick={() => setDataToolsOpen(!dataToolsOpen)}
+                  style={{ position: 'relative' }}
+                >
+                  <svg className="button-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+                  </svg>
+                  Data Tools
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginLeft: '4px' }}>
+                    <polyline points="6 9 12 15 18 9"/>
+                  </svg>
+                </button>
+                {dataToolsOpen && (
+                  <div style={{
+                    position: 'absolute',
+                    top: '100%',
+                    right: 0,
+                    marginTop: '4px',
+                    background: 'white',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '8px',
+                    boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+                    zIndex: 1000,
+                    minWidth: '260px',
+                    overflow: 'hidden'
+                  }}>
+                    {/* Export Section */}
+                    <div style={dataToolsSectionStyle}>Export</div>
+                    <button
+                      onClick={() => {
+                        exportToExcel();
+                        setDataToolsOpen(false);
+                      }}
+                      style={dataToolsItemStyle}
+                      onMouseEnter={(e) => e.currentTarget.style.background = '#f9fafb'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = 'white'}
+                    >
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
+                      </svg>
+                      Export PDL
+                    </button>
+                    <button
+                      onClick={() => {
+                        exportVisitorsToExcelLinkHandler();
+                        setDataToolsOpen(false);
+                      }}
+                      style={{ ...dataToolsItemStyle, borderTop: '1px solid #f3f4f6' }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = '#f9fafb'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = 'white'}
+                    >
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
+                      </svg>
+                      Export PDL with Visitors
+                    </button>
+
+                    {/* Import Section */}
+                    <div style={dataToolsSectionStyle}>Import</div>
+                    <button
+                      onClick={() => {
+                        if (!isImportingPdls && !isImporting) {
+                          fileInputRef.current && fileInputRef.current.click();
+                          setDataToolsOpen(false);
+                        }
+                      }}
+                      disabled={isImportingPdls || isImporting}
+                      style={{
+                        ...dataToolsItemStyle,
+                        opacity: (isImportingPdls || isImporting) ? 0.5 : 1,
+                        cursor: (isImportingPdls || isImporting) ? 'not-allowed' : 'pointer'
+                      }}
+                      onMouseEnter={(e) => { if (!isImportingPdls && !isImporting) e.currentTarget.style.background = '#f9fafb'; }}
+                      onMouseLeave={(e) => e.currentTarget.style.background = 'white'}
+                    >
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                        <polyline points="17 8 12 3 7 8"/>
+                        <line x1="12" y1="3" x2="12" y2="15"/>
+                      </svg>
+                      Import PDLs
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (!isImportingPdls && !isImporting) {
+                          fileInputVisitorsRef.current && fileInputVisitorsRef.current.click();
+                          setDataToolsOpen(false);
+                        }
+                      }}
+                      disabled={isImportingPdls || isImporting}
+                      style={{
+                        ...dataToolsItemStyle,
+                        borderTop: '1px solid #f3f4f6',
+                        opacity: (isImportingPdls || isImporting) ? 0.5 : 1,
+                        cursor: (isImportingPdls || isImporting) ? 'not-allowed' : 'pointer'
+                      }}
+                      onMouseEnter={(e) => { if (!isImportingPdls && !isImporting) e.currentTarget.style.background = '#f9fafb'; }}
+                      onMouseLeave={(e) => e.currentTarget.style.background = 'white'}
+                    >
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                        <polyline points="17 8 12 3 7 8"/>
+                        <line x1="12" y1="3" x2="12" y2="15"/>
+                      </svg>
+                      Import PDL with Visitors
+                    </button>
+
+                    {/* Template Section */}
+                    <div style={dataToolsSectionStyle}>Download Template</div>
+                    <button
+                      onClick={() => {
+                        downloadPdlTemplateLinkHandler();
+                        setDataToolsOpen(false);
+                      }}
+                      style={dataToolsItemStyle}
+                      onMouseEnter={(e) => e.currentTarget.style.background = '#fffbeb'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = 'white'}
+                    >
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                        <polyline points="7 10 12 15 17 10"/>
+                        <line x1="12" y1="15" x2="12" y2="3"/>
+                      </svg>
+                      PDL Template
+                    </button>
+                    <button
+                      onClick={() => {
+                        downloadPdlWithVisitorsTemplateLinkHandler();
+                        setDataToolsOpen(false);
+                      }}
+                      style={{ ...dataToolsItemStyle, borderTop: '1px solid #f3f4f6' }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = '#fffbeb'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = 'white'}
+                    >
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                        <polyline points="7 10 12 15 17 10"/>
+                        <line x1="12" y1="15" x2="12" y2="3"/>
+                      </svg>
+                      PDL with Visitors Template
+                    </button>
+                  </div>
                 )}
-              </button>
-              {importDropdownOpen && !isImportingPdls && !isImporting && (
-                <div style={{
-                  position: 'absolute',
-                  top: '100%',
-                  left: 0,
-                  marginTop: '4px',
-                  background: 'white',
-                  border: '1px solid #e5e7eb',
-                  borderRadius: '8px',
-                  boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-                  zIndex: 1000,
-                  minWidth: '220px',
-                  overflow: 'hidden'
-                }}>
-                  <button
-                    onClick={() => {
-                      fileInputRef.current && fileInputRef.current.click();
-                      setImportDropdownOpen(false);
-                    }}
-                    style={{
-                      width: '100%',
-                      padding: '12px 16px',
-                      border: 'none',
-                      background: 'white',
-                      textAlign: 'left',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '12px',
-                      fontSize: '14px',
-                      color: '#374151',
-                      transition: 'background 0.2s ease'
-                    }}
-                    onMouseEnter={(e) => e.target.style.background = '#f9fafb'}
-                    onMouseLeave={(e) => e.target.style.background = 'white'}
-                  >
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                      <polyline points="17 8 12 3 7 8"/>
-                      <line x1="12" y1="3" x2="12" y2="15"/>
-                    </svg>
-                    Import PDLs
-                  </button>
-                  <button
-                    onClick={() => {
-                      fileInputVisitorsRef.current && fileInputVisitorsRef.current.click();
-                      setImportDropdownOpen(false);
-                    }}
-                    style={{
-                      width: '100%',
-                      padding: '12px 16px',
-                      border: 'none',
-                      background: 'white',
-                      textAlign: 'left',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '12px',
-                      fontSize: '14px',
-                      color: '#374151',
-                      borderTop: '1px solid #f3f4f6',
-                      transition: 'background 0.2s ease'
-                    }}
-                    onMouseEnter={(e) => e.target.style.background = '#f9fafb'}
-                    onMouseLeave={(e) => e.target.style.background = 'white'}
-                  >
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                      <polyline points="17 8 12 3 7 8"/>
-                      <line x1="12" y1="3" x2="12" y2="15"/>
-                    </svg>
-                    Import PDL with Visitors
-                  </button>
-                </div>
-              )}
+              </div>
+              <input ref={fileInputRef} type="file" accept=".xlsx,.xls" style={{ display: 'none' }} onChange={handleImportFileChange} />
+              <input ref={fileInputVisitorsRef} type="file" accept=".xlsx,.xls" style={{ display: 'none' }} onChange={handleImportPdlsWithVisitorsFileChange} />
             </div>
-            <input ref={fileInputRef} type="file" accept=".xlsx,.xls" style={{ display: 'none' }} onChange={handleImportFileChange} />
-            <input ref={fileInputVisitorsRef} type="file" accept=".xlsx,.xls" style={{ display: 'none' }} onChange={handleImportPdlsWithVisitorsFileChange} />
-
-            {/* Download Template Dropdown */}
-            <div style={{ position: 'relative', display: 'inline-block' }} data-dropdown>
-              <button 
-                className="common-button export"
-                type="button" 
-                onClick={() => {
-                  setTemplateDropdownOpen(!templateDropdownOpen);
-                  setExportDropdownOpen(false);
-                  setImportDropdownOpen(false);
-                }}
-                style={{ position: 'relative' }}
-              >
-                <svg className="button-icon" viewBox="0 0 24 24">
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                  <polyline points="14 2 14 8 20 8"/>
-                </svg>
-                Download Template
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginLeft: '4px' }}>
-                  <polyline points="6 9 12 15 18 9"/>
-                </svg>
-              </button>
-              {templateDropdownOpen && (
-                <div style={{
-                  position: 'absolute',
-                  top: '100%',
-                  left: 0,
-                  marginTop: '4px',
-                  background: 'white',
-                  border: '1px solid #e5e7eb',
-                  borderRadius: '8px',
-                  boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-                  zIndex: 1000,
-                  minWidth: '240px',
-                  overflow: 'hidden'
-                }}>
-                  <button
-                    onClick={() => {
-                      downloadPdlTemplateLinkHandler();
-                      setTemplateDropdownOpen(false);
-                    }}
-                    style={{
-                      width: '100%',
-                      padding: '12px 16px',
-                      border: 'none',
-                      background: 'white',
-                      textAlign: 'left',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '12px',
-                      fontSize: '14px',
-                      color: '#374151',
-                      transition: 'background 0.2s ease'
-                    }}
-                    onMouseEnter={(e) => e.target.style.background = '#fffbeb'}
-                    onMouseLeave={(e) => e.target.style.background = 'white'}
-                  >
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                      <polyline points="7 10 12 15 17 10"/>
-                      <line x1="12" y1="15" x2="12" y2="3"/>
-                    </svg>
-                    PDL Template
-                  </button>
-                  <button
-                    onClick={() => {
-                      downloadPdlWithVisitorsTemplateLinkHandler();
-                      setTemplateDropdownOpen(false);
-                    }}
-                    style={{
-                      width: '100%',
-                      padding: '12px 16px',
-                      border: 'none',
-                      background: 'white',
-                      textAlign: 'left',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '12px',
-                      fontSize: '14px',
-                      color: '#374151',
-                      borderTop: '1px solid #f3f4f6',
-                      transition: 'background 0.2s ease'
-                    }}
-                    onMouseEnter={(e) => e.target.style.background = '#fffbeb'}
-                    onMouseLeave={(e) => e.target.style.background = 'white'}
-                  >
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                      <polyline points="7 10 12 15 17 10"/>
-                      <line x1="12" y1="15" x2="12" y2="3"/>
-                    </svg>
-                    PDL with Visitors Template
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
         </div>
 
-        <h3 style={{ textAlign: 'center', margin: '20px 0 16px 0', fontSize: '20px', fontWeight: '600', color: '#111827' }}>PDL Lists</h3>
-        
         <div className="search-filter-container">
           <div style={{ 
             display: 'grid', 
@@ -1824,16 +1688,16 @@ const exportPdlsWithVisitorsToExcel = async () => {
                   onChange={(e) => setSearchTerm(e.target.value)}
                   onFocus={(e) => {
                     e.target.style.outline = 'none';
-                    e.target.style.borderColor = '#4b5563';
-                    e.target.style.boxShadow = '0 0 0 3px rgba(75, 85, 99, 0.1)';
+                    e.target.style.borderColor = '#2563eb';
+                    e.target.style.boxShadow = '0 0 0 3px rgba(37, 99, 235, 0.12)';
                   }}
                   onBlur={(e) => {
-                    e.target.style.borderColor = '#e5e7eb';
+                    e.target.style.borderColor = '#bfdbfe';
                     e.target.style.boxShadow = 'none';
                   }}
                   style={{
                     padding: '8px 12px',
-                    border: '2px solid #e5e7eb',
+                    border: '2px solid #bfdbfe',
                     borderRadius: '6px',
                     fontSize: '12px',
                     transition: 'all 0.2s ease',
@@ -1867,7 +1731,7 @@ const exportPdlsWithVisitorsToExcel = async () => {
                 aria-label="Sort Options"
                 style={{
                   padding: '8px 12px',
-                  border: '2px solid #e5e7eb',
+                  border: '2px solid #bfdbfe',
                   borderRadius: '6px',
                   fontSize: '12px',
                   background: '#fff',
@@ -1895,7 +1759,7 @@ const exportPdlsWithVisitorsToExcel = async () => {
                 }}
                 style={{
                   padding: '8px 12px',
-                  border: '2px solid #e5e7eb',
+                  border: '2px solid #bfdbfe',
                   borderRadius: '6px',
                   fontSize: '12px',
                   background: '#fff',
@@ -1915,7 +1779,7 @@ const exportPdlsWithVisitorsToExcel = async () => {
                   onChange={(e) => setFilterValue(e.target.value)}
                   style={{
                     padding: '8px 12px',
-                    border: '2px solid #e5e7eb',
+                    border: '2px solid #bfdbfe',
                     borderRadius: '6px',
                     fontSize: '12px',
                     background: '#fff',
@@ -1955,12 +1819,10 @@ const exportPdlsWithVisitorsToExcel = async () => {
               )}
               
               <div style={{ 
-                background: 'linear-gradient(135deg, #4b5563 0%, #374151 100%)', 
-                color: 'white', 
-                padding: '8px 12px', 
-                borderRadius: '6px', 
-                fontWeight: '600',
-                fontSize: '12px'
+                color: '#6b7280', 
+                fontSize: '12px',
+                fontWeight: '400',
+                whiteSpace: 'nowrap'
               }}>
                 Showing: {filteredSortedPdls.length} of {pdls.length} records
               </div>
@@ -1970,27 +1832,9 @@ const exportPdlsWithVisitorsToExcel = async () => {
         
         <div className="table-wrapper" ref={tableWrapperRef}>
           {loadingPdls ? (
-            <div style={{ 
-              display: 'flex', 
-              flexDirection: 'column', 
-              alignItems: 'center', 
-              justifyContent: 'center', 
-              padding: '60px 20px',
-              minHeight: '300px'
-            }}>
-              <div style={{
-                width: '48px',
-                height: '48px',
-                border: '4px solid #e5e7eb',
-                borderTop: '4px solid #4b5563',
-                borderRadius: '50%',
-                animation: 'spin 1s linear infinite',
-                marginBottom: '16px'
-              }}></div>
-              <p style={{ color: '#6b7280', fontSize: '14px', margin: 0 }}>Loading PDL data...</p>
-            </div>
+            <SkeletonTable columns={12} rows={7} minWidth={1100} />
           ) : (
-          <table className="common-table">
+          <table className="common-table datas-table">
             <thead>
             <tr>
               <th>
@@ -2079,8 +1923,20 @@ const exportPdlsWithVisitorsToExcel = async () => {
           )}
         </div>
 
-        {totalPages > 1 && (
+        {(totalPages > 1 || pageSize === 'all') && (
           <div className="pagination-container">
+            <select
+              className="pagination-size-select"
+              value={String(pageSize)}
+              onChange={handlePageSizeChange}
+              aria-label="Rows per page"
+            >
+              <option value="10">10 per page</option>
+              <option value="25">25 per page</option>
+              <option value="50">50 per page</option>
+              <option value="100">100 per page</option>
+              <option value="all">All</option>
+            </select>
             <button
               className="pagination-button pagination-nav"
               onClick={() => setCurrentPage(1)}
@@ -2151,7 +2007,7 @@ const exportPdlsWithVisitorsToExcel = async () => {
             </button>
             
             <div className="pagination-info">
-              Page {currentPage} of {totalPages}
+              {pageSize === 'all' ? `Showing all ${filteredSortedPdls.length} rows` : `Page ${currentPage} of ${totalPages}`}
             </div>
           </div>
         )}

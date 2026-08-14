@@ -9,8 +9,6 @@ import IconButton from '@mui/material/IconButton';
 import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 import CircularProgress from '@mui/material/CircularProgress';
-import FormControlLabel from '@mui/material/FormControlLabel';
-import Checkbox from '@mui/material/Checkbox';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
@@ -172,7 +170,7 @@ const Login = () => {
         const data = await response.json();
         localStorage.setItem('token', data.token);
         login();
-        showToast('Logged in successfully! Welcome back.', 'success');
+        showToast(`Logged in successfully! Welcome back, ${username}.`, 'success');
         setTimeout(() => {
           navigate('/');
         }, 1500);
@@ -317,7 +315,10 @@ const Login = () => {
     fullWidth: true,
     size: 'small',
     margin: 'dense',
-    sx: { mb: 1.5 },
+    sx: {
+      mb: 1.5,
+      '& .MuiOutlinedInput-root': { borderRadius: '10px' },
+    },
   };
 
   return (
@@ -353,7 +354,12 @@ const Login = () => {
                 {error}
               </Alert>
             )}
-            <Button type="submit" variant="contained" disabled={isRequestingReset} sx={{ mt: 1 }}>
+            <Button
+              type="submit"
+              variant="contained"
+              disabled={isRequestingReset}
+              sx={{ mt: 1, py: 1.25, fontWeight: 700, fontSize: '0.95rem', borderRadius: '12px' }}
+            >
               {isRequestingReset && <CircularProgress size={18} color="inherit" sx={{ mr: 1 }} />}
               Send Reset Link
             </Button>
@@ -378,6 +384,7 @@ const Login = () => {
           <Box component="form" onSubmit={handleLoginSubmit} sx={{ display: 'flex', flexDirection: 'column' }}>
             <TextField
               label="Username"
+              placeholder="e.g. Juandelacruz06"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               autoFocus
@@ -385,40 +392,49 @@ const Login = () => {
             />
             <TextField
               label="Password"
+              placeholder="Enter your password"
               type={showLoginPassword ? 'text' : 'password'}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               {...textFieldProps}
-              InputProps={{
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <IconButton
-                      aria-label={showLoginPassword ? 'Hide password' : 'Show password'}
-                      onClick={() => setShowLoginPassword((v) => !v)}
-                      edge="end"
-                    >
-                      {showLoginPassword ? <VisibilityOff /> : <Visibility />}
-                    </IconButton>
-                  </InputAdornment>
-                ),
+              slotProps={{
+                input: {
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton
+                        aria-label={showLoginPassword ? 'Hide password' : 'Show password'}
+                        onClick={() => setShowLoginPassword((v) => !v)}
+                        edge="end"
+                        size="small"
+                        sx={{ color: '#60a5fa' }}
+                      >
+                        {showLoginPassword ? <VisibilityOff /> : <Visibility />}
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                },
               }}
             />
-            <FormControlLabel
-              control={
-                <Checkbox
-                  checked={showLoginPassword}
-                  onChange={(e) => setShowLoginPassword(e.target.checked)}
-                  size="small"
-                />
-              }
-              label="Show password"
-            />
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: -0.5, mb: 1.5 }}>
+              <Button
+                size="small"
+                onClick={() => setIsForgotPassword(true)}
+                sx={{ fontWeight: 600 }}
+              >
+                Forgot Password?
+              </Button>
+            </Box>
             {error && (
               <Alert severity="error" sx={{ mb: 2 }}>
                 {error}
               </Alert>
             )}
-            <Button type="submit" variant="contained" disabled={isLoggingIn} sx={{ mt: 1 }}>
+            <Button
+              type="submit"
+              variant="contained"
+              disabled={isLoggingIn}
+              sx={{ mt: 1, py: 1.25, fontWeight: 700, fontSize: '0.95rem', borderRadius: '12px' }}
+            >
               {isLoggingIn && <CircularProgress size={18} color="inherit" sx={{ mr: 1 }} />}
               Login
             </Button>
@@ -433,12 +449,9 @@ const Login = () => {
                   resetForm();
                 }}
               >
-                Click here
+                Sign Up
               </Button>
             </Typography>
-            <Button size="small" onClick={() => setIsForgotPassword(true)} sx={{ mt: 0.5 }}>
-              Forgot Password?
-            </Button>
           </Box>
         </>
       ) : (
@@ -466,18 +479,22 @@ const Login = () => {
               onChange={(e) => handlePasswordChange(e.target.value)}
               placeholder="Min 8 chars, uppercase, lowercase, number, special char"
               {...textFieldProps}
-              InputProps={{
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <IconButton
-                      aria-label={showSignUpPassword ? 'Hide password' : 'Show password'}
-                      onClick={() => setShowSignUpPassword((v) => !v)}
-                      edge="end"
-                    >
-                      {showSignUpPassword ? <VisibilityOff /> : <Visibility />}
-                    </IconButton>
-                  </InputAdornment>
-                ),
+              slotProps={{
+                input: {
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton
+                        aria-label={showSignUpPassword ? 'Hide password' : 'Show password'}
+                        onClick={() => setShowSignUpPassword((v) => !v)}
+                        edge="end"
+                        size="small"
+                        sx={{ color: '#60a5fa' }}
+                      >
+                        {showSignUpPassword ? <VisibilityOff /> : <Visibility />}
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                },
               }}
             />
             <PasswordRequirements password={password} errors={passwordErrors} />
@@ -487,18 +504,22 @@ const Login = () => {
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               {...textFieldProps}
-              InputProps={{
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <IconButton
-                      aria-label={showSignUpConfirmPassword ? 'Hide password' : 'Show password'}
-                      onClick={() => setShowSignUpConfirmPassword((v) => !v)}
-                      edge="end"
-                    >
-                      {showSignUpConfirmPassword ? <VisibilityOff /> : <Visibility />}
-                    </IconButton>
-                  </InputAdornment>
-                ),
+              slotProps={{
+                input: {
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton
+                        aria-label={showSignUpConfirmPassword ? 'Hide password' : 'Show password'}
+                        onClick={() => setShowSignUpConfirmPassword((v) => !v)}
+                        edge="end"
+                        size="small"
+                        sx={{ color: '#60a5fa' }}
+                      >
+                        {showSignUpConfirmPassword ? <VisibilityOff /> : <Visibility />}
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                },
               }}
             />
             {confirmPassword && confirmPassword !== password && (
@@ -527,7 +548,12 @@ const Login = () => {
                 {error}
               </Alert>
             )}
-            <Button type="submit" variant="contained" disabled={isSigningUp} sx={{ mt: 1 }}>
+            <Button
+              type="submit"
+              variant="contained"
+              disabled={isSigningUp}
+              sx={{ mt: 1, py: 1.25, fontWeight: 700, fontSize: '0.95rem', borderRadius: '12px' }}
+            >
               {isSigningUp && <CircularProgress size={18} color="inherit" sx={{ mr: 1 }} />}
               Sign Up
             </Button>
@@ -542,7 +568,7 @@ const Login = () => {
                   resetForm();
                 }}
               >
-                Click here
+                Login
               </Button>
             </Typography>
           </Box>
