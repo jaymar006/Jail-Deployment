@@ -54,6 +54,7 @@
   },
   "devDependencies": {
     "moment": "^2.30.1",
-    "serve": "^14.2.1"
+    "serve": "^14.2.1",
+    "typescript": "^4.9.5"
   }
 }

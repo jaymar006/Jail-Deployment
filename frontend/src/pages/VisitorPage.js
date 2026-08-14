@@ -751,34 +751,14 @@ const VisitorPage = () => {
                 }}>
                   <button 
                     type="submit"
-                    style={{
-                      background: 'linear-gradient(135deg, #4b5563 0%, #374151 100%)',
-                      color: 'white',
-                      border: 'none',
-                      padding: '12px 24px',
-                      borderRadius: '6px',
-                      fontSize: '14px',
-                      fontWeight: '600',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease'
-                    }}
+                    className="common-button"
                   >
                     Submit
                   </button>
                   <button 
                     type="button" 
                     onClick={() => { setShowAddModal(false); resetForm(); setEditingVisitorId(null); }}
-                    style={{
-                      background: '#e5e7eb',
-                      color: '#374151',
-                      border: 'none',
-                      padding: '12px 24px',
-                      borderRadius: '6px',
-                      fontSize: '14px',
-                      fontWeight: '600',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease'
-                    }}
+                    className="common-button cancel"
                   >
                     Cancel
                   </button>
@@ -1028,34 +1008,14 @@ const VisitorPage = () => {
                 }}>
                   <button 
                     type="submit"
-                    style={{
-                      background: 'linear-gradient(135deg, #4b5563 0%, #374151 100%)',
-                      color: 'white',
-                      border: 'none',
-                      padding: '12px 24px',
-                      borderRadius: '6px',
-                      fontSize: '14px',
-                      fontWeight: '600',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease'
-                    }}
+                    className="common-button"
                   >
                     Submit
                   </button>
                   <button 
                     type="button" 
                     onClick={() => { setShowEditModal(false); resetForm(); setEditingVisitorId(null); }}
-                    style={{
-                      background: '#e5e7eb',
-                      color: '#374151',
-                      border: 'none',
-                      padding: '12px 24px',
-                      borderRadius: '6px',
-                      fontSize: '14px',
-                      fontWeight: '600',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease'
-                    }}
+                    className="common-button cancel"
                   >
                     Cancel
                   </button>

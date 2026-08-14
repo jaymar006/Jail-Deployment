@@ -121,7 +121,6 @@ const Dashboard = () => {
   const [selectAll, setSelectAll] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '', type: '' });
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
-  const [isSmallMobile, setIsSmallMobile] = useState(window.innerWidth <= 480);
   const [useMilitaryTime, setUseMilitaryTime] = useState(() => {
     const saved = localStorage.getItem('useMilitaryTime');
     return saved !== null ? saved === 'true' : true;
@@ -258,7 +257,6 @@ const Dashboard = () => {
   useEffect(() => {
     const handleResize = () => {
       setIsMobile(window.innerWidth <= 768);
-      setIsSmallMobile(window.innerWidth <= 480);
     };
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
@@ -1378,14 +1376,15 @@ const Dashboard = () => {
           className={`dashboard-toast dashboard-toast-${toast.type}`}
           style={{
             position: 'fixed',
-            top: isMobile ? (isSmallMobile ? '70px' : '90px') : '100px', // Mobile: 90px (or 70px for small), Desktop: 100px
-            left: isMobile ? '10px' : '50%',
-            right: isMobile ? '10px' : 'auto',
-            transform: isMobile ? 'none' : 'translateX(-50%)',
+            top: 'auto',
+            bottom: isMobile ? '20px' : '20px',
+            left: isMobile ? '10px' : 'auto',
+            right: isMobile ? '10px' : '20px',
+            transform: 'none',
             zIndex: 999999,
             maxWidth: isMobile ? 'calc(100vw - 20px)' : '400px',
             minWidth: isMobile ? 'auto' : '300px',
-            width: isMobile ? 'auto' : 'auto'
+            width: 'auto'
           }}
         >
           <div className="dashboard-toast-content">
@@ -2206,43 +2205,12 @@ const Dashboard = () => {
                     logger.debug('Scan unlocked after user confirmed success');
                   }
                 }}
+                className="common-button"
                 style={{
-                  background: 'linear-gradient(135deg, #4b5563 0%, #374151 100%)',
-                  color: 'white',
-                  border: 'none',
                   padding: isMobile ? '14px 32px' : '12px 40px',
-                  borderRadius: '10px',
                   fontSize: isMobile ? '15px' : '16px',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
                   width: isMobile ? '100%' : 'auto',
                   minHeight: isMobile ? '48px' : 'auto'
-                }}
-                onMouseEnter={(e) => {
-                  if (!isMobile) {
-                    e.target.style.transform = 'translateY(-2px)';
-                    e.target.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!isMobile) {
-                    e.target.style.transform = 'translateY(0)';
-                    e.target.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.1)';
-                  }
-                }}
-                onTouchStart={(e) => {
-                  if (isMobile) {
-                    e.target.style.transform = 'scale(0.98)';
-                  }
-                }}
-                onTouchEnd={(e) => {
-                  if (isMobile) {
-                    setTimeout(() => {
-                      e.target.style.transform = 'scale(1)';
-                    }, 150);
-                  }
                 }}
               >
                 OK

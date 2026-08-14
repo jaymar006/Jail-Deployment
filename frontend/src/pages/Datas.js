@@ -1844,18 +1844,7 @@ const exportPdlsWithVisitorsToExcel = async () => {
                 {searchTerm && (
                   <button
                     onClick={() => setSearchTerm('')}
-                    style={{
-                      padding: '8px',
-                      border: 'none',
-                      background: '#ef4444',
-                      color: 'white',
-                      borderRadius: '6px',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      transition: 'all 0.2s ease'
-                    }}
+                    className="search-clear-btn"
                     title="Clear search"
                   >
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -2450,34 +2439,14 @@ const exportPdlsWithVisitorsToExcel = async () => {
               }}>
                 <button 
                   type="submit"
-                  style={{
-                    background: 'linear-gradient(135deg, #4b5563 0%, #374151 100%)',
-                    color: 'white',
-                    border: 'none',
-                    padding: '12px 24px',
-                    borderRadius: '6px',
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease'
-                  }}
+                  className="common-button"
                 >
                   Submit
                 </button>
                 <button 
                   type="button" 
                   onClick={() => setShowAddModal(false)}
-                  style={{
-                    background: '#e5e7eb',
-                    color: '#374151',
-                    border: 'none',
-                    padding: '12px 24px',
-                    borderRadius: '6px',
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease'
-                  }}
+                  className="common-button cancel"
                 >
                   Cancel
                 </button>
@@ -2769,34 +2738,14 @@ const exportPdlsWithVisitorsToExcel = async () => {
               }}>
                 <button 
                   type="submit"
-                  style={{
-                    background: 'linear-gradient(135deg, #4b5563 0%, #374151 100%)',
-                    color: 'white',
-                    border: 'none',
-                    padding: '12px 24px',
-                    borderRadius: '6px',
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease'
-                  }}
+                  className="common-button"
                 >
                   Submit
                 </button>
                 <button 
                   type="button" 
                   onClick={() => setShowEditModal(false)}
-                  style={{
-                    background: '#e5e7eb',
-                    color: '#374151',
-                    border: 'none',
-                    padding: '12px 24px',
-                    borderRadius: '6px',
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease'
-                  }}
+                  className="common-button cancel"
                 >
                   Cancel
                 </button>
@@ -2994,17 +2943,7 @@ const exportPdlsWithVisitorsToExcel = async () => {
             <div style={{ display: 'flex', justifyContent: 'center' }}>
               <button
                 onClick={() => setShowImportSummaryModal(false)}
-                style={{
-                  background: 'linear-gradient(135deg, #4b5563 0%, #374151 100%)',
-                  color: 'white',
-                  border: 'none',
-                  padding: '12px 24px',
-                  borderRadius: '6px',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease'
-                }}
+                className="common-button cancel"
               >
                 Close
               </button>
@@ -3118,17 +3057,7 @@ const exportPdlsWithVisitorsToExcel = async () => {
             <div style={{ display: 'flex', justifyContent: 'center' }}>
               <button
                 onClick={() => setShowPdlImportSummaryModal(false)}
-                style={{
-                  background: 'linear-gradient(135deg, #4b5563 0%, #374151 100%)',
-                  color: 'white',
-                  border: 'none',
-                  padding: '12px 24px',
-                  borderRadius: '6px',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease'
-                }}
+                className="common-button cancel"
               >
                 Close
               </button>

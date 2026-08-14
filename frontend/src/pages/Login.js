@@ -740,14 +740,14 @@ const Login = () => {
         <div 
           className={`toast toast-${toast.type}`}
           style={{
-            top: isMobile ? '20px' : undefined,
-            bottom: isMobile ? undefined : '20px',
+            top: 'auto',
+            bottom: '20px',
+            left: isMobile ? '10px' : 'auto',
             right: isMobile ? '10px' : '20px',
-            left: isMobile ? '10px' : undefined,
             minWidth: isMobile ? 'auto' : '300px',
             maxWidth: isMobile ? 'calc(100% - 20px)' : '400px',
             padding: isMobile ? '0.875rem' : '1rem',
-            animation: isMobile ? 'slideInTop 0.3s ease-out' : 'slideInRight 0.3s ease-out'
+            animation: isMobile ? 'slideInBottom 0.3s ease-out' : 'slideInRight 0.3s ease-out'
           }}
         >
           <div className="toast-content">
@@ -767,15 +767,6 @@ const Login = () => {
             </div>
             <span className="toast-message">{toast.message}</span>
           </div>
-          <button 
-            className="toast-close" 
-            onClick={() => setToast({ show: false, message: '', type: 'success' })}
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="18" y1="6" x2="6" y2="18"/>
-              <line x1="6" y1="6" x2="18" y2="18"/>
-            </svg>
-          </button>
         </div>
       )}
     </div>

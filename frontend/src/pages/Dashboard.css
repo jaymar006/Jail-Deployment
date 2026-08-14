@@ -341,9 +341,11 @@
 /* Toast Notifications */
 .dashboard-toast {
   position: fixed !important;
-  top: 100px !important; /* Position below navbar */
-  left: 50% !important;
-  transform: translateX(-50%) !important;
+  bottom: 20px !important;
+  top: auto !important;
+  left: auto !important;
+  right: 20px !important;
+  transform: none !important;
   min-width: 300px;
   max-width: 400px;
   padding: 1rem;
@@ -353,7 +355,7 @@
   display: flex !important;
   align-items: center;
   justify-content: space-between;
-  animation: slideInTop 0.3s ease-out;
+  animation: slideInBottom 0.3s ease-out;
   backdrop-filter: blur(10px);
   pointer-events: auto !important; /* Ensure it's clickable/visible */
 }
@@ -391,21 +393,10 @@
 }
 
 /* Toast notification animations */
-@keyframes slideInTop {
+@keyframes slideInBottom {
   from {
     opacity: 0;
-    transform: translateX(-50%) translateY(-100%);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(-50%) translateY(0);
-  }
-}
-
-@keyframes slideInTopMobile {
-  from {
-    opacity: 0;
-    transform: translateY(-100%);
+    transform: translateY(100%);
   }
   to {
     opacity: 1;
@@ -572,7 +563,8 @@
   /* Toast mobile responsive */
   .dashboard-toast {
     position: fixed !important;
-    top: 90px !important; /* Position below mobile navbar (increased for mobile) */
+    top: auto !important;
+    bottom: 20px !important;
     left: 10px !important;
     right: 10px !important;
     transform: none !important;
@@ -581,7 +573,7 @@
     padding: 0.875rem !important;
     width: auto !important;
     z-index: 99999 !important;
-    animation: slideInTopMobile 0.3s ease-out !important;
+    animation: slideInBottom 0.3s ease-out !important;
     display: flex !important;
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3), 0 0 0 3px rgba(255, 255, 255, 0.4) !important;
   }
@@ -698,12 +690,13 @@
   /* Toast small mobile responsive */
   .dashboard-toast {
     position: fixed !important;
-    top: 70px !important; /* Position below small mobile navbar */
+    top: auto !important;
+    bottom: 10px !important;
     left: 10px !important;
     right: 10px !important;
     padding: 0.75rem !important;
     z-index: 99999 !important;
-    animation: slideInTopMobile 0.3s ease-out !important;
+    animation: slideInBottom 0.3s ease-out !important;
     display: flex !important;
   }
 

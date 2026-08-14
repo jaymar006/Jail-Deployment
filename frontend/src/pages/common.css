@@ -48,9 +48,9 @@ body, .common-container {
   overflow-y: auto;
   overflow-x: auto;
   margin-bottom: 20px;
-  border-radius: 10px;
-  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.08);
-  border: 1px solid rgba(0, 0, 0, 0.05);
+  border-radius: 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  border: 1px solid #e5e7eb;
   background-color: #fff;
   position: relative;
 }
@@ -69,7 +69,7 @@ body, .common-container {
   border-collapse: separate;
   border-spacing: 0;
   background-color: #fff;
-  border-radius: 10px;
+  border-radius: 0;
   table-layout: auto;
   word-wrap: break-word;
   margin: 0;
@@ -77,12 +77,12 @@ body, .common-container {
 
 .common-table th, .common-table td {
   border: none;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  border-bottom: 1px solid #e5e7eb;
   padding: 10px 12px;
   text-align: center;
   font-size: 12px;
   vertical-align: middle;
-  transition: all 0.2s ease;
+  transition: background-color 0.15s ease;
 }
 
 .common-table thead {
@@ -101,32 +101,14 @@ body, .common-container {
   position: relative;
 }
 
-.common-table thead th:first-child {
-  border-top-left-radius: 10px;
-}
-
-.common-table thead th:last-child {
-  border-top-right-radius: 10px;
-}
-
 .common-table tbody tr {
-  transition: all 0.2s ease;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  transition: background-color 0.15s ease;
+  border-bottom: 1px solid #e5e7eb;
 }
 
 .common-table tbody tr:hover {
-  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  background-color: #f8fafc;
   cursor: pointer;
-}
-
-.common-table tbody tr:last-child td:first-child {
-  border-bottom-left-radius: 10px;
-}
-
-.common-table tbody tr:last-child td:last-child {
-  border-bottom-right-radius: 10px;
 }
 
 .common-table tbody tr:last-child {
@@ -143,7 +125,6 @@ body, .common-container {
 
 .sortable-th:hover {
   background: linear-gradient(135deg, #374151 0%, #1f2937 100%);
-  transform: translateY(-1px);
 }
 
 /* Enhanced checkbox styling */
@@ -187,25 +168,36 @@ body, .common-container {
 .common-button {
   font-weight: bold;
   padding: 8px 14px;
-  border: none;
-  border-radius: 6px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 4px;
   cursor: pointer;
-  transition: background-color 0.2s ease-in-out;
+  transition: background-color 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease;
   color: white;
   background-color: #2563eb;
   display: flex;
   align-items: center;
   gap: 6px;
   justify-content: center;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
 }
 
 .common-button:hover {
-  background-color: #1e40af; 
+  background-color: #1e40af;
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
+}
+
+.common-button:active {
+  transform: translateY(1px);
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.12);
 }
 
 .common-button:disabled {
   background-color: #9ca3af;
+  border-color: rgba(0, 0, 0, 0.08);
   cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
 }
 
 /* Specific button variants */
@@ -214,7 +206,7 @@ body, .common-container {
 }
 
 .common-button.add:hover {
-  background-color: #047857;
+  background-color: #059669;
 }
 
 .common-button.edit {
@@ -230,7 +222,39 @@ body, .common-container {
 }
 
 .common-button.delete:hover {
-  background-color: #b91c1c;
+  background-color: #dc2626;
+}
+
+.common-button.export {
+  background-color: #4b5563;
+}
+
+.common-button.export:hover {
+  background-color: #374151;
+}
+
+.common-button.save {
+  background-color: #10b981;
+}
+
+.common-button.save:hover {
+  background-color: #059669;
+}
+
+.common-button.cancel {
+  background-color: #6b7280;
+}
+
+.common-button.cancel:hover {
+  background-color: #4b5563;
+}
+
+.common-button.cyan {
+  background-color: #0891b2;
+}
+
+.common-button.cyan:hover {
+  background-color: #0e7490;
 }
 
 /* Modal styles */
@@ -352,16 +376,47 @@ body, .common-container {
   align-items: center;
 }
 
-/* Compact action buttons with text */
+/* Compact action buttons with text - soft tinted style */
 .action-buttons-row .common-button {
   padding: 6px 10px;
   min-width: auto;
-  height: 28px;
+  height: 30px;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 11px;
   gap: 4px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  box-shadow: none;
+}
+
+.action-buttons-row .common-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+}
+
+.action-buttons-row .common-button:active {
+  transform: translateY(0);
+  box-shadow: none;
+}
+
+.action-buttons-row .common-button.edit {
+  background-color: #dbeafe;
+  color: #1d4ed8;
+}
+
+.action-buttons-row .common-button.edit:hover {
+  background-color: #bfdbfe;
+}
+
+.action-buttons-row .common-button.delete {
+  background-color: #fee2e2;
+  color: #dc2626;
+}
+
+.action-buttons-row .common-button.delete:hover {
+  background-color: #fecaca;
 }
 
 .action-buttons-row .common-button .button-icon {
@@ -431,6 +486,30 @@ body, .common-container {
   box-shadow: 0 0 0 3px rgba(75, 85, 99, 0.1);
 }
 
+/* Search clear icon button */
+.search-clear-btn {
+  padding: 8px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: #ef4444;
+  color: white;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.15s ease, transform 0.1s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+}
+
+.search-clear-btn:hover {
+  background: #dc2626;
+  transform: translateY(-1px);
+}
+
+.search-clear-btn:active {
+  transform: translateY(0);
+}
+
 /* Enhanced pagination styling */
 .pagination-container {
   display: flex;
@@ -446,7 +525,7 @@ body, .common-container {
   border: 2px solid #e5e7eb;
   background: #fff;
   color: #4b5563;
-  border-radius: 6px;
+  border-radius: 4px;
   cursor: pointer;
   font-weight: 600;
   font-size: 13px;
@@ -458,16 +537,16 @@ body, .common-container {
 .pagination-button:hover {
   background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
   border-color: #4b5563;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
 }
 
 .pagination-button.active {
   background: linear-gradient(135deg, #4b5563 0%, #374151 100%);
   border-color: #4b5563;
   color: white;
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(75, 85, 99, 0.3);
+  transform: translateY(-1px);
+  box-shadow: 0 3px 10px rgba(75, 85, 99, 0.3);
 }
 
 .pagination-button:disabled {
@@ -559,7 +638,7 @@ body, .common-container {
   .table-wrapper {
     max-height: calc(100vh - 300px);
     margin-bottom: 12px;
-    border-radius: 8px;
+    border-radius: 0;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     display: block;

@@ -960,32 +960,14 @@ const Settings = () => {
                 <button
                   type="button"
                   onClick={() => setAllCellsForSelectedDay(true)}
-                  style={{
-                    background: '#10b981',
-                    color: 'white',
-                    border: 'none',
-                    padding: '8px 12px',
-                    borderRadius: '6px',
-                    fontSize: '13px',
-                    fontWeight: '600',
-                    cursor: 'pointer'
-                  }}
+                  className="common-button add"
                 >
                   Select All
                 </button>
                 <button
                   type="button"
                   onClick={() => setAllCellsForSelectedDay(false)}
-                  style={{
-                    background: '#ef4444',
-                    color: 'white',
-                    border: 'none',
-                    padding: '8px 12px',
-                    borderRadius: '6px',
-                    fontSize: '13px',
-                    fontWeight: '600',
-                    cursor: 'pointer'
-                  }}
+                  className="common-button delete"
                 >
                   Clear Day
                 </button>
@@ -1038,16 +1020,7 @@ const Settings = () => {
               <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'center' }}>
                 <button
                   onClick={closeModal}
-                  style={{
-                    padding: '10px 24px',
-                    background: '#e5e7eb',
-                    color: '#374151',
-                    border: 'none',
-                    borderRadius: '6px',
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    cursor: 'pointer'
-                  }}
+                  className="common-button cancel"
                 >
                   Done
                 </button>
@@ -1193,33 +1166,6 @@ const Settings = () => {
                   });
                   setCustomCellName('');
                   setModalOpen('editCell');
-                }}
-                style={{
-                  background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                  color: 'white',
-                  border: 'none',
-                  padding: '12px 24px',
-                  borderRadius: '10px',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  transition: 'all 0.3s ease',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.5px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  boxShadow: '0 4px 12px rgba(16, 185, 129, 0.2)'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'translateY(-2px)';
-                  e.currentTarget.style.boxShadow = '0 6px 16px rgba(16, 185, 129, 0.3)';
-                  e.currentTarget.style.background = 'linear-gradient(135deg, #059669 0%, #047857 100%)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(16, 185, 129, 0.2)';
-                  e.currentTarget.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
                 }}
               >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -1396,30 +1342,8 @@ const Settings = () => {
                 <button 
                   type="button" 
                   onClick={closeModal} 
-                  style={{ 
-                    flex: 1, 
-                    background: 'linear-gradient(135deg, #6b7280 0%, #4b5563 100%)',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '8px',
-                    padding: '12px 24px',
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.5px'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.target.style.background = 'linear-gradient(135deg, #4b5563 0%, #374151 100%)';
-                    e.target.style.transform = 'translateY(-1px)';
-                    e.target.style.boxShadow = '0 4px 12px rgba(75, 85, 99, 0.3)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.target.style.background = 'linear-gradient(135deg, #6b7280 0%, #4b5563 100%)';
-                    e.target.style.transform = 'translateY(0)';
-                    e.target.style.boxShadow = 'none';
-                  }}
+                  className="common-button cancel"
+                  style={{ flex: 1 }}
                 >
                   Cancel
                 </button>
@@ -1504,36 +1428,13 @@ const Settings = () => {
               <button
                 onClick={handleDeleteAllPdls}
                 disabled={deleteAllPdlsConfirmation !== 'Yes Delete All'}
-                style={{
-                  background: deleteAllPdlsConfirmation === 'Yes Delete All' 
-                    ? 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)' 
-                    : '#d1d5db',
-                  color: 'white',
-                  border: 'none',
-                  padding: '12px 24px',
-                  borderRadius: '6px',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  cursor: deleteAllPdlsConfirmation === 'Yes Delete All' ? 'pointer' : 'not-allowed',
-                  transition: 'all 0.2s ease',
-                  opacity: deleteAllPdlsConfirmation === 'Yes Delete All' ? 1 : 0.6
-                }}
+                className="common-button delete"
               >
                 Yes, Delete All
               </button>
               <button
                 onClick={closeModal}
-                style={{
-                  background: '#e5e7eb',
-                  color: '#374151',
-                  border: 'none',
-                  padding: '12px 24px',
-                  borderRadius: '6px',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease'
-                }}
+                className="common-button cancel"
               >
                 Cancel
               </button>
@@ -2008,36 +1909,13 @@ const Settings = () => {
               <button
                 onClick={handleDeleteAllLogs}
                 disabled={deleteAllLogsConfirmation !== 'Yes Delete All'}
-                style={{
-                  background: deleteAllLogsConfirmation === 'Yes Delete All' 
-                    ? 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)' 
-                    : '#d1d5db',
-                  color: 'white',
-                  border: 'none',
-                  padding: '12px 24px',
-                  borderRadius: '6px',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  cursor: deleteAllLogsConfirmation === 'Yes Delete All' ? 'pointer' : 'not-allowed',
-                  transition: 'all 0.2s ease',
-                  opacity: deleteAllLogsConfirmation === 'Yes Delete All' ? 1 : 0.6
-                }}
+                className="common-button delete"
               >
                 Yes, Delete All
               </button>
               <button
                 onClick={closeModal}
-                style={{
-                  background: '#e5e7eb',
-                  color: '#374151',
-                  border: 'none',
-                  padding: '12px 24px',
-                  borderRadius: '6px',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease'
-                }}
+                className="common-button cancel"
               >
                 Cancel
               </button>
@@ -2185,37 +2063,14 @@ const Settings = () => {
                   <div style={{ display: 'flex', gap: '12px' }}>
                     <button
                       onClick={closeModal}
-                      style={{
-                        background: '#e5e7eb',
-                        color: '#374151',
-                        border: 'none',
-                        padding: '8px 16px',
-                        borderRadius: '6px',
-                        fontSize: '14px',
-                        fontWeight: '600',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease'
-                      }}
+                      className="common-button cancel"
                     >
                       Cancel
                     </button>
                     <button
                       onClick={handleDeleteSelectedLogs}
                       disabled={selectedLogs.length === 0}
-                      style={{
-                        background: selectedLogs.length === 0 
-                          ? '#d1d5db' 
-                          : 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
-                        color: 'white',
-                        border: 'none',
-                        padding: '8px 16px',
-                        borderRadius: '6px',
-                        fontSize: '14px',
-                        fontWeight: '600',
-                        cursor: selectedLogs.length === 0 ? 'not-allowed' : 'pointer',
-                        transition: 'all 0.2s ease',
-                        opacity: selectedLogs.length === 0 ? 0.6 : 1
-                      }}
+                      className="common-button delete"
                     >
                       Delete Selected ({selectedLogs.length})
                     </button>
@@ -2299,17 +2154,7 @@ const Settings = () => {
                 </div>
                 <button
                   type="submit"
-                  style={{
-                    padding: '8px 20px',
-                    background: 'linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '6px',
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    cursor: 'pointer',
-                    whiteSpace: 'nowrap'
-                  }}
+                  className="common-button cyan"
                 >
                   Generate Code
                 </button>
@@ -2431,16 +2276,7 @@ const Settings = () => {
             <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'flex-end' }}>
               <button
                 onClick={closeModal}
-                style={{
-                  padding: '10px 24px',
-                  background: '#e5e7eb',
-                  color: '#374151',
-                  border: 'none',
-                  borderRadius: '6px',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  cursor: 'pointer'
-                }}
+                className="common-button cancel"
               >
                 Close
               </button>
