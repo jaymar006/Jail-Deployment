@@ -423,12 +423,14 @@ const VisitorPage = () => {
         {pdlFetchError && <p style={{ color: 'red' }}>{pdlFetchError}</p>}
         {fetchError && <p style={{ color: 'red' }}>{fetchError}</p>}
 
-        <button className="common-button add" onClick={openAddModal}>
-          <svg className="button-icon" viewBox="0 0 24 24">
-            <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
-          </svg>
-          Add Visitor
-        </button>
+        <div style={{ display: 'flex', gap: '10px', marginBottom: '12px' }}>
+          <button className="common-button add" onClick={openAddModal}>
+            <svg className="button-icon" viewBox="0 0 24 24">
+              <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+            </svg>
+            Add Visitor
+          </button>
+        </div>
 
         <div className="visitor-table-wrapper">
           <table className="common-table card-table card-first-is-name">
@@ -500,12 +502,14 @@ const VisitorPage = () => {
         </div>
 
         {!isSelecting && !showIdPreview && (
-          <button className="common-button" style={{ marginTop: '10px' }} onClick={handleCreateIdClick}>
-            <svg className="button-icon" viewBox="0 0 24 24">
-              <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
-            </svg>
-            Create ID
-          </button>
+          <div style={{ display: 'flex', marginTop: '10px' }}>
+            <button className="common-button" onClick={handleCreateIdClick}>
+              <svg className="button-icon" viewBox="0 0 24 24">
+                <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
+              </svg>
+              Create ID
+            </button>
+          </div>
         )}
 
         {isSelecting && (

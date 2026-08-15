@@ -176,7 +176,7 @@ const Layout = ({ children }) => {
       </Box>
       <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', minWidth: 0, height: '100vh' }}>
         <Header activePage={getActivePage()} breadcrumbs={getBreadcrumbs(location.pathname)} onMenuClick={() => setMobileOpen(true)} />
-        <Box component="main" sx={{ flexGrow: 1, width: '100%', overflowY: { xs: 'auto', md: 'hidden' }, display: 'flex', flexDirection: 'column' }}>
+        <Box component="main" sx={{ flexGrow: 1, width: '100%', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
           {children}
         </Box>
       </Box>

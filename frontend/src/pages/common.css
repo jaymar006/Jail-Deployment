@@ -14,7 +14,6 @@ body {
   background-color: #f9fafb;
   color: #333;
   padding: 0;
-  height: 100%;
   flex: 1 1 auto;
   display: flex;
   flex-direction: column;
@@ -23,14 +22,18 @@ body {
   width: 100%;
   max-width: 100vw;
   box-sizing: border-box;
-  overflow: hidden;
   position: relative;
 }
 
 /* Loading spinner animation */
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 .common-container main {
@@ -39,9 +42,7 @@ body {
   max-width: 1200px;
   margin: 0 auto;
   width: 100%;
-  height: 100%;
   box-sizing: border-box;
-  overflow: hidden;
   display: flex;
   flex-direction: column;
 }
@@ -154,7 +155,8 @@ body {
   width: 84px;
 }
 
-.common-table th, .common-table td {
+.common-table th,
+.common-table td {
   border: none;
   border-bottom: 1px solid #e5e7eb;
   padding: 8px 10px;
@@ -367,7 +369,7 @@ td.card-summary {
   height: 100vh;
   min-height: 100vh;
   max-height: 100vh;
-  background-color: rgba(0,0,0,0.4);
+  background-color: rgba(0, 0, 0, 0.4);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -384,7 +386,7 @@ td.card-summary {
   border-radius: 8px;
   width: 400px;
   max-width: 90%;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
   position: relative;
   z-index: 10000;
   box-sizing: border-box;
@@ -540,7 +542,7 @@ td.card-summary {
   padding: 0;
   max-height: calc(100vh - 310px);
   overflow-y: auto;
-  margin: 10px auto;
+  margin: 0;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
   border: 1px solid #bfdbfe;
   overflow-x: auto;
@@ -929,7 +931,9 @@ td.card-summary {
 
 /* Mobile Responsive Styles */
 @media (max-width: 768px) {
-  body, .common-container {
+
+  body,
+  .common-container {
     width: 100%;
     max-width: 100vw;
     overflow-x: hidden;
@@ -958,7 +962,8 @@ td.card-summary {
     min-width: 760px;
   }
 
-  .common-table th, .common-table td {
+  .common-table th,
+  .common-table td {
     padding: 8px 6px;
     font-size: 11px;
   }
@@ -1054,7 +1059,7 @@ td.card-summary {
     -webkit-overflow-scrolling: touch;
     border-radius: 12px;
   }
-  
+
   .common-modal {
     padding: 10px;
     align-items: flex-start;
@@ -1063,7 +1068,7 @@ td.card-summary {
     /* Ensure modal is scrollable on mobile */
     -webkit-overflow-scrolling: touch;
   }
-  
+
   /* Purpose modal specific mobile styles */
   .purpose-modal {
     width: 100% !important;
@@ -1085,7 +1090,8 @@ td.card-summary {
   .pagination-button {
     padding: 10px 14px;
     font-size: 14px;
-    min-width: 44px; /* Touch-friendly */
+    min-width: 44px;
+    /* Touch-friendly */
   }
 
   .pagination-info {
@@ -1105,7 +1111,7 @@ td.card-summary {
   .form-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .common-modal-content.wide {
     width: 95%;
   }
@@ -1134,7 +1140,8 @@ td.card-summary {
     min-width: 700px;
   }
 
-  .common-table th, .common-table td {
+  .common-table th,
+  .common-table td {
     padding: 6px 4px;
     font-size: 10px;
   }
@@ -1146,7 +1153,9 @@ td.card-summary {
 }
 
 @media (max-width: 480px) {
-  body, .common-container {
+
+  body,
+  .common-container {
     width: 100%;
     max-width: 100vw;
     overflow-x: hidden;
@@ -1170,7 +1179,8 @@ td.card-summary {
     width: 100%;
   }
 
-  .common-table th, .common-table td {
+  .common-table th,
+  .common-table td {
     padding: 6px 3px;
     font-size: 9px;
   }
@@ -1204,6 +1214,7 @@ td.card-summary {
 /* ===== Stacked card table layout for phones ===== */
 /* Opt-in via `card-table` class + `data-label` on each <td>. */
 @media (max-width: 768px) {
+
   .table-wrapper:has(.card-table),
   .visitor-table-wrapper:has(.card-table) {
     overflow: visible;
