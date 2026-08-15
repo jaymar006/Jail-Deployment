@@ -17,22 +17,31 @@ const AuthShell = ({ title, children }) => {
         background: '#f4f5f7',
       }}
     >
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1.5, mb: 2.5 }}>
-        <img src="/logo1.png" alt="Logo 1" style={{ height: 64, objectFit: 'contain' }} />
-        <img src="/logo2.png" alt="Logo 2" style={{ height: 64, objectFit: 'contain' }} />
-        <img src="/logo3.png" alt="Logo 3" style={{ height: 64, objectFit: 'contain' }} />
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: { xs: 1, sm: 1.5 },
+          mb: 2.5,
+          '& img': { height: { xs: 44, sm: 64 }, objectFit: 'contain' },
+        }}
+      >
+        <img src="/logo1.png" alt="Logo 1" />
+        <img src="/logo2.png" alt="Logo 2" />
+        <img src="/logo3.png" alt="Logo 3" />
       </Box>
       <Typography
         variant="h5"
         component="h1"
         align="center"
-        sx={{ color: 'primary.main', maxWidth: 680, mb: 3, px: 1, lineHeight: 1.35 }}
+        sx={{ color: 'primary.main', maxWidth: 680, mb: { xs: 2, sm: 3 }, px: 1, lineHeight: 1.35 }}
       >
         Silang Municipal Jail Visitation Management System
       </Typography>
       <Paper
         elevation={4}
-        sx={{ width: '100%', maxWidth: 440, borderRadius: 1.5, p: { xs: 3, sm: 4 } }}
+        sx={{ width: '100%', maxWidth: 440, borderRadius: 1.5, p: { xs: 2.5, sm: 4 } }}
       >
         {title && (
           <Typography variant="h6" align="center" sx={{ mb: 2 }}>

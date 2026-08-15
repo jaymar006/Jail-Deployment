@@ -20,7 +20,17 @@ const Logs = () => {
   const [availableCells, setAvailableCells] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
+  const [expandedIds, setExpandedIds] = useState(() => new Set());
   const tableWrapperRef = useRef(null);
+
+  const toggleCollapse = (id) => {
+    setExpandedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
 
   useEffect(() => {
     const fetchVisitors = async () => {
@@ -408,46 +418,21 @@ const Logs = () => {
     <>
       <div className="common-container">
         <main>
-          <h3 style={{ textAlign: 'center', margin: '20px 0 16px 0', fontSize: '20px', fontWeight: '600', color: '#111827' }}>Allowed Visitors</h3>
-
-            {/* Filter Controls */}
+          {/* Filter Controls */}
             <div className="search-filter-container">
-              <div style={{ 
-                display: 'grid', 
-                gridTemplateColumns: '1fr auto 1fr',
-                alignItems: 'center',
-                gap: '20px',
-                width: '100%'
-              }}>
-                {/* Search Section - Left Column */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifySelf: 'start' }}>
-                  <label style={{ fontWeight: '600', color: '#374151', fontSize: '14px' }}>
+              <div className="search-filter-grid">
+                {/* Search Section */}
+                <div className="search-filter-item search-group">
+                  <label className="filter-label">
                     Search:
                   </label>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div className="search-input-wrapper">
                     <input
                       type="text"
                       placeholder="Search visitors, PDLs, relationships..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
-                      onFocus={(e) => {
-                        e.target.style.outline = 'none';
-                        e.target.style.borderColor = '#2563eb';
-                        e.target.style.boxShadow = '0 0 0 3px rgba(37, 99, 235, 0.12)';
-                      }}
-                      onBlur={(e) => {
-                        e.target.style.borderColor = '#bfdbfe';
-                        e.target.style.boxShadow = 'none';
-                      }}
-                      style={{
-                        padding: '8px 12px',
-                        border: '2px solid #bfdbfe',
-                        borderRadius: '6px',
-                        fontSize: '12px',
-                        transition: 'all 0.2s ease',
-                        background: '#fff',
-                        width: '250px'
-                      }}
+                      aria-label="Search visitors"
                     />
                     {searchTerm && (
                       <button
@@ -465,8 +450,8 @@ const Logs = () => {
                 </div>
                 
                 {/* Visit type filter */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifySelf: 'center' }}>
-                  <label htmlFor="logs-purpose-filter" style={{ fontWeight: '600', color: '#374151', fontSize: '14px' }}>
+                <div className="search-filter-item sort-group">
+                  <label htmlFor="logs-purpose-filter" className="filter-label">
                     Visit type:
                   </label>
                   <select
@@ -474,16 +459,6 @@ const Logs = () => {
                     value={purposeFilter}
                     onChange={(e) => setPurposeFilter(e.target.value)}
                     aria-label="Filter logs by visit type"
-                    style={{
-                      padding: '8px 12px',
-                      border: '2px solid #bfdbfe',
-                      borderRadius: '6px',
-                      fontSize: '12px',
-                      background: '#fff',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease',
-                      minWidth: '140px'
-                    }}
                   >
                     <option value="all">All</option>
                     <option value="normal">Normal</option>
@@ -491,9 +466,9 @@ const Logs = () => {
                   </select>
                 </div>
                 
-                {/* Show Only Section - Right Column */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifySelf: 'end' }}>
-                  <label style={{ fontWeight: '600', color: '#374151', fontSize: '14px' }}>
+                {/* Show Only Section */}
+                <div className="search-filter-item filter-group">
+                  <label className="filter-label">
                     Show Only:
                   </label>
                   <select
@@ -502,15 +477,7 @@ const Logs = () => {
                       setFilterType(e.target.value);
                       setFilterValue('');
                     }}
-                    style={{
-                      padding: '8px 12px',
-                      border: '2px solid #bfdbfe',
-                      borderRadius: '6px',
-                      fontSize: '12px',
-                      background: '#fff',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease'
-                    }}
+                    aria-label="Filter type"
                   >
                     <option value="all">All Records</option>
                     <option value="year">By Year</option>
@@ -522,16 +489,7 @@ const Logs = () => {
                     <select
                       value={filterValue}
                       onChange={(e) => setFilterValue(e.target.value)}
-                      style={{
-                        padding: '8px 12px',
-                        border: '2px solid #bfdbfe',
-                        borderRadius: '6px',
-                        fontSize: '12px',
-                        background: '#fff',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease',
-                        minWidth: '120px'
-                      }}
+                      aria-label={`Select ${filterType}`}
                     >
                       <option value="">Select {filterType}...</option>
                       {filterType === 'year' && getUniqueYears().map(year => (
@@ -563,19 +521,14 @@ const Logs = () => {
                     </select>
                   )}
                   
-                  <div style={{ 
-                    color: '#6b7280', 
-                    fontSize: '12px',
-                    fontWeight: '400',
-                    whiteSpace: 'nowrap'
-                  }}>
+                  <div className="records-count-badge">
                     Showing: {sortedVisitors.length} of {allowedVisitors.length} records
                   </div>
                 </div>
               </div>
             </div>
           <div className="table-wrapper" ref={tableWrapperRef}>
-          <table className="common-table">
+          <table className="common-table card-table card-first-is-name">
             <thead>
             <tr>
               <th className="sortable-th" onClick={() => onHeaderClick('visitor_name')}>Visitor's Name</th>
@@ -591,24 +544,30 @@ const Logs = () => {
           <tbody>
             {sortedVisitors.length === 0 ? (
               <tr>
-                <td colSpan="8">No records</td>
+                <td colSpan="8" className="no-data">No records</td>
               </tr>
             ) : (
               currentVisitors.map((v) => (
-                <tr key={v.id}>
-                  <td>{capitalizeWords(v.visitor_name)}</td>
-                  <td>{v.contact_number}</td>
-                  <td>{capitalizeWords(v.pdl_name)}</td>
-                  <td>{v.relationship}</td>
-                  <td>
+                <tr
+                  key={v.id}
+                  className={expandedIds.has(v.id) ? 'card-expanded' : 'card-collapsed'}
+                  onClick={() => toggleCollapse(v.id)}
+                  style={{ cursor: 'pointer' }}
+                >
+                  <td data-label="Visitor's Name">{capitalizeWords(v.visitor_name)}</td>
+                  <td data-label="Contact Number">{v.contact_number}</td>
+                  <td data-label="PDL Visited">{capitalizeWords(v.pdl_name)}</td>
+                  <td data-label="Relationship">{v.relationship}</td>
+                  <td data-label="Cell">
                     {(() => {
                       const cell = availableCells.find(c => c.cell_number.toLowerCase() === v.cell.toLowerCase());
                       return cell && cell.cell_name ? `${cell.cell_name} - ${capitalizeWords(v.cell)}` : capitalizeWords(v.cell);
                     })()}
                   </td>
-                  <td>{v.time_in ? formatTimeOnly(v.time_in) : ''}</td>
-                  <td>{v.time_out ? formatTimeOnly(v.time_out) : ''}</td>
-                  <td>{v.time_in ? formatDateTime(v.time_in).split(',')[0] : ''}</td>
+                  <td data-label="Time In">{v.time_in ? formatTimeOnly(v.time_in) : ''}</td>
+                  <td data-label="Time Out">{v.time_out ? formatTimeOnly(v.time_out) : ''}</td>
+                  <td data-label="Date">{v.time_in ? formatDateTime(v.time_in).split(',')[0] : ''}</td>
+                  <td className="card-summary">{capitalizeWords(v.visitor_name)}</td>
                 </tr>
               ))
             )}

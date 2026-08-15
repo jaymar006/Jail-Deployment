@@ -119,6 +119,7 @@ const Dashboard = () => {
   const lastCellsFetchLogAtRef = useRef(0);
   const [selectedDeleteIds, setSelectedDeleteIds] = useState([]);
   const [selectAll, setSelectAll] = useState(false);
+  const [collapsedIds, setCollapsedIds] = useState(() => new Set());
   const [toast, setToast] = useState({ show: false, message: '', type: '' });
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const [useMilitaryTime, setUseMilitaryTime] = useState(() => {
@@ -1277,6 +1278,15 @@ const Dashboard = () => {
   };
 
   const handleRowClick = (id) => {
+    if (isMobile) {
+      setCollapsedIds(prev => {
+        const next = new Set(prev);
+        if (next.has(id)) next.delete(id);
+        else next.add(id);
+        return next;
+      });
+      return;
+    }
     setSelectedVisitorId(id === selectedVisitorId ? null : id);
   };
 
@@ -1600,7 +1610,7 @@ const Dashboard = () => {
               </select>
             </div>
 
-            <table className="common-table">
+            <table className="common-table card-table card-first-is-name">
               <thead>
                 <tr>
                   <th className="no-print">
@@ -1621,12 +1631,13 @@ const Dashboard = () => {
               </thead>
               <tbody>
                 {filteredVisitors.length === 0 ? (
-                  <tr><td colSpan="6" style={{ textAlign: 'center', padding: '20px', fontStyle: 'italic', color: '#6b7280' }}>No records found</td></tr>
+                  <tr><td colSpan="6" className="no-data" style={{ fontStyle: 'italic', color: '#6b7280' }}>No records found</td></tr>
                 ) : (
                   filteredVisitors.map(v => (
                     <tr
                       key={v.id}
                       onClick={() => handleRowClick(v.id)}
+                      className={collapsedIds.has(v.id) ? 'card-expanded' : 'card-collapsed'}
                       style={{
                         backgroundColor: v.id === selectedVisitorId ? '#d3d3d3' : 'transparent',
                         cursor: 'pointer'
@@ -1637,20 +1648,21 @@ const Dashboard = () => {
                           type="checkbox"
                           checked={selectedDeleteIds.includes(v.id)}
                           onChange={(e) => { e.stopPropagation(); handleToggleRowDelete(v.id); }}
+                          onClick={(e) => e.stopPropagation()}
                         />
                       </td>
-                      <td>{capitalizeWords(v.visitor_name)}</td>
-                      <td>{capitalizeWords(v.pdl_name)}</td>
-                      <td>
+                      <td data-label="Visitor's Name">{capitalizeWords(v.visitor_name)}</td>
+                      <td data-label="PDL Visited">{capitalizeWords(v.pdl_name)}</td>
+                      <td data-label="Cell">
                         {(() => {
                           const cell = availableCells.find(c => c.cell_number.toLowerCase() === v.cell.toLowerCase());
                           return cell && cell.cell_name ? `${cell.cell_name} - ${capitalizeWords(v.cell)}` : capitalizeWords(v.cell);
                         })()}
                       </td>
-                      <td>{v.purpose ? (v.purpose.charAt(0).toUpperCase() + v.purpose.slice(1)) : ''}</td>
-                      <td>{formatTime(v.time_in)}</td>
-                      <td>{v.time_out ? formatTime(v.time_out) : ''}</td>
-                      <td className="no-print" style={{ textAlign: 'center' }}>
+                      <td data-label="Purpose">{v.purpose ? (v.purpose.charAt(0).toUpperCase() + v.purpose.slice(1)) : ''}</td>
+                      <td data-label="Time In">{formatTime(v.time_in)}</td>
+                      <td data-label="Time Out">{v.time_out ? formatTime(v.time_out) : ''}</td>
+                      <td className="no-print" data-label="Actions" style={{ textAlign: 'center' }}>
                         <div style={{ display: 'flex', justifyContent: 'center' }}>
                           <button
                             className="common-button edit no-print"
@@ -1663,6 +1675,7 @@ const Dashboard = () => {
                           </button>
                         </div>
                       </td>
+                      <td className="card-summary">{capitalizeWords(v.visitor_name)}</td>
                     </tr>
                   ))
                 )}

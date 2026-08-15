@@ -114,6 +114,16 @@ const Datas = () => {
   const [sortOption, setSortOption] = useState('none');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
+  const [expandedIds, setExpandedIds] = useState(() => new Set());
+
+  const toggleCollapse = (id) => {
+    setExpandedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
 
   // New: track column and direction for header sorting
   const [sortColumn, setSortColumn] = useState(null); // e.g., 'last_name'
@@ -419,6 +429,10 @@ const Datas = () => {
   };
 
   const handlePdlClick = (pdl) => {
+    if (window.innerWidth <= 768) {
+      toggleCollapse(pdl.id);
+      return;
+    }
     navigate(`/visitors/${pdl.id}`, { state: { pdl } });
   };
 
@@ -1668,42 +1682,19 @@ const exportPdlsWithVisitorsToExcel = async () => {
         </div>
 
         <div className="search-filter-container">
-          <div style={{ 
-            display: 'grid', 
-            gridTemplateColumns: '1fr auto 1fr',
-            alignItems: 'center',
-            gap: '20px',
-            width: '100%'
-          }}>
-            {/* Search Section - Left Column */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifySelf: 'start' }}>
-              <label style={{ fontWeight: '600', color: '#374151', fontSize: '14px' }}>
+          <div className="search-filter-grid">
+            {/* Search Section */}
+            <div className="search-filter-item search-group">
+              <label className="filter-label">
                 Search:
               </label>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div className="search-input-wrapper">
                 <input
                   type="text"
                   placeholder="Search PDLs, names, cases..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  onFocus={(e) => {
-                    e.target.style.outline = 'none';
-                    e.target.style.borderColor = '#2563eb';
-                    e.target.style.boxShadow = '0 0 0 3px rgba(37, 99, 235, 0.12)';
-                  }}
-                  onBlur={(e) => {
-                    e.target.style.borderColor = '#bfdbfe';
-                    e.target.style.boxShadow = 'none';
-                  }}
-                  style={{
-                    padding: '8px 12px',
-                    border: '2px solid #bfdbfe',
-                    borderRadius: '6px',
-                    fontSize: '12px',
-                    transition: 'all 0.2s ease',
-                    background: '#fff',
-                    width: '250px'
-                  }}
+                  aria-label="Search PDLs"
                 />
                 {searchTerm && (
                   <button
@@ -1720,24 +1711,15 @@ const exportPdlsWithVisitorsToExcel = async () => {
               </div>
             </div>
             
-            {/* Sort Section - Middle Column */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifySelf: 'center' }}>
-              <label style={{ fontWeight: '600', color: '#374151', fontSize: '14px' }}>
+            {/* Sort Section */}
+            <div className="search-filter-item sort-group">
+              <label className="filter-label">
                 Sort:
               </label>
               <select
                 value={sortOption}
                 onChange={(e) => setSortOption(e.target.value)}
                 aria-label="Sort Options"
-                style={{
-                  padding: '8px 12px',
-                  border: '2px solid #bfdbfe',
-                  borderRadius: '6px',
-                  fontSize: '12px',
-                  background: '#fff',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease'
-                }}
               >
                 <option value="none">No Sort</option>
                 <option value="cell">Sort by Cell</option>
@@ -1746,9 +1728,9 @@ const exportPdlsWithVisitorsToExcel = async () => {
               </select>
             </div>
             
-            {/* Show Only Section - Right Column */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifySelf: 'end' }}>
-              <label style={{ fontWeight: '600', color: '#374151', fontSize: '14px' }}>
+            {/* Show Only Section */}
+            <div className="search-filter-item filter-group">
+              <label className="filter-label">
                 Show Only:
               </label>
               <select
@@ -1757,15 +1739,7 @@ const exportPdlsWithVisitorsToExcel = async () => {
                   setFilterType(e.target.value);
                   setFilterValue('');
                 }}
-                style={{
-                  padding: '8px 12px',
-                  border: '2px solid #bfdbfe',
-                  borderRadius: '6px',
-                  fontSize: '12px',
-                  background: '#fff',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease'
-                }}
+                aria-label="Filter type"
               >
                 <option value="all">All Records</option>
                 <option value="year">By Year</option>
@@ -1777,16 +1751,7 @@ const exportPdlsWithVisitorsToExcel = async () => {
                 <select
                   value={filterValue}
                   onChange={(e) => setFilterValue(e.target.value)}
-                  style={{
-                    padding: '8px 12px',
-                    border: '2px solid #bfdbfe',
-                    borderRadius: '6px',
-                    fontSize: '12px',
-                    background: '#fff',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease',
-                    minWidth: '120px'
-                  }}
+                  aria-label={`Select ${filterType}`}
                 >
                   <option value="">Select {filterType}...</option>
                   {filterType === 'year' && getUniqueYears().map(year => (
@@ -1818,12 +1783,7 @@ const exportPdlsWithVisitorsToExcel = async () => {
                 </select>
               )}
               
-              <div style={{ 
-                color: '#6b7280', 
-                fontSize: '12px',
-                fontWeight: '400',
-                whiteSpace: 'nowrap'
-              }}>
+              <div className="records-count-badge">
                 Showing: {filteredSortedPdls.length} of {pdls.length} records
               </div>
             </div>
@@ -1834,7 +1794,7 @@ const exportPdlsWithVisitorsToExcel = async () => {
           {loadingPdls ? (
             <SkeletonTable columns={12} rows={7} minWidth={1100} />
           ) : (
-          <table className="common-table datas-table">
+          <table className="common-table datas-table card-table">
             <thead>
             <tr>
               <th>
@@ -1863,6 +1823,7 @@ const exportPdlsWithVisitorsToExcel = async () => {
               <tr 
                 key={pdl.id}
                 onClick={() => handlePdlClick(pdl)}
+                className={expandedIds.has(pdl.id) ? 'card-expanded' : 'card-collapsed'}
                 style={{ cursor: 'pointer' }}
               >
                 <td onClick={(e) => e.stopPropagation()}>
@@ -1873,22 +1834,22 @@ const exportPdlsWithVisitorsToExcel = async () => {
                     onClick={(e) => e.stopPropagation()}
                   />
                 </td>
-                <td>{pdl.last_name}</td>
-                <td>{pdl.first_name}</td>
-                <td>{pdl.middle_name}</td>
-                <td>
+                <td data-label="Last Name">{pdl.last_name}</td>
+                <td data-label="First Name">{pdl.first_name}</td>
+                <td data-label="Middle Name">{pdl.middle_name}</td>
+                <td data-label="Cell Number">
                   {(() => {
                     const cell = availableCells.find(c => c.cell_number === pdl.cell_number);
                     return cell && cell.cell_name ? `${cell.cell_name} - ${pdl.cell_number}` : pdl.cell_number;
                   })()}
                 </td>
-                <td>{pdl.criminal_case_no}</td>
-                <td>{pdl.offense_charge}</td>
-                <td>{pdl.court_branch}</td>
-                <td>{formatDate(pdl.arrest_date)}</td>
-                <td>{formatDate(pdl.commitment_date)}</td>
-                <td>{pdl.first_time_offender === 1 || pdl.first_time_offender === '1' ? 'Yes' : 'No'}</td>
-                <td onClick={(e) => e.stopPropagation()}>
+                <td data-label="Criminal Case No.">{pdl.criminal_case_no}</td>
+                <td data-label="Offense Charge">{pdl.offense_charge}</td>
+                <td data-label="Court Branch">{pdl.court_branch}</td>
+                <td data-label="Date of Arrest">{formatDate(pdl.arrest_date)}</td>
+                <td data-label="Date of Commitment">{formatDate(pdl.commitment_date)}</td>
+                <td data-label="First Time Offender">{pdl.first_time_offender === 1 || pdl.first_time_offender === '1' ? 'Yes' : 'No'}</td>
+                <td onClick={(e) => e.stopPropagation()} data-label="Actions">
                   <div className="action-buttons-row">
                     <button 
                       className="common-button edit" 
@@ -1916,6 +1877,7 @@ const exportPdlsWithVisitorsToExcel = async () => {
                     </button>
                   </div>
                 </td>
+                <td className="card-summary">{pdl.last_name}{pdl.first_name ? `, ${pdl.first_name}` : ''}</td>
               </tr>
             ))}
           </tbody>
@@ -2015,35 +1977,15 @@ const exportPdlsWithVisitorsToExcel = async () => {
 
       {showAddModal && (
         <Modal onClose={() => setShowAddModal(false)} wide={true}>
-          <div style={{ maxHeight: '90vh', overflowY: 'auto' }}>
-            <h3 style={{ textAlign: 'center', marginBottom: '24px', fontSize: '24px', fontWeight: '600', color: '#111827' }}>Add a PDL</h3>
+          <div className="add-pdl-modal" style={{ maxHeight: '90vh', overflowY: 'auto' }}>
+            <h3 className="add-pdl-title">Add a PDL</h3>
             <form onSubmit={handleAddSubmit}>
-              <div style={{ 
-                display: 'grid', 
-                gridTemplateColumns: '1fr 1fr', 
-                gap: '20px',
-                marginBottom: '24px'
-              }}>
-                {/* Personal Information Section */}
-                <div style={{ 
-                  background: '#f8fafc', 
-                  padding: '20px', 
-                  borderRadius: '8px',
-                  border: '1px solid #e2e8f0'
-                }}>
-                  <h4 style={{ 
-                    margin: '0 0 20px 0', 
-                    fontSize: '16px', 
-                    fontWeight: '600', 
-                    color: '#374151',
-                    borderBottom: '2px solid #4b5563',
-                    paddingBottom: '8px'
-                  }}>
-                    Personal Information
-                  </h4>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                    <div>
-                      <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#374151' }}>Last Name *</label>
+              <div className="add-pdl-sections">
+                <div className="add-pdl-section">
+                  <h4>Personal Information</h4>
+                  <div className="add-pdl-fields">
+                    <div className="add-pdl-field">
+                      <label>Last Name *</label>
                       <input
                         type="text"
                         placeholder="Enter last name"
@@ -2051,18 +1993,10 @@ const exportPdlsWithVisitorsToExcel = async () => {
                         onChange={(e) => setAddForm({ ...addForm, last_name: e.target.value })}
                         onBlur={(e) => setAddForm({ ...addForm, last_name: capitalizeWords(e.target.value) })}
                         required
-                        style={{
-                          width: '90%',
-                          padding: '10px 12px',
-                          border: '2px solid #e5e7eb',
-                          borderRadius: '6px',
-                          fontSize: '14px',
-                          transition: 'border-color 0.2s ease'
-                        }}
                       />
                     </div>
-                    <div>
-                      <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#374151' }}>First Name *</label>
+                    <div className="add-pdl-field">
+                      <label>First Name *</label>
                       <input
                         type="text"
                         placeholder="Enter first name"
@@ -2070,50 +2004,24 @@ const exportPdlsWithVisitorsToExcel = async () => {
                         onChange={(e) => setAddForm({ ...addForm, first_name: e.target.value })}
                         onBlur={(e) => setAddForm({ ...addForm, first_name: capitalizeWords(e.target.value) })}
                         required
-                        style={{
-                          width: '90%',
-                          padding: '10px 12px',
-                          border: '2px solid #e5e7eb',
-                          borderRadius: '6px',
-                          fontSize: '14px',
-                          transition: 'border-color 0.2s ease'
-                        }}
                       />
                     </div>
-                    <div>
-                      <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#374151' }}>Middle Name</label>
+                    <div className="add-pdl-field">
+                      <label>Middle Name</label>
                       <input
                         type="text"
                         placeholder="Enter middle name"
                         value={addForm.middle_name}
                         onChange={(e) => setAddForm({ ...addForm, middle_name: e.target.value })}
                         onBlur={(e) => setAddForm({ ...addForm, middle_name: capitalizeWords(e.target.value) })}
-                        style={{
-                          width: '90%',
-                          padding: '10px 12px',
-                          border: '2px solid #e5e7eb',
-                          borderRadius: '6px',
-                          fontSize: '14px',
-                          transition: 'border-color 0.2s ease'
-                        }}
                       />
                     </div>
-                    <div>
-                      <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#374151' }}>Cell Number *</label>
-                      <select 
-                        value={addForm.cell_number} 
-                        onChange={(e) => setAddForm({ ...addForm, cell_number: e.target.value })} 
-                        required 
-                        style={{
-                          width: '90%',
-                          padding: '10px 12px',
-                          border: '2px solid #e5e7eb',
-                          borderRadius: '6px',
-                          fontSize: '14px',
-                          background: '#fff',
-                          cursor: 'pointer',
-                          transition: 'border-color 0.2s ease'
-                        }}
+                    <div className="add-pdl-field">
+                      <label>Cell Number *</label>
+                      <select
+                        value={addForm.cell_number}
+                        onChange={(e) => setAddForm({ ...addForm, cell_number: e.target.value })}
+                        required
                       >
                         <option value="">Select a cell...</option>
                         {availableCells.map((cell) => {
@@ -2129,90 +2037,41 @@ const exportPdlsWithVisitorsToExcel = async () => {
                   </div>
                 </div>
 
-                {/* Case Information Section */}
-                <div style={{ 
-                  background: '#f8fafc', 
-                  padding: '20px', 
-                  borderRadius: '8px',
-                  border: '1px solid #e2e8f0'
-                }}>
-                  <h4 style={{ 
-                    margin: '0 0 20px 0', 
-                    fontSize: '16px', 
-                    fontWeight: '600', 
-                    color: '#374151',
-                    borderBottom: '2px solid #4b5563',
-                    paddingBottom: '8px'
-                  }}>
-                    Case Information
-                  </h4>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                    <div>
-                      <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#374151' }}>Criminal Case No.</label>
-                      <input 
-                        type="text" 
-                        placeholder="Enter case number" 
-                        value={addForm.criminal_case_no} 
-                        onChange={(e) => setAddForm({ ...addForm, criminal_case_no: e.target.value })} 
-                        style={{
-                          width: '90%',
-                          padding: '10px 12px',
-                          border: '2px solid #e5e7eb',
-                          borderRadius: '6px',
-                          fontSize: '14px',
-                          transition: 'border-color 0.2s ease'
-                        }}
+                <div className="add-pdl-section">
+                  <h4>Case Information</h4>
+                  <div className="add-pdl-fields">
+                    <div className="add-pdl-field">
+                      <label>Criminal Case No.</label>
+                      <input
+                        type="text"
+                        placeholder="Enter case number"
+                        value={addForm.criminal_case_no}
+                        onChange={(e) => setAddForm({ ...addForm, criminal_case_no: e.target.value })}
                       />
                     </div>
-                    <div>
-                      <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#374151' }}>Offense Charge</label>
-                      <input 
-                        type="text" 
-                        placeholder="Enter offense charge" 
-                        value={addForm.offense_charge} 
-                        onChange={(e) => setAddForm({ ...addForm, offense_charge: e.target.value })} 
-                        style={{
-                          width: '90%',
-                          padding: '10px 12px',
-                          border: '2px solid #e5e7eb',
-                          borderRadius: '6px',
-                          fontSize: '14px',
-                          transition: 'border-color 0.2s ease'
-                        }}
+                    <div className="add-pdl-field">
+                      <label>Offense Charge</label>
+                      <input
+                        type="text"
+                        placeholder="Enter offense charge"
+                        value={addForm.offense_charge}
+                        onChange={(e) => setAddForm({ ...addForm, offense_charge: e.target.value })}
                       />
                     </div>
-                    <div>
-                      <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#374151' }}>Court Branch</label>
-                      <input 
-                        type="text" 
-                        placeholder="Enter court branch" 
-                        value={addForm.court_branch} 
-                        onChange={(e) => setAddForm({ ...addForm, court_branch: e.target.value })} 
-                        style={{
-                          width: '90%',
-                          padding: '10px 12px',
-                          border: '2px solid #e5e7eb',
-                          borderRadius: '6px',
-                          fontSize: '14px',
-                          transition: 'border-color 0.2s ease'
-                        }}
+                    <div className="add-pdl-field">
+                      <label>Court Branch</label>
+                      <input
+                        type="text"
+                        placeholder="Enter court branch"
+                        value={addForm.court_branch}
+                        onChange={(e) => setAddForm({ ...addForm, court_branch: e.target.value })}
                       />
                     </div>
-                    <div>
-                      <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#374151' }}>First Time Offender</label>
-                      <select 
-                        value={addForm.first_time_offender} 
+                    <div className="add-pdl-field">
+                      <label>First Time Offender</label>
+                      <select
+                        value={addForm.first_time_offender}
                         onChange={(e) => setAddForm({ ...addForm, first_time_offender: e.target.value })}
-                        style={{
-                          width: '90%',
-                          padding: '10px 12px',
-                          border: '2px solid #e5e7eb',
-                          borderRadius: '6px',
-                          fontSize: '14px',
-                          background: '#fff',
-                          cursor: 'pointer',
-                          transition: 'border-color 0.2s ease'
-                        }}
                       >
                         <option value="No">No</option>
                         <option value="Yes">Yes</option>
@@ -2222,85 +2081,36 @@ const exportPdlsWithVisitorsToExcel = async () => {
                 </div>
               </div>
 
-              {/* Dates Section */}
-              <div style={{ 
-                background: '#f8fafc', 
-                padding: '20px', 
-                borderRadius: '8px',
-                border: '1px solid #e2e8f0',
-                marginBottom: '24px'
-              }}>
-                <h4 style={{ 
-                  margin: '0 0 20px 0', 
-                  fontSize: '16px', 
-                  fontWeight: '600', 
-                  color: '#374151',
-                  borderBottom: '2px solid #4b5563',
-                  paddingBottom: '8px'
-                }}>
-                  Important Dates
-                </h4>
-                <div style={{ 
-                  display: 'grid', 
-                  gridTemplateColumns: '1fr 1fr', 
-                  gap: '20px'
-                }}>
-                  <div>
-                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#374151' }}>Arrest Date</label>
+              <div className="add-pdl-dates-section">
+                <h4>Important Dates</h4>
+                <div className="add-pdl-dates-grid">
+                  <div className="add-pdl-field">
+                    <label>Arrest Date</label>
                     <input
                       type="date"
                       value={addForm.arrest_date}
                       max={new Date().toISOString().split('T')[0]}
                       onChange={(e) => setAddForm({ ...addForm, arrest_date: e.target.value })}
-                      style={{
-                        width: '90%',
-                        padding: '10px 12px',
-                        border: '2px solid #e5e7eb',
-                        borderRadius: '6px',
-                        fontSize: '14px',
-                        background: '#fff',
-                        cursor: 'pointer',
-                        transition: 'border-color 0.2s ease'
-                      }}
                     />
                   </div>
-                  <div>
-                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#374151' }}>Commitment Date</label>
+                  <div className="add-pdl-field">
+                    <label>Commitment Date</label>
                     <input
                       type="date"
                       value={addForm.commitment_date}
                       max={new Date().toISOString().split('T')[0]}
                       onChange={(e) => setAddForm({ ...addForm, commitment_date: e.target.value })}
-                      style={{
-                        width: '90%',
-                        padding: '10px 12px',
-                        border: '2px solid #e5e7eb',
-                        borderRadius: '6px',
-                        fontSize: '14px',
-                        background: '#fff',
-                        cursor: 'pointer',
-                        transition: 'border-color 0.2s ease'
-                      }}
                     />
                   </div>
                 </div>
               </div>
 
-              <div className="common-modal-buttons" style={{ 
-                display: 'flex', 
-                justifyContent: 'center', 
-                gap: '12px',
-                marginTop: '24px',
-                paddingBottom: '20px'
-              }}>
-                <button 
-                  type="submit"
-                  className="common-button"
-                >
+              <div className="add-pdl-actions">
+                <button type="submit" className="common-button">
                   Submit
                 </button>
-                <button 
-                  type="button" 
+                <button
+                  type="button"
                   onClick={() => setShowAddModal(false)}
                   className="common-button cancel"
                 >

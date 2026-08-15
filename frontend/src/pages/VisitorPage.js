@@ -64,6 +64,7 @@ const VisitorPage = () => {
   const { visitorData, loading, error } = useContext(VisitorContext);
   const { setVisitorName } = useContext(PageMetaContext);
   const [visitors, setVisitors] = useState([]);
+  const [collapsedIds, setCollapsedIds] = useState(() => new Set());
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [visitorForm, setVisitorForm] = useState({
@@ -407,6 +408,15 @@ const VisitorPage = () => {
   // Get selected visitors data
   const selectedVisitors = visitors.filter(visitor => selectedVisitorIds.includes(visitor.id));
 
+  const toggleCollapse = (id) => {
+    setCollapsedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
   return (
     <div className="common-container">
       <main>
@@ -421,7 +431,7 @@ const VisitorPage = () => {
         </button>
 
         <div className="visitor-table-wrapper">
-          <table className="common-table">
+          <table className="common-table card-table card-first-is-name">
             <thead>
               <tr>
                 {isSelecting && <th>Select</th>}
@@ -438,28 +448,34 @@ const VisitorPage = () => {
             <tbody>
               {visitors.length === 0 ? (
                 <tr>
-                  <td colSpan={isSelecting ? "9" : "8"} className="no-visitors">No visitors yet</td>
+                  <td colSpan={isSelecting ? "9" : "8"} className="no-visitors no-data">No visitors yet</td>
                 </tr>
               ) : (
                 visitors.map(visitor => (
-                  <tr key={visitor.id}>
+                  <tr
+                    key={visitor.id}
+                    className={collapsedIds.has(visitor.id) ? 'card-expanded' : 'card-collapsed'}
+                    onClick={() => toggleCollapse(visitor.id)}
+                    style={{ cursor: 'pointer' }}
+                  >
                     {isSelecting && (
                       <td>
                         <input
                           type="checkbox"
                           checked={selectedVisitorIds.includes(visitor.id)}
                           onChange={() => handleCheckboxChange(visitor.id)}
+                          onClick={(e) => e.stopPropagation()}
                         />
                       </td>
                     )}
-                    <td>{visitor.name}</td>
-                    <td>{visitor.relationship}</td>
-                    <td>{visitor.age}</td>
-                    <td>{visitor.address}</td>
-                    <td>{visitor.valid_id}</td>
-                    <td>{formatDateForTable(visitor.date_of_application)}</td>
-                    <td>{visitor.contact_number}</td>
-                    <td>
+                    <td data-label="Name">{visitor.name}</td>
+                    <td data-label="Relationship">{visitor.relationship}</td>
+                    <td data-label="Age">{visitor.age}</td>
+                    <td data-label="Address">{visitor.address}</td>
+                    <td data-label="Valid ID">{visitor.valid_id}</td>
+                    <td data-label="Date of Application">{formatDateForTable(visitor.date_of_application)}</td>
+                    <td data-label="Contact Number">{visitor.contact_number}</td>
+                    <td data-label="Actions">
                       <div className="action-buttons-row">
                         <button className="common-button edit" onClick={() => openEditModal(visitor)}>
                           <svg className="button-icon" viewBox="0 0 24 24">
@@ -475,6 +491,7 @@ const VisitorPage = () => {
                         </button>
                       </div>
                     </td>
+                    <td className="card-summary">{visitor.name}</td>
                   </tr>
                 ))
               )}
@@ -510,71 +527,35 @@ const VisitorPage = () => {
 
         {showAddModal && (
           <Modal onClose={() => { setShowAddModal(false); resetForm(); setEditingVisitorId(null); }} wide={true}>
-            <div style={{ maxHeight: '90vh', overflowY: 'auto' }}>
-              <h3 style={{ textAlign: 'center', marginBottom: '24px', fontSize: '24px', fontWeight: '600', color: '#111827' }}>Add Visitor</h3>
+            <div className="add-pdl-modal" style={{ maxHeight: '90vh', overflowY: 'auto' }}>
+              <h3 className="add-pdl-title">Add Visitor</h3>
               <form onSubmit={handleAddVisitor}>
-                <div style={{ 
-                  display: 'grid', 
-                  gridTemplateColumns: '1fr 1fr', 
-                  gap: '20px',
-                  marginBottom: '24px'
-                }}>
-                  {/* Personal Information Section */}
-                  <div style={{ 
-                    background: '#f8fafc', 
-                    padding: '20px', 
-                    borderRadius: '8px',
-                    border: '1px solid #e2e8f0'
-                  }}>
-                    <h4 style={{ 
-                      margin: '0 0 20px 0', 
-                      fontSize: '16px', 
-                      fontWeight: '600', 
-                      color: '#374151',
-                      borderBottom: '2px solid #4b5563',
-                      paddingBottom: '8px'
-                    }}>
-                      Personal Information
-                    </h4>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                      <div>
-                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#374151' }}>Name *</label>
+                <div className="add-pdl-sections">
+                  <div className="add-pdl-section">
+                    <h4>Personal Information</h4>
+                    <div className="add-pdl-fields">
+                      <div className="add-pdl-field">
+                        <label>Name *</label>
                         <input
                           type="text"
                           placeholder="Enter visitor name"
                           value={visitorForm.name}
                           onChange={(e) => setVisitorForm({ ...visitorForm, name: e.target.value })}
                           required
-                          style={{
-                            width: '90%',
-                            padding: '10px 12px',
-                            border: '2px solid #e5e7eb',
-                            borderRadius: '6px',
-                            fontSize: '14px',
-                            transition: 'border-color 0.2s ease'
-                          }}
                         />
                       </div>
-                      <div>
-                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#374151' }}>Relationship *</label>
+                      <div className="add-pdl-field">
+                        <label>Relationship *</label>
                         <input
                           type="text"
                           placeholder="Enter relationship to PDL"
                           value={visitorForm.relationship}
                           onChange={(e) => setVisitorForm({ ...visitorForm, relationship: normalizeRelationship(e.target.value) })}
                           required
-                          style={{
-                            width: '90%',
-                            padding: '10px 12px',
-                            border: '2px solid #e5e7eb',
-                            borderRadius: '6px',
-                            fontSize: '14px',
-                            transition: 'border-color 0.2s ease'
-                          }}
                         />
                       </div>
-                      <div>
-                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#374151' }}>Age *</label>
+                      <div className="add-pdl-field">
+                        <label>Age *</label>
                         <input
                           type="number"
                           min="0"
@@ -583,102 +564,52 @@ const VisitorPage = () => {
                           value={visitorForm.age}
                           onChange={(e) => setVisitorForm({ ...visitorForm, age: clampAge(e.target.value) })}
                           required
-                          style={{
-                            width: '90%',
-                            padding: '10px 12px',
-                            border: '2px solid #e5e7eb',
-                            borderRadius: '6px',
-                            fontSize: '14px',
-                            transition: 'border-color 0.2s ease'
-                          }}
                         />
                       </div>
-                      <div>
-                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#374151' }}>Address *</label>
+                      <div className="add-pdl-field">
+                        <label>Address *</label>
                         <input
                           type="text"
                           placeholder="Enter address"
                           value={visitorForm.address}
                           onChange={(e) => setVisitorForm({ ...visitorForm, address: e.target.value })}
                           required
-                          style={{
-                            width: '90%',
-                            padding: '10px 12px',
-                            border: '2px solid #e5e7eb',
-                            borderRadius: '6px',
-                            fontSize: '14px',
-                            transition: 'border-color 0.2s ease'
-                          }}
                         />
                       </div>
                     </div>
                   </div>
 
-                  {/* Documentation & Contact Section */}
-                  <div style={{ 
-                    background: '#f8fafc', 
-                    padding: '20px', 
-                    borderRadius: '8px',
-                    border: '1px solid #e2e8f0'
-                  }}>
-                    <h4 style={{ 
-                      margin: '0 0 20px 0', 
-                      fontSize: '16px', 
-                      fontWeight: '600', 
-                      color: '#374151',
-                      borderBottom: '2px solid #4b5563',
-                      paddingBottom: '8px'
-                    }}>
-                      Documentation & Contact
-                    </h4>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                      <div>
-                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#374151' }}>Valid ID *</label>
+                  <div className="add-pdl-section">
+                    <h4>Documentation & Contact</h4>
+                    <div className="add-pdl-fields">
+                      <div className="add-pdl-field">
+                        <label>Valid ID *</label>
                         <input
                           type="text"
                           placeholder="Enter valid ID number"
                           value={visitorForm.valid_id}
                           onChange={(e) => setVisitorForm({ ...visitorForm, valid_id: e.target.value })}
                           required
-                          style={{
-                            width: '90%',
-                            padding: '10px 12px',
-                            border: '2px solid #e5e7eb',
-                            borderRadius: '6px',
-                            fontSize: '14px',
-                            transition: 'border-color 0.2s ease'
-                          }}
                         />
                       </div>
-                      <div>
-                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#374151' }}>Date of Application *</label>
+                      <div className="add-pdl-field">
+                        <label>Date of Application *</label>
                         <input
                           type="date"
                           value={visitorForm.date_of_application}
                           max={getTodayDate()}
                           onChange={(e) => setVisitorForm({ ...visitorForm, date_of_application: e.target.value })}
                           required
-                          style={{
-                            width: '90%',
-                            padding: '10px 12px',
-                            border: '2px solid #e5e7eb',
-                            borderRadius: '6px',
-                            fontSize: '14px',
-                            background: '#fff',
-                            cursor: 'pointer',
-                            transition: 'border-color 0.2s ease'
-                          }}
                         />
                       </div>
-                      <div>
-                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#374151' }}>Contact Number</label>
+                      <div className="add-pdl-field">
+                        <label>Contact Number</label>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
-                          <label style={{ display: 'flex', alignItems: 'center', gap: '6px', margin: 0, fontSize: '14px' }}>
+                          <label className="add-pdl-checkbox-row">
                             <input
                               type="checkbox"
                               checked={!!visitorForm.has_contact_number}
                               onChange={(e) => setVisitorForm({ ...visitorForm, has_contact_number: e.target.checked })}
-                              style={{ margin: 0 }}
                             />
                             Visitor has contact number
                           </label>
@@ -693,67 +624,32 @@ const VisitorPage = () => {
                           title="Contact number must be 11 digits and start with 09"
                           disabled={!visitorForm.has_contact_number}
                           required={!!visitorForm.has_contact_number}
-                          style={{
-                            width: '90%',
-                            padding: '10px 12px',
-                            border: '2px solid #e5e7eb',
-                            borderRadius: '6px',
-                            fontSize: '14px',
-                            transition: 'border-color 0.2s ease',
-                            opacity: visitorForm.has_contact_number ? 1 : 0.5
-                          }}
                         />
                       </div>
                     </div>
                   </div>
                 </div>
 
-                {/* Visit Type Section */}
-                <div style={{ 
-                  background: '#f8fafc', 
-                  padding: '20px', 
-                  borderRadius: '8px',
-                  border: '1px solid #e2e8f0',
-                  marginBottom: '24px'
-                }}>
-                  <h4 style={{ 
-                    margin: '0 0 20px 0', 
-                    fontSize: '16px', 
-                    fontWeight: '600', 
-                    color: '#374151',
-                    borderBottom: '2px solid #4b5563',
-                    paddingBottom: '8px'
-                  }}>
-                    Visit Type
-                  </h4>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: 0, fontSize: '14px', fontWeight: '500', color: '#374151' }}>
+                <div className="add-pdl-dates-section">
+                  <h4>Visit Type</h4>
+                  <div className="add-pdl-field">
+                    <label className="add-pdl-checkbox-row" style={{ marginBottom: 0 }}>
                       <input
                         type="checkbox"
                         checked={visitorForm.verified_conjugal}
                         onChange={(e) => setVisitorForm({ ...visitorForm, verified_conjugal: e.target.checked })}
-                        style={{ margin: 0, width: '16px', height: '16px' }}
                       />
                       Verified for conjugal visit
                     </label>
                   </div>
                 </div>
 
-                <div className="common-modal-buttons" style={{ 
-                  display: 'flex', 
-                  justifyContent: 'center', 
-                  gap: '12px',
-                  marginTop: '24px',
-                  paddingBottom: '20px'
-                }}>
-                  <button 
-                    type="submit"
-                    className="common-button"
-                  >
+                <div className="add-pdl-actions">
+                  <button type="submit" className="common-button">
                     Submit
                   </button>
-                  <button 
-                    type="button" 
+                  <button
+                    type="button"
                     onClick={() => { setShowAddModal(false); resetForm(); setEditingVisitorId(null); }}
                     className="common-button cancel"
                   >

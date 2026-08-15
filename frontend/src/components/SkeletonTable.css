@@ -52,3 +52,10 @@
     animation: none;
   }
 }
+
+@media (max-width: 768px) {
+  .skeleton-table {
+    min-width: 0 !important;
+    width: 100%;
+  }
+}

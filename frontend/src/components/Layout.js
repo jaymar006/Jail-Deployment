@@ -91,24 +91,28 @@ const SidebarContent = ({ activePath, onClose }) => {
         })}
       </List>
       <Box sx={{ mt: 'auto' }}>
-        <Divider sx={{ borderColor: 'rgba(255,255,255,0.15)' }} />
-        <Box sx={{ p: 2 }}>
+        <Divider sx={{ borderColor: 'rgba(255,255,255,0.12)' }} />
+        <Box sx={{ px: 2, py: 2, textAlign: 'center' }}>
           <Box
+            component="div"
             sx={{
-              bgcolor: 'rgba(255,255,255,0.12)',
-              color: '#fff',
-              borderRadius: 1.5,
-              px: 1.5,
-              py: 1,
-              textAlign: 'center',
+              fontWeight: 700,
+              fontSize: 12,
+              letterSpacing: 0.6,
+              color: '#ffffff',
             }}
           >
-            <Box component="div" sx={{ fontWeight: 700, fontSize: 12, letterSpacing: 0.5 }}>
-              SILANG MUNICIPAL JAIL
-            </Box>
-            <Box component="div" sx={{ fontSize: 11, opacity: 0.85 }}>
-              Visitation Management System
-            </Box>
+            SILANG MUNICIPAL JAIL
+          </Box>
+          <Box
+            component="div"
+            sx={{
+              fontSize: 11,
+              color: 'rgba(255,255,255,0.65)',
+              mt: 0.25,
+            }}
+          >
+            Visitation Management System
           </Box>
         </Box>
       </Box>
@@ -172,7 +176,7 @@ const Layout = ({ children }) => {
       </Box>
       <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', minWidth: 0, height: '100vh' }}>
         <Header activePage={getActivePage()} breadcrumbs={getBreadcrumbs(location.pathname)} onMenuClick={() => setMobileOpen(true)} />
-        <Box component="main" sx={{ flexGrow: 1, width: '100%', overflowY: 'auto' }}>
+        <Box component="main" sx={{ flexGrow: 1, width: '100%', overflowY: { xs: 'auto', md: 'hidden' }, display: 'flex', flexDirection: 'column' }}>
           {children}
         </Box>
       </Box>
