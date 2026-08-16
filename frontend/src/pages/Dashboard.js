@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import ReactDOM from 'react-dom';
 import QRCodeScanner from '../components/QRCodeScanner';
 import Dropdown from '../components/Dropdown';
+import CellsDropdown from '../components/CellsDropdown';
 import { Html5Qrcode } from 'html5-qrcode';
 import api from '../services/api';
 import logger from '../utils/logger';
@@ -43,10 +44,8 @@ const Modal = ({ children, onClose }) => {
 };
 
 const WEEK_DAY_KEYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-const WEEK_DAY_LABELS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 const getCurrentWeekDayKey = () => WEEK_DAY_KEYS[new Date().getDay()];
-const getCurrentWeekDayLabel = () => WEEK_DAY_LABELS[new Date().getDay()];
 
 const getTodayScheduledCellsFromWeekly = () => {
   try {
@@ -155,6 +154,23 @@ const Dashboard = () => {
   const [isDragging, setIsDragging] = useState(false);
   const [isScanningFile, setIsScanningFile] = useState(false);
   const fileInputRef = useRef(null);
+  const [now, setNow] = useState(() => new Date());
+
+  useEffect(() => {
+    const interval = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const formatClock = (date) => {
+    const pad = (n) => String(n).padStart(2, '0');
+    const hours = date.getHours();
+    if (useMilitaryTime) {
+      return `${pad(hours)}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+    }
+    const period = hours >= 12 ? 'PM' : 'AM';
+    const hour12 = (hours % 12) || 12;
+    return `${pad(hour12)}:${pad(date.getMinutes())}:${pad(date.getSeconds())} ${period}`;
+  };
 
   const formatTime = (timestamp) => {
     if (!timestamp) return '';
@@ -476,10 +492,14 @@ const Dashboard = () => {
     return isScheduled;
   };
 
-  const todayScheduledCellLabels = availableCells
-    .filter(cell => scheduledCells.has(Number(cell.id)))
-    .map(cell => (cell.cell_name ? `${cell.cell_name} - ${cell.cell_number}` : cell.cell_number));
-  const todayWeekDayLabel = getCurrentWeekDayLabel();
+  const isCellScheduled = (cell) => scheduledCells.has(Number(cell.id));
+  const isCellQuarantine = (cell) => String(cell.cell_name || '').toLowerCase() === 'quarantine';
+  const cellLabel = (cell) => (cell.cell_name ? `${cell.cell_name} - ${cell.cell_number}` : cell.cell_number);
+  const sortedCells = [...availableCells].sort((a, b) => {
+    const na = parseInt(a.cell_number, 10) || 0;
+    const nb = parseInt(b.cell_number, 10) || 0;
+    return na - nb || String(a.cell_number).localeCompare(String(b.cell_number));
+  });
 
   // QR File Upload Handler
   const handleFileScan = async (file) => {
@@ -1430,71 +1450,27 @@ const Dashboard = () => {
       )}
       
       <main className="dashboard-main">
-        <section style={{ textAlign: 'center' }}>
-          <h2 style={{ margin: '0 0 16px 0' }}>QR Code Scanner</h2>
-          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '12px' }}>
-            <div
-              style={{
-                display: 'flex',
-                flexWrap: 'wrap',
-                justifyContent: 'center',
-                gap: '8px',
-                maxWidth: 'min(92vw, 980px)'
-              }}
-              title={
-                todayScheduledCellLabels.length > 0
-                  ? `Today's scheduled cells: ${todayScheduledCellLabels.join(', ')}`
-                  : "Today's scheduled cells: None"
-              }
-            >
-              <span
-                style={{
-                  background: 'linear-gradient(135deg, #2563eb 0%, #1e40af 100%)',
-                  color: 'white',
-                  padding: '6px 12px',
-                  borderRadius: '999px',
-                  fontSize: '12px',
-                  fontWeight: '700'
-                }}
-              >
-                {isMobile ? `${todayWeekDayLabel} schedule` : `${todayWeekDayLabel} scheduled cells`}
-              </span>
-              {todayScheduledCellLabels.length > 0 ? (
-                todayScheduledCellLabels.map((label, idx) => (
-                  <span
-                    key={`${label}-${idx}`}
-                    style={{
-                      background: '#f3f4f6',
-                      color: '#374151',
-                      border: '1px solid #d1d5db',
-                      padding: '6px 10px',
-                      borderRadius: '999px',
-                      fontSize: '12px',
-                      fontWeight: '600'
-                    }}
-                  >
-                    {label}
-                  </span>
-                ))
-              ) : (
-                <span
-                  style={{
-                    background: '#fee2e2',
-                    color: '#991b1b',
-                    border: '1px solid #fca5a5',
-                    padding: '6px 10px',
-                    borderRadius: '999px',
-                    fontSize: '12px',
-                    fontWeight: '600'
-                  }}
-                >
-                  None
-                </span>
-              )}
-            </div>
-          </div>
-          <div style={{ marginBottom: '16px' }} />
-          <div style={{ display: 'flex', justifyContent: 'center', flexDirection: 'column', alignItems: 'center', gap: '20px', width: '100%', maxWidth: '100%', padding: isMobile ? '0 10px' : '0' }}>
+        <div className="dashboard-datetime">
+          <span className="dashboard-date">
+            {now.toLocaleDateString('en-US', {
+              weekday: 'long',
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
+            })}
+          </span>
+          <span className="dashboard-clock">{formatClock(now)}</span>
+        </div>
+
+        <div className="dashboard-layout">
+          <aside className="dashboard-right">
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px', width: '100%' }}>
+            <CellsDropdown
+              cells={sortedCells}
+              isScheduled={isCellScheduled}
+              isQuarantine={isCellQuarantine}
+              cellLabel={cellLabel}
+            />
             {/* Lockout Message Display */}
             {lockoutUntil && Date.now() < lockoutUntil && (
               <div style={{
@@ -1577,28 +1553,30 @@ const Dashboard = () => {
                 )}
               </div>
             )}
-          </div>
-        </section>
+            </div>
+          </aside>
 
-        <section>
+          <section className="dashboard-left">
           <div id="printable-dashboard" className="print-section">
             <div className="print-only" style={{ textAlign: 'center', marginBottom: '10px' }}>
               <img src="/logo1.png" alt="Logo 1" style={{ height: '60px', marginRight: '10px' }} />
               <img src="/logo2.png" alt="Logo 2" style={{ height: '60px', marginRight: '10px' }} />
               <img src="/logo3.png" alt="Logo 3" style={{ height: '60px' }} />
               <h1 style={{ marginTop: '10px' }}>SILANG MUNICIPAL JAIL VISITATION MANAGEMENT SYSTEM</h1>
+              <b style={{ display: 'block', marginTop: '8px' }}>
+                {new Date().toLocaleDateString('en-US', {
+                  weekday: 'long',
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric'
+                })}
+              </b>
             </div>
-
-            <b style={{ display: 'block', textAlign: 'center', marginBottom: '10px' }}>
-              {new Date().toLocaleDateString('en-US', { 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric' 
-              })}
-            </b>
-            <h2 style={{ textAlign: 'center' }}>Allowed Visitors</h2>
+            <h2 className="print-only" style={{ textAlign: 'center' }}>Allowed Visitors</h2>
 
             <div className="time-format-toggle">
+              <span className="time-format-title">Allowed Visitors</span>
+              <span className="time-format-separator">|</span>
               <span>Time format:</span>
               <Dropdown
                 variant="time"
@@ -1704,6 +1682,7 @@ const Dashboard = () => {
             )}
           </div>
         </section>
+        </div>
 
         {/* Purpose Selection Modal */}
         {showPurposeModal && (

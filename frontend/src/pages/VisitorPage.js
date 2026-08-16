@@ -502,7 +502,7 @@ const VisitorPage = () => {
         </div>
 
         {!isSelecting && !showIdPreview && (
-          <div style={{ display: 'flex', marginTop: '10px' }}>
+          <div style={{ display: 'flex', justifyContent: 'center', marginTop: '10px' }}>
             <button className="common-button" onClick={handleCreateIdClick}>
               <svg className="button-icon" viewBox="0 0 24 24">
                 <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
@@ -514,13 +514,13 @@ const VisitorPage = () => {
 
         {isSelecting && (
           <div className="id-preview-buttons">
-            <button className="common-button" onClick={handleConfirmSelection}>
+            <button className="common-button save" onClick={handleConfirmSelection}>
               <svg className="button-icon" viewBox="0 0 24 24">
                 <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
               </svg>
               Confirm
             </button>
-            <button className="common-button" onClick={handleCancelSelection}>
+            <button className="common-button delete" onClick={handleCancelSelection}>
               <svg className="button-icon" viewBox="0 0 24 24">
                 <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
               </svg>
@@ -924,9 +924,8 @@ const VisitorPage = () => {
 
         {showIdPreview && (
           <div style={{ marginTop: '20px' }}>
-            <h3>ID Preview</h3>
-            <div style={{ border: '1px solid #ccc', borderRadius: '8px', padding: '15px', boxShadow: '0 0 10px rgba(0,0,0,0.1)', backgroundColor: 'white' }}>
-              <div id="id-preview-container" ref={idPreviewRef} style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
+            <h3 style={{ textAlign: 'center' }}>ID Preview</h3>
+            <div id="id-preview-container" ref={idPreviewRef} style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', justifyContent: 'center' }}>
                 {selectedVisitors.map(visitor => (
                   <div key={visitor.id} className="id-card" style={{ width: 408 * 1.5 + 'px', height: 324 * 1.5 + 'px', position: 'relative', backgroundColor: 'transparent', display: 'flex', flexDirection: 'row', justifyContent: 'space-between' }}>
                     {/* Background image layer covering entire card */}
@@ -988,9 +987,8 @@ const VisitorPage = () => {
                   </div>
                 ))}
               </div>
-            </div>
             <div className="id-preview-buttons">
-              <button className="common-button" onClick={handleCloseIdPreview}>
+              <button className="common-button delete" onClick={handleCloseIdPreview}>
                 <svg className="button-icon" viewBox="0 0 24 24">
                   <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
                 </svg>
@@ -1037,7 +1035,7 @@ const VisitorPage = () => {
                 </svg>
                 Add Photo
               </button>
-              <button className="common-button" onClick={() => {
+              <button className="common-button save" onClick={() => {
                 if (selectedVisitorIds.length !== 1) {
                   alert('Please select exactly one visitor to save.');
                   return;

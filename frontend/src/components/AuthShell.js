@@ -3,7 +3,7 @@ import Box from '@mui/material/Box';
 import Paper from '@mui/material/Paper';
 import Typography from '@mui/material/Typography';
 
-const AuthShell = ({ title, children }) => {
+const AuthShell = ({ title, subtitle, children }) => {
   return (
     <Box
       sx={{
@@ -40,13 +40,24 @@ const AuthShell = ({ title, children }) => {
         Silang Municipal Jail Visitation Management System
       </Typography>
       <Paper
-        elevation={4}
-        sx={{ width: '100%', maxWidth: 440, borderRadius: 1.5, p: { xs: 2.5, sm: 4 } }}
+        elevation={3}
+        sx={{ width: '100%', maxWidth: 420, borderRadius: 3, p: { xs: 3, sm: 4 } }}
       >
         {title && (
-          <Typography variant="h6" align="center" sx={{ mb: 2 }}>
-            {title}
-          </Typography>
+          <Box sx={{ textAlign: 'center', mb: 3 }}>
+            <Typography
+              variant="h5"
+              component="h2"
+              sx={{ fontWeight: 700, color: 'text.primary', lineHeight: 1.3 }}
+            >
+              {title}
+            </Typography>
+            {subtitle && (
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 0.75 }}>
+                {subtitle}
+              </Typography>
+            )}
+          </Box>
         )}
         {children}
       </Paper>

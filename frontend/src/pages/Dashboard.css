@@ -243,6 +243,164 @@
   }
 }
 
+/* Date & time strip */
+.dashboard-datetime {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.dashboard-date {
+  font-size: 17px;
+  font-weight: 700;
+  color: #0f172a;
+  letter-spacing: -0.2px;
+}
+
+.dashboard-clock {
+  font-size: 17px;
+  font-weight: 700;
+  color: #1e3a8a;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Two-column dashboard layout */
+.dashboard-layout {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+.dashboard-right {
+  order: 1;
+  flex: 0 0 380px;
+  width: 380px;
+  box-sizing: border-box;
+}
+
+.dashboard-left {
+  order: 2;
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+@media (min-width: 1080px) {
+  .dashboard-right { order: 2; }
+  .dashboard-left { order: 1; }
+}
+
+@media (max-width: 1079px) {
+  .dashboard-layout {
+    flex-direction: column;
+  }
+  .dashboard-right,
+  .dashboard-left {
+    flex: 1 1 auto;
+    width: 100%;
+  }
+}
+
+/* Cells dropdown (scheduled cells / quarantine) */
+.cells-dd {
+  width: 100%;
+  max-width: 320px;
+}
+
+.cells-dd.dd-time .dd-trigger {
+  justify-content: flex-start;
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.cells-dd .dd-value {
+  flex: 1;
+  text-align: left;
+}
+
+.cells-dd-panel {
+  width: 320px;
+  box-sizing: border-box;
+}
+
+.cells-dd-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 14px;
+  font-size: 13px;
+  color: #374151;
+}
+
+.cells-dd-row.quarantine {
+  background: #fff7f7;
+}
+
+.cells-dd-row.quarantine .cells-dd-name {
+  color: #991b1b;
+}
+
+.cells-dd-name {
+  font-weight: 600;
+  color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cells-dd-group {
+  position: sticky;
+  top: 0;
+  padding: 8px 14px 4px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: #b91c1c;
+  background: #ffffff;
+  border-bottom: 1px solid #fecaca;
+}
+
+.cells-dd-empty {
+  padding: 16px;
+  text-align: center;
+  color: #6b7280;
+  font-size: 13px;
+  font-style: italic;
+}
+
+.cell-badge {
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: #e5e7eb;
+  color: #374151;
+}
+
+.cell-badge.scheduled {
+  background: #10b981;
+  color: #ffffff;
+}
+
+/* Keep the dashboard table compact so it fits beside the QR panel */
+.dashboard-left .common-table {
+  min-width: 0;
+}
+
+.dashboard-left .common-table th,
+.dashboard-left .common-table td {
+  padding: 7px 8px;
+}
+
+
 /* Modal buttons styling to match Datas.js Add PDL modal buttons */
 .common-modal-buttons {
   margin-top: 20px;
@@ -472,6 +630,16 @@
   font-size: 14px;
   font-weight: 600;
   color: #1d4ed8;
+}
+
+.time-format-toggle .time-format-title {
+  color: #0f172a;
+  font-size: 15px;
+}
+
+.time-format-toggle .time-format-separator {
+  color: #cbd5e1;
+  font-weight: 400;
 }
 
 .time-format-select {

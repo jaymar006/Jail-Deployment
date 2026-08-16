@@ -317,12 +317,31 @@ const Login = () => {
     margin: 'dense',
     sx: {
       mb: 1.5,
-      '& .MuiOutlinedInput-root': { borderRadius: '10px' },
+      '& .MuiOutlinedInput-root': {
+        borderRadius: '12px',
+        height: 48,
+        transition: 'box-shadow 0.2s ease, border-color 0.2s ease',
+      },
+      '& .MuiOutlinedInput-notchedOutline': {
+        borderColor: '#cbd5e1',
+      },
+      '& .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline': {
+        borderColor: '#94a3b8',
+      },
+      '& .MuiOutlinedInput-root.Mui-focused': {
+        boxShadow: '0 0 0 3px rgba(30, 58, 138, 0.12)',
+      },
+      '& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline': {
+        borderColor: '#1e3a8a',
+      },
     },
   };
 
   return (
-    <AuthShell title={isForgotPassword ? 'Forgot Password' : isLogin ? 'Login' : 'Sign Up'}>
+    <AuthShell
+      title={isForgotPassword ? 'Forgot Password' : isLogin ? 'Welcome back' : 'Sign Up'}
+      subtitle={isLogin ? 'Sign in to continue to your account.' : isForgotPassword ? undefined : 'Create an account to get started.'}
+    >
       {isForgotPassword ? (
         <>
           <Box
@@ -358,13 +377,22 @@ const Login = () => {
               type="submit"
               variant="contained"
               disabled={isRequestingReset}
-              sx={{ mt: 1, py: 1.25, fontWeight: 700, fontSize: '0.95rem', borderRadius: '12px' }}
+              sx={{
+                mt: 0.5,
+                height: 48,
+                fontWeight: 600,
+                fontSize: '0.95rem',
+                borderRadius: '12px',
+                textTransform: 'none',
+                boxShadow: 'none',
+                '&:hover': { boxShadow: '0 4px 12px rgba(30, 58, 138, 0.25)' },
+              }}
             >
               {isRequestingReset && <CircularProgress size={18} color="inherit" sx={{ mr: 1 }} />}
               Send Reset Link
             </Button>
           </Box>
-          <Box sx={{ textAlign: 'center', mt: 2 }}>
+          <Box sx={{ textAlign: 'center', mt: 3, pt: 2.5, borderTop: '1px solid', borderColor: 'divider' }}>
             <Typography variant="body2" color="text.secondary">
               Remember your password?{' '}
               <Button
@@ -372,6 +400,16 @@ const Login = () => {
                 onClick={() => {
                   setIsForgotPassword(false);
                   resetForm();
+                }}
+                sx={{
+                  textTransform: 'none',
+                  color: 'primary.main',
+                  fontWeight: 600,
+                  fontSize: '0.85rem',
+                  minWidth: 0,
+                  p: 0,
+                  verticalAlign: 'baseline',
+                  '&:hover': { backgroundColor: 'transparent', textDecoration: 'underline' },
                 }}
               >
                 Back to Login
@@ -415,11 +453,18 @@ const Login = () => {
                 },
               }}
             />
-            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: -0.5, mb: 1.5 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 0.5, mb: 2 }}>
               <Button
                 size="small"
                 onClick={() => setIsForgotPassword(true)}
-                sx={{ fontWeight: 600 }}
+                sx={{
+                  textTransform: 'none',
+                  color: 'primary.main',
+                  fontWeight: 600,
+                  fontSize: '0.8rem',
+                  p: 0.5,
+                  '&:hover': { backgroundColor: 'transparent', textDecoration: 'underline' },
+                }}
               >
                 Forgot Password?
               </Button>
@@ -433,13 +478,22 @@ const Login = () => {
               type="submit"
               variant="contained"
               disabled={isLoggingIn}
-              sx={{ mt: 1, py: 1.25, fontWeight: 700, fontSize: '0.95rem', borderRadius: '12px' }}
+              sx={{
+                mt: 0.5,
+                height: 48,
+                fontWeight: 600,
+                fontSize: '0.95rem',
+                borderRadius: '12px',
+                textTransform: 'none',
+                boxShadow: 'none',
+                '&:hover': { boxShadow: '0 4px 12px rgba(30, 58, 138, 0.25)' },
+              }}
             >
               {isLoggingIn && <CircularProgress size={18} color="inherit" sx={{ mr: 1 }} />}
-              Login
+              Sign In
             </Button>
           </Box>
-          <Box sx={{ textAlign: 'center', mt: 2 }}>
+          <Box sx={{ textAlign: 'center', mt: 3, pt: 2.5, borderTop: '1px solid', borderColor: 'divider' }}>
             <Typography variant="body2" color="text.secondary">
               Don&apos;t have an account?{' '}
               <Button
@@ -447,6 +501,16 @@ const Login = () => {
                 onClick={() => {
                   setIsLogin(false);
                   resetForm();
+                }}
+                sx={{
+                  textTransform: 'none',
+                  color: 'primary.main',
+                  fontWeight: 600,
+                  fontSize: '0.85rem',
+                  minWidth: 0,
+                  p: 0,
+                  verticalAlign: 'baseline',
+                  '&:hover': { backgroundColor: 'transparent', textDecoration: 'underline' },
                 }}
               >
                 Sign Up
@@ -552,13 +616,22 @@ const Login = () => {
               type="submit"
               variant="contained"
               disabled={isSigningUp}
-              sx={{ mt: 1, py: 1.25, fontWeight: 700, fontSize: '0.95rem', borderRadius: '12px' }}
+              sx={{
+                mt: 0.5,
+                height: 48,
+                fontWeight: 600,
+                fontSize: '0.95rem',
+                borderRadius: '12px',
+                textTransform: 'none',
+                boxShadow: 'none',
+                '&:hover': { boxShadow: '0 4px 12px rgba(30, 58, 138, 0.25)' },
+              }}
             >
               {isSigningUp && <CircularProgress size={18} color="inherit" sx={{ mr: 1 }} />}
               Sign Up
             </Button>
           </Box>
-          <Box sx={{ textAlign: 'center', mt: 2 }}>
+          <Box sx={{ textAlign: 'center', mt: 3, pt: 2.5, borderTop: '1px solid', borderColor: 'divider' }}>
             <Typography variant="body2" color="text.secondary">
               Already have an account?{' '}
               <Button
@@ -566,6 +639,16 @@ const Login = () => {
                 onClick={() => {
                   setIsLogin(true);
                   resetForm();
+                }}
+                sx={{
+                  textTransform: 'none',
+                  color: 'primary.main',
+                  fontWeight: 600,
+                  fontSize: '0.85rem',
+                  minWidth: 0,
+                  p: 0,
+                  verticalAlign: 'baseline',
+                  '&:hover': { backgroundColor: 'transparent', textDecoration: 'underline' },
                 }}
               >
                 Login
