@@ -24,7 +24,16 @@ app.use(requestLogger);
 app.set('trust proxy', 1);
 
 // Security headers (X-Frame-Options, CSP, X-Content-Type-Options, etc.)
-app.use(helmet());
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        'img-src': ["'self'", 'data:', 'blob:'],
+        'media-src': ["'self'", 'data:', 'blob:'],
+      },
+    },
+  })
+);
 
 const parseOriginList = (value) => {
   if (!value) return [];
