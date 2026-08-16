@@ -253,8 +253,20 @@ async function uploadToGoogleDrive(filePath, fileName) {
     fields: 'id, name, webViewLink',
   });
 
+  // Resolve a shareable link to the dated backup folder itself, so the UI's
+  // "Open in Drive" can jump straight to where this backup lives.
+  let folderLink = null;
+  if (folderId) {
+    try {
+      const folderInfo = await drive.files.get({ fileId: folderId, fields: 'webViewLink' });
+      folderLink = folderInfo.data.webViewLink || null;
+    } catch (e) {
+      logger.warn(`⚠️ Could not fetch backup folder link: ${e.message}`);
+    }
+  }
+
   logger.info(`✅ Uploaded to Google Drive successfully. File ID: ${response.data.id}`);
-  return response.data;
+  return { ...response.data, folderId, folderLink };
 }
 
 /**
@@ -405,7 +417,7 @@ async function runScheduledBackup() {
       success: true,
       backupFile: uploadResult.name,
       fileId: uploadResult.id,
-      link: uploadResult.webViewLink,
+      link: uploadResult.folderLink || uploadResult.webViewLink,
       uploadedTo,
       cleanup: cleanupResult
     };
@@ -461,7 +473,7 @@ async function runManualBackup() {
       const driveRes = await uploadToGoogleDrive(filePath, fileName);
       uploadedTo.push('Google Drive');
       fileId = fileId || driveRes.id;
-      link = link || driveRes.webViewLink || null;
+      link = link || driveRes.folderLink || driveRes.webViewLink || null;
     } catch (driveError) {
       logger.error(`⚠️ Manual backup Google Drive upload failed: ${driveError.message}`);
     }

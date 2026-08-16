@@ -1005,7 +1005,7 @@ const Settings = () => {
                         {dest}
                       </Typography>
                     ))}
-                    {snapshotResult.link && (
+                    {snapshotResult.link && /^https?:\/\//.test(snapshotResult.link) && (
                       <Button
                         href={snapshotResult.link}
                         target="_blank"
