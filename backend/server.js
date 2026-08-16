@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
 const dotenv = require('dotenv');
 dotenv.config();
 
@@ -22,31 +23,41 @@ app.use(requestLogger);
 // Trust proxy for accurate IP addresses in rate limiting (important for deployed apps)
 app.set('trust proxy', 1);
 
+// Security headers (X-Frame-Options, CSP, X-Content-Type-Options, etc.)
+app.use(helmet());
+
+const parseOriginList = (value) => {
+  if (!value) return [];
+  return value
+    .split(',')
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+};
+
 const corsOptions = {
   origin: function (origin, callback) {
     // Allow requests with no origin (mobile apps, Postman, etc.)
     if (!origin) {
       return callback(null, true);
     }
-    
-    // In production, allow all origins for mobile/network access
-    // This is safe because we're behind a firewall/network
-    if (process.env.NODE_ENV === 'production') {
-      // Log for debugging
-      logger.debug(`CORS: Allowing origin ${origin}`);
-      return callback(null, true);
+
+    // Restrict to an explicit allow-list in every environment:
+    // FRONTEND_URL plus optional CORS_ORIGINS (comma-separated, for LAN/other UIs).
+    const allowedOrigins = new Set([
+      ...parseOriginList(process.env.FRONTEND_URL),
+      ...parseOriginList(process.env.CORS_ORIGINS),
+    ]);
+
+    // Development: also allow localhost frontends
+    if (process.env.NODE_ENV !== 'production') {
+      allowedOrigins.add('http://localhost:3000');
+      allowedOrigins.add('http://localhost:3001');
     }
-    
-    // Development: restrict to localhost
-    const allowedOrigins = [
-      'http://localhost:3000',
-      'http://localhost:3001',
-      process.env.FRONTEND_URL || 'http://localhost:3000',
-    ];
-    
-    if (allowedOrigins.includes(origin)) {
+
+    if (allowedOrigins.has(origin)) {
       callback(null, true);
     } else {
+      logger.warn(`CORS: Blocked origin ${origin}`);
       callback(new Error('Not allowed by CORS'));
     }
   },

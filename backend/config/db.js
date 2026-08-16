@@ -95,6 +95,7 @@ CREATE TABLE IF NOT EXISTS users (
   password TEXT NOT NULL,
   email TEXT NOT NULL UNIQUE,
   telegram_username TEXT,
+  role TEXT NOT NULL DEFAULT 'user',
   created_at TEXT DEFAULT (datetime('now'))
 );
 
@@ -178,6 +179,8 @@ sqliteDb.serialize(() => {
       ensureColumn('users', 'email', 'TEXT', '');
       // Users: telegram_username
       ensureColumn('users', 'telegram_username', 'TEXT', '');
+      // Users: role (defaults to 'user' for existing rows)
+      ensureColumn('users', 'role', 'TEXT', "DEFAULT 'user'");
       
       // Migration: Rename dorm columns to cell
       const migrateDormToCell = () => {

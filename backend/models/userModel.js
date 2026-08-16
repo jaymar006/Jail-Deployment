@@ -5,10 +5,10 @@ const findUserByUsername = async (username) => {
   return rows[0];
 };
 
-const createUser = async (username, password, telegramUsername) => {
+const createUser = async (username, password, telegramUsername, role = 'user') => {
   const [result] = await db.query(
-    'INSERT INTO users (username, password, telegram_username) VALUES (?, ?, ?)', 
-    [username, password, telegramUsername || null]
+    'INSERT INTO users (username, password, telegram_username, role) VALUES (?, ?, ?, ?)', 
+    [username, password, telegramUsername || null, role]
   );
   return result.insertId;
 };

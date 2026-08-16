@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../config/db');
 const authMiddleware = require('../middleware/authMiddleware');
+const { requireAdmin } = require('../middleware/roleMiddleware');
 
 // Require authentication for all PDL routes
 router.use(authMiddleware);
@@ -142,8 +143,8 @@ router.put('/:id', async (req, res) => {
   }
 });
 
-// DELETE ALL PDLs
-router.delete('/', async (req, res) => {
+// DELETE ALL PDLs (admin only)
+router.delete('/', requireAdmin, async (req, res) => {
   try {
     const [result] = await db.query('DELETE FROM pdls');
     res.json({ 

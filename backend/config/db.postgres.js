@@ -138,6 +138,7 @@ CREATE TABLE IF NOT EXISTS users (
   password VARCHAR(255) NOT NULL,
   telegram_username VARCHAR(255),
   telegram_chat_id BIGINT,
+  role VARCHAR(20) NOT NULL DEFAULT 'user',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -431,6 +432,7 @@ const ensureColumns = async (client) => {
     { table: 'scanned_visitors', column: 'purpose', type: 'TEXT' },
     { table: 'users', column: 'telegram_username', type: 'VARCHAR(255)', default: '' },
     { table: 'users', column: 'telegram_chat_id', type: 'BIGINT', default: null },
+    { table: 'users', column: 'role', type: 'VARCHAR(20)', default: "DEFAULT 'user'" },
     { table: 'registration_codes', column: 'use_limit', type: 'INTEGER', default: 'DEFAULT 1' },
     { table: 'registration_codes', column: 'used_count', type: 'INTEGER', default: 'DEFAULT 0' },
   ];

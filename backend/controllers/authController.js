@@ -9,16 +9,8 @@ const { validatePasswordStrength } = require('../middleware/passwordValidator');
 const telegramService = require('../services/telegramService');
 const passwordResetModel = require('../models/passwordResetModel');
 
-let JWT_SECRET = process.env.JWT_SECRET;
-
-if (!JWT_SECRET) {
-  console.warn('⚠️  JWT_SECRET not found in environment variables');
-  console.warn('🔧 Generating a temporary JWT secret...');
-  console.warn('💡 For production, please set JWT_SECRET in your .env file');
-  
-  // Generate a temporary secret (this will change on each restart)
-  JWT_SECRET = crypto.randomBytes(64).toString('hex');
-  console.warn('🔐 Temporary JWT secret generated (will change on restart)');
+if (!process.env.JWT_SECRET) {
+  throw new Error('JWT_SECRET must be set in environment variables. Server will not start without a stable signing secret.');
 }
 
 exports.login = async (req, res) => {
@@ -46,7 +38,7 @@ exports.login = async (req, res) => {
         console.error('Error resetting failed attempts:', lockoutError.message);
       }
       
-      const token = jwt.sign({ id: user.id, username: user.username }, JWT_SECRET, { expiresIn: '1h' });
+      const token = jwt.sign({ id: user.id, username: user.username, role: user.role || 'user' }, process.env.JWT_SECRET, { expiresIn: '1h' });
       res.json({ message: 'Login successful', token });
     } else {
       // Invalid credentials - record failed attempt
@@ -160,7 +152,8 @@ exports.getProfile = async (req, res) => {
     }
     res.json({ 
       username: user.username,
-      telegramUsername: user.telegram_username || null
+      telegramUsername: user.telegram_username || null,
+      role: user.role || 'user'
     });
   } catch (err) {
     res.status(500).json({ message: 'Server error', error: err.message });
@@ -244,7 +237,7 @@ exports.requestPasswordReset = async (req, res) => {
           console.error('   User:', user.username);
           console.error('   Telegram Username:', user.telegram_username);
           console.error('   Reset token created but Telegram message not sent.');
-          console.error('   Token (first 20 chars):', resetToken.substring(0, 20) + '...');
+          console.error('   Token digest (SHA-256):', crypto.createHash('sha256').update(resetToken).digest('hex'));
           console.error('');
           console.error('   🔍 TROUBLESHOOTING:');
           console.error('   1. Check if TELEGRAM_BOT_TOKEN is set in environment variables');
@@ -258,7 +251,7 @@ exports.requestPasswordReset = async (req, res) => {
         console.error('❌ Error sending password reset Telegram message:', telegramError);
         console.error('   Error details:', telegramError.message);
         console.error('   Stack:', telegramError.stack);
-        console.error('   Reset token was created but Telegram message failed. Token:', resetToken.substring(0, 20) + '...');
+        console.error('   Reset token was created but Telegram message failed. Token digest (SHA-256):', crypto.createHash('sha256').update(resetToken).digest('hex'));
       }
     })(); // Fire and forget - don't wait for Telegram message to send
 

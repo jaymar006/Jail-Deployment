@@ -24,6 +24,7 @@ const Header = ({ activePage, breadcrumbs = [], onMenuClick }) => {
   const showToast = useToast();
   const { isAuthenticated, logout } = useContext(AuthContext);
   const [username, setUsername] = useState(null);
+  const [role, setRole] = useState(null);
   const [anchorEl, setAnchorEl] = useState(null);
 
   useEffect(() => {
@@ -40,11 +41,14 @@ const Header = ({ activePage, breadcrumbs = [], onMenuClick }) => {
         );
         const payload = JSON.parse(jsonPayload);
         setUsername(payload.username || null);
+        setRole(payload.role || null);
       } catch (e) {
         setUsername(null);
+        setRole(null);
       }
     } else {
       setUsername(null);
+      setRole(null);
     }
   }, [isAuthenticated]);
 
@@ -123,6 +127,24 @@ const Header = ({ activePage, breadcrumbs = [], onMenuClick }) => {
             <Typography variant="body2" sx={{ fontWeight: 600, display: { xs: 'none', sm: 'block' } }}>
               {username}
             </Typography>
+            {role === 'admin' && (
+              <Typography
+                variant="caption"
+                sx={{
+                  display: { xs: 'none', sm: 'inline-flex' },
+                  fontWeight: 700,
+                  color: '#2563eb',
+                  bgcolor: '#dbeafe',
+                  borderRadius: '6px',
+                  px: 0.75,
+                  py: 0.25,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.04em',
+                }}
+              >
+                Admin
+              </Typography>
+            )}
             <IconButton
               onClick={(e) => setAnchorEl(e.currentTarget)}
               size="small"

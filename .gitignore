@@ -122,6 +122,11 @@ dist
 # TernJS port file
 .tern-port
 
+backend/data/jail_visitation.sqlite
+backend/data/jail_visitation.sqlite-shm
+backend/data/jail_visitation.sqlite-wal
+
+
 # Stores VSCode versions used for testing VSCode extensions
 .vscode-test
 

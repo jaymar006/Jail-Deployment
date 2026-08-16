@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const visitorController = require('../controllers/visitorController');
 const authMiddleware = require('../middleware/authMiddleware');
+const { requireAdmin } = require('../middleware/roleMiddleware');
 
 // Require authentication for all /api visitor routes
 router.use(authMiddleware);
@@ -35,9 +36,9 @@ router.put('/scanned_visitors/:id', require('../controllers/visitorController').
 
 router.delete('/scanned_visitors/:id', require('../controllers/visitorController').deleteScannedVisitor);
 
-// Delete logs routes
-router.delete('/logs/all', require('../controllers/visitorController').deleteAllLogs);
-router.delete('/logs/date-range', require('../controllers/visitorController').deleteLogsByDateRange);
-router.delete('/logs/date', require('../controllers/visitorController').deleteLogsByDate);
+// Delete logs routes (admin only - destroys audit records)
+router.delete('/logs/all', requireAdmin, require('../controllers/visitorController').deleteAllLogs);
+router.delete('/logs/date-range', requireAdmin, require('../controllers/visitorController').deleteLogsByDateRange);
+router.delete('/logs/date', requireAdmin, require('../controllers/visitorController').deleteLogsByDate);
 
 module.exports = router;

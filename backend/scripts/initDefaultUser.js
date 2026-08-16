@@ -2,37 +2,44 @@ const bcrypt = require('bcrypt');
 const userModel = require('../models/userModel');
 
 /**
- * Initialize default admin user if no users exist in the database
- * This runs on server startup to ensure there's always at least one user
+ * Initialize default admin user if no users exist in the database.
+ * Runs on server startup to ensure there's always at least one admin.
+ *
+ * Security: the default admin is ONLY created when ADMIN_PASSWORD is set in
+ * the environment. No hardcoded credentials are ever used.
  */
 const initDefaultUser = async () => {
   try {
     // Check if any users exist
     const existingUser = await userModel.findUserByUsername('admin');
-    
-    if (!existingUser) {
-      console.log('🔐 No admin user found. Creating default admin user...');
-      
-      // Hash the default password
-      const hashedPassword = await bcrypt.hash('admin123', 10);
-      
-      // Create default admin user with empty security questions (can be set later)
-      await userModel.createUser(
-        'admin',
-        hashedPassword,
-        '', // security_question_1
-        '', // security_answer_1
-        '', // security_question_2
-        ''  // security_answer_2
-      );
-      
-      console.log('✅ Default admin user created successfully!');
-      console.log('   Username: admin');
-      console.log('   Password: admin123');
-      console.log('   ⚠️  Please change the password after first login!');
-    } else {
+
+    if (existingUser) {
       console.log('✅ Admin user already exists. Skipping default user creation.');
+      return;
     }
+
+    const adminPassword = process.env.ADMIN_PASSWORD;
+    if (!adminPassword) {
+      console.warn('⚠️  No users exist and ADMIN_PASSWORD is not set.');
+      console.warn('⚠️  Skipping default admin creation. Set ADMIN_PASSWORD (and optionally ADMIN_USERNAME) in the environment to create one.');
+      return;
+    }
+
+    const adminUsername = process.env.ADMIN_USERNAME || 'admin';
+
+    console.log('🔐 No admin user found. Creating default admin user...');
+    const hashedPassword = await bcrypt.hash(adminPassword, 10);
+
+    await userModel.createUser(
+      adminUsername,
+      hashedPassword,
+      '',
+      'admin'
+    );
+
+    console.log(`✅ Default admin user created successfully!`);
+    console.log(`   Username: ${adminUsername}`);
+    console.log('   ⚠️  Please change the password after first login!');
   } catch (error) {
     console.error('❌ Error initializing default user:', error);
     // Don't throw - allow server to start even if user creation fails
@@ -40,4 +47,3 @@ const initDefaultUser = async () => {
 };
 
 module.exports = initDefaultUser;
-
