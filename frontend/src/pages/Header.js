@@ -132,31 +132,8 @@ const Header = ({ activePage, breadcrumbs = [], onMenuClick }) => {
               sx={{ textTransform: 'none', gap: 1.25, px: 1, py: 0.5, minWidth: 0 }}
             >
               <Box sx={{ textAlign: 'right', display: { xs: 'none', sm: 'block' } }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, justifyContent: 'flex-end' }}>
-                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                    {username}
-                  </Typography>
-                  {role === 'admin' && (
-                    <Box
-                      component="span"
-                      sx={{
-                        fontWeight: 700,
-                        color: '#2563eb',
-                        bgcolor: '#dbeafe',
-                        borderRadius: '6px',
-                        px: 0.75,
-                        py: 0.25,
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.04em',
-                        fontSize: 11,
-                      }}
-                    >
-                      Admin
-                    </Box>
-                  )}
-                </Box>
-                <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', fontSize: 12 }}>
-                  {role ? `Role: ${role}` : 'Signed in'}
+                <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                  {username}
                 </Typography>
               </Box>
               <Avatar sx={{ width: 32, height: 32, bgcolor: 'primary.main', fontSize: 14 }}>
