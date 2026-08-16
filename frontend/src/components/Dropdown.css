@@ -1,0 +1,153 @@
+/* Reusable Dropdown - matches the "Data Tools" dropdown design */
+
+.dd {
+  position: relative;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.dd-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 14px;
+  background: #ffffff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+  border-radius: 4px;
+  font-weight: 500;
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+  width: 100%;
+  transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease, transform 0.1s ease;
+}
+
+.dd-trigger:hover {
+  background-color: #eff6ff;
+  border-color: #93c5fd;
+}
+
+.dd-trigger:active {
+  transform: translateY(1px);
+}
+
+.dd-trigger:focus-visible {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+.dd-trigger:disabled {
+  background-color: #f3f4f6;
+  color: #9ca3af;
+  border-color: #e5e7eb;
+  cursor: not-allowed;
+}
+
+.dd-value {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dd-chevron {
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+
+.dd[data-open='true'] .dd-chevron {
+  transform: rotate(180deg);
+}
+
+.dd-panel {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  min-width: var(--dd-min-width, 260px);
+  max-height: 300px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.dd-panel-right {
+  left: auto;
+  right: 0;
+}
+
+.dd-panel-up {
+  top: auto;
+  bottom: calc(100% + 4px);
+}
+
+.dd-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 16px;
+  border: none;
+  background: #ffffff;
+  text-align: left;
+  cursor: pointer;
+  font-size: 14px;
+  color: #374151;
+  transition: background-color 0.2s ease;
+}
+
+.dd-item:hover {
+  background-color: #f9fafb;
+}
+
+.dd-item-selected {
+  background-color: #eff6ff;
+  color: #1d4ed8;
+  font-weight: 600;
+}
+
+.dd-item-selected:hover {
+  background-color: #dbeafe;
+}
+
+.dd-check {
+  flex-shrink: 0;
+}
+
+/* Variants */
+.dd-form {
+  display: block;
+}
+
+.dd-form .dd-trigger {
+  padding: 10px 12px;
+  border: 2px solid #bfdbfe;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #111827;
+}
+
+.dd-form .dd-panel {
+  left: 0;
+  right: 0;
+}
+
+.dd-pagination .dd-trigger,
+.dd-time .dd-trigger {
+  padding: 5px 8px;
+  border: 2px solid #bfdbfe;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.dd-pagination .dd-trigger {
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  margin-right: 4px;
+}

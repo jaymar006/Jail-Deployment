@@ -406,7 +406,7 @@ const Login = () => {
                         onClick={() => setShowLoginPassword((v) => !v)}
                         edge="end"
                         size="small"
-                        sx={{ color: '#60a5fa' }}
+                        sx={{ color: '#1e3a8a' }}
                       >
                         {showLoginPassword ? <VisibilityOff /> : <Visibility />}
                       </IconButton>
@@ -488,7 +488,7 @@ const Login = () => {
                         onClick={() => setShowSignUpPassword((v) => !v)}
                         edge="end"
                         size="small"
-                        sx={{ color: '#60a5fa' }}
+                        sx={{ color: '#1e3a8a' }}
                       >
                         {showSignUpPassword ? <VisibilityOff /> : <Visibility />}
                       </IconButton>
@@ -513,7 +513,7 @@ const Login = () => {
                         onClick={() => setShowSignUpConfirmPassword((v) => !v)}
                         edge="end"
                         size="small"
-                        sx={{ color: '#60a5fa' }}
+                        sx={{ color: '#1e3a8a' }}
                       >
                         {showSignUpConfirmPassword ? <VisibilityOff /> : <Visibility />}
                       </IconButton>

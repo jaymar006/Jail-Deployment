@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import api from '../services/api';
 import SkeletonTable from '../components/SkeletonTable';
+import Dropdown from '../components/Dropdown';
 import './Dashboard.css';
 import './common.css';
 import * as XLSX from 'xlsx';
@@ -454,16 +455,17 @@ const Logs = () => {
                   <label htmlFor="logs-purpose-filter" className="filter-label">
                     Visit type:
                   </label>
-                  <select
-                    id="logs-purpose-filter"
+                  <Dropdown
                     value={purposeFilter}
-                    onChange={(e) => setPurposeFilter(e.target.value)}
-                    aria-label="Filter logs by visit type"
-                  >
-                    <option value="all">All</option>
-                    <option value="normal">Normal</option>
-                    <option value="conjugal">Conjugal Visit</option>
-                  </select>
+                    onChange={(val) => setPurposeFilter(val)}
+                    ariaLabel="Filter logs by visit type"
+                    minWidth={180}
+                    options={[
+                      { value: 'all', label: 'All' },
+                      { value: 'normal', label: 'Normal' },
+                      { value: 'conjugal', label: 'Conjugal Visit' },
+                    ]}
+                  />
                 </div>
                 
                 {/* Show Only Section */}
@@ -471,54 +473,56 @@ const Logs = () => {
                   <label className="filter-label">
                     Show Only:
                   </label>
-                  <select
+                  <Dropdown
                     value={filterType}
-                    onChange={(e) => {
-                      setFilterType(e.target.value);
+                    onChange={(val) => {
+                      setFilterType(val);
                       setFilterValue('');
                     }}
-                    aria-label="Filter type"
-                  >
-                    <option value="all">All Records</option>
-                    <option value="year">By Year</option>
-                    <option value="month">By Month</option>
-                    <option value="day">By Day</option>
-                  </select>
+                    ariaLabel="Filter type"
+                    minWidth={160}
+                    options={[
+                      { value: 'all', label: 'All Records' },
+                      { value: 'year', label: 'By Year' },
+                      { value: 'month', label: 'By Month' },
+                      { value: 'day', label: 'By Day' },
+                    ]}
+                  />
                   
                   {filterType !== 'all' && (
-                    <select
+                    <Dropdown
                       value={filterValue}
-                      onChange={(e) => setFilterValue(e.target.value)}
-                      aria-label={`Select ${filterType}`}
-                    >
-                      <option value="">Select {filterType}...</option>
-                      {filterType === 'year' && getUniqueYears().map(year => (
-                        <option key={year} value={year}>{year}</option>
-                      ))}
-                      {filterType === 'month' && getUniqueYears().map(year => 
-                        getUniqueMonths(year).map(month => (
-                          <option key={`${year}-${month}`} value={`${year}-${month}`}>
-                            {new Date(year, month - 1).toLocaleDateString('en-US', { 
-                              year: 'numeric', 
-                              month: 'long' 
-                            })}
-                          </option>
-                        ))
-                      )}
-                      {filterType === 'day' && getUniqueYears().map(year => 
-                        getUniqueMonths(year).map(month => 
-                          getUniqueDays(year, month).map(day => (
-                            <option key={`${year}-${month}-${day}`} value={`${year}-${month}-${day}`}>
-                              {new Date(year, month - 1, day).toLocaleDateString('en-US', { 
-                                year: 'numeric', 
-                                month: 'long', 
-                                day: 'numeric' 
-                              })}
-                            </option>
-                          ))
-                        )
-                      )}
-                    </select>
+                      onChange={(val) => setFilterValue(val)}
+                      ariaLabel={`Select ${filterType}`}
+                      minWidth={240}
+                      options={[
+                        { value: '', label: `Select ${filterType}...` },
+                        ...(filterType === 'year'
+                          ? getUniqueYears().map((year) => ({ value: year, label: String(year) }))
+                          : filterType === 'month'
+                          ? getUniqueYears().map((year) =>
+                              getUniqueMonths(year).map((month) => ({
+                                value: `${year}-${month}`,
+                                label: new Date(year, month - 1).toLocaleDateString('en-US', {
+                                  year: 'numeric',
+                                  month: 'long',
+                                }),
+                              }))
+                            ).flat()
+                          : getUniqueYears().map((year) =>
+                              getUniqueMonths(year).map((month) =>
+                                getUniqueDays(year, month).map((day) => ({
+                                  value: `${year}-${month}-${day}`,
+                                  label: new Date(year, month - 1, day).toLocaleDateString('en-US', {
+                                    year: 'numeric',
+                                    month: 'long',
+                                    day: 'numeric',
+                                  }),
+                                }))
+                              ).flat()
+                            ).flat()),
+                      ]}
+                    />
                   )}
                   
                   <div className="records-count-badge">
@@ -576,18 +580,22 @@ const Logs = () => {
         </div>
         {(totalPages > 1 || pageSize === 'all') && (
           <div className="pagination-container">
-            <select
-              className="pagination-size-select"
+            <Dropdown
+              variant="pagination"
               value={String(pageSize)}
-              onChange={handlePageSizeChange}
-              aria-label="Rows per page"
-            >
-              <option value="10">10 per page</option>
-              <option value="25">25 per page</option>
-              <option value="50">50 per page</option>
-              <option value="100">100 per page</option>
-              <option value="all">All</option>
-            </select>
+              onChange={(val) => handlePageSizeChange({ target: { value: val } })}
+              ariaLabel="Rows per page"
+              minWidth={140}
+              align="right"
+              direction="up"
+              options={[
+                { value: '10', label: '10 per page' },
+                { value: '25', label: '25 per page' },
+                { value: '50', label: '50 per page' },
+                { value: '100', label: '100 per page' },
+                { value: 'all', label: 'All' },
+              ]}
+            />
             <button
               className="pagination-button pagination-nav"
               onClick={() => setCurrentPage(1)}

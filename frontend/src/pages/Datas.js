@@ -4,6 +4,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import axios from '../services/api';
 import * as XLSX from 'xlsx';
 import SkeletonTable from '../components/SkeletonTable';
+import Dropdown from '../components/Dropdown';
 import './common.css';
 
 const Modal = ({ children, onClose, wide = false }) => {
@@ -1716,16 +1717,18 @@ const exportPdlsWithVisitorsToExcel = async () => {
               <label className="filter-label">
                 Sort:
               </label>
-              <select
+              <Dropdown
                 value={sortOption}
-                onChange={(e) => setSortOption(e.target.value)}
-                aria-label="Sort Options"
-              >
-                <option value="none">No Sort</option>
-                <option value="cell">Sort by Cell</option>
-                <option value="alphabetical">Sort Alphabetically with Cell</option>
-                <option value="alphabeticalWithCell">Sort Alphabetically</option>
-              </select>
+                onChange={(val) => setSortOption(val)}
+                ariaLabel="Sort Options"
+                minWidth={220}
+                options={[
+                  { value: 'none', label: 'No Sort' },
+                  { value: 'cell', label: 'Sort by Cell' },
+                  { value: 'alphabetical', label: 'Sort Alphabetically with Cell' },
+                  { value: 'alphabeticalWithCell', label: 'Sort Alphabetically' },
+                ]}
+              />
             </div>
             
             {/* Show Only Section */}
@@ -1733,54 +1736,56 @@ const exportPdlsWithVisitorsToExcel = async () => {
               <label className="filter-label">
                 Show Only:
               </label>
-              <select
+              <Dropdown
                 value={filterType}
-                onChange={(e) => {
-                  setFilterType(e.target.value);
+                onChange={(val) => {
+                  setFilterType(val);
                   setFilterValue('');
                 }}
-                aria-label="Filter type"
-              >
-                <option value="all">All Records</option>
-                <option value="year">By Year</option>
-                <option value="month">By Month</option>
-                <option value="day">By Day</option>
-              </select>
+                ariaLabel="Filter type"
+                minWidth={160}
+                options={[
+                  { value: 'all', label: 'All Records' },
+                  { value: 'year', label: 'By Year' },
+                  { value: 'month', label: 'By Month' },
+                  { value: 'day', label: 'By Day' },
+                ]}
+              />
               
               {filterType !== 'all' && (
-                <select
+                <Dropdown
                   value={filterValue}
-                  onChange={(e) => setFilterValue(e.target.value)}
-                  aria-label={`Select ${filterType}`}
-                >
-                  <option value="">Select {filterType}...</option>
-                  {filterType === 'year' && getUniqueYears().map(year => (
-                    <option key={year} value={year}>{year}</option>
-                  ))}
-                  {filterType === 'month' && getUniqueYears().map(year => 
-                    getUniqueMonths(year).map(month => (
-                      <option key={`${year}-${month}`} value={`${year}-${month}`}>
-                        {new Date(year, month - 1).toLocaleDateString('en-US', { 
-                          year: 'numeric', 
-                          month: 'long' 
-                        })}
-                      </option>
-                    ))
-                  )}
-                  {filterType === 'day' && getUniqueYears().map(year => 
-                    getUniqueMonths(year).map(month => 
-                      getUniqueDays(year, month).map(day => (
-                        <option key={`${year}-${month}-${day}`} value={`${year}-${month}-${day}`}>
-                          {new Date(year, month - 1, day).toLocaleDateString('en-US', { 
-                            year: 'numeric', 
-                            month: 'long', 
-                            day: 'numeric' 
-                          })}
-                        </option>
-                      ))
-                    )
-                  )}
-                </select>
+                  onChange={(val) => setFilterValue(val)}
+                  ariaLabel={`Select ${filterType}`}
+                  minWidth={240}
+                  options={[
+                    { value: '', label: `Select ${filterType}...` },
+                    ...(filterType === 'year'
+                      ? getUniqueYears().map((year) => ({ value: year, label: String(year) }))
+                      : filterType === 'month'
+                      ? getUniqueYears().map((year) =>
+                          getUniqueMonths(year).map((month) => ({
+                            value: `${year}-${month}`,
+                            label: new Date(year, month - 1).toLocaleDateString('en-US', {
+                              year: 'numeric',
+                              month: 'long',
+                            }),
+                          }))
+                        ).flat()
+                      : getUniqueYears().map((year) =>
+                          getUniqueMonths(year).map((month) =>
+                            getUniqueDays(year, month).map((day) => ({
+                              value: `${year}-${month}-${day}`,
+                              label: new Date(year, month - 1, day).toLocaleDateString('en-US', {
+                                year: 'numeric',
+                                month: 'long',
+                                day: 'numeric',
+                              }),
+                            }))
+                          ).flat()
+                        ).flat()),
+                  ]}
+                />
               )}
               
               <div className="records-count-badge">
@@ -1792,7 +1797,7 @@ const exportPdlsWithVisitorsToExcel = async () => {
         
         <div className="table-wrapper" ref={tableWrapperRef}>
           {loadingPdls ? (
-            <SkeletonTable columns={12} rows={7} minWidth={1100} />
+            <SkeletonTable columns={12} rows={7} minWidth={0} />
           ) : (
           <table className="common-table datas-table card-table">
             <thead>
@@ -1887,18 +1892,22 @@ const exportPdlsWithVisitorsToExcel = async () => {
 
         {(totalPages > 1 || pageSize === 'all') && (
           <div className="pagination-container">
-            <select
-              className="pagination-size-select"
+            <Dropdown
+              variant="pagination"
               value={String(pageSize)}
-              onChange={handlePageSizeChange}
-              aria-label="Rows per page"
-            >
-              <option value="10">10 per page</option>
-              <option value="25">25 per page</option>
-              <option value="50">50 per page</option>
-              <option value="100">100 per page</option>
-              <option value="all">All</option>
-            </select>
+              onChange={(val) => handlePageSizeChange({ target: { value: val } })}
+              ariaLabel="Rows per page"
+              minWidth={140}
+              align="right"
+              direction="up"
+              options={[
+                { value: '10', label: '10 per page' },
+                { value: '25', label: '25 per page' },
+                { value: '50', label: '50 per page' },
+                { value: '100', label: '100 per page' },
+                { value: 'all', label: 'All' },
+              ]}
+            />
             <button
               className="pagination-button pagination-nav"
               onClick={() => setCurrentPage(1)}
@@ -2018,21 +2027,19 @@ const exportPdlsWithVisitorsToExcel = async () => {
                     </div>
                     <div className="add-pdl-field">
                       <label>Cell Number *</label>
-                      <select
+                      <Dropdown
+                        variant="form"
                         value={addForm.cell_number}
-                        onChange={(e) => setAddForm({ ...addForm, cell_number: e.target.value })}
+                        onChange={(val) => setAddForm({ ...addForm, cell_number: val })}
+                        ariaLabel="Cell Number"
+                        placeholder="Select a cell..."
+                        name="add_cell_number"
                         required
-                      >
-                        <option value="">Select a cell...</option>
-                        {availableCells.map((cell) => {
+                        options={availableCells.map((cell) => {
                           const cellDisplay = cell.cell_name ? `${cell.cell_name} - ${cell.cell_number}` : cell.cell_number;
-                          return (
-                            <option key={cell.id} value={cellDisplay}>
-                              {cellDisplay}
-                            </option>
-                          );
+                          return { value: cellDisplay, label: cellDisplay };
                         })}
-                      </select>
+                      />
                     </div>
                   </div>
                 </div>
@@ -2069,13 +2076,16 @@ const exportPdlsWithVisitorsToExcel = async () => {
                     </div>
                     <div className="add-pdl-field">
                       <label>First Time Offender</label>
-                      <select
+                      <Dropdown
+                        variant="form"
                         value={addForm.first_time_offender}
-                        onChange={(e) => setAddForm({ ...addForm, first_time_offender: e.target.value })}
-                      >
-                        <option value="No">No</option>
-                        <option value="Yes">Yes</option>
-                      </select>
+                        onChange={(val) => setAddForm({ ...addForm, first_time_offender: val })}
+                        ariaLabel="First Time Offender"
+                        options={[
+                          { value: 'No', label: 'No' },
+                          { value: 'Yes', label: 'Yes' },
+                        ]}
+                      />
                     </div>
                   </div>
                 </div>
@@ -2209,31 +2219,24 @@ const exportPdlsWithVisitorsToExcel = async () => {
                     </div>
                     <div>
                       <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#374151' }}>Cell Number *</label>
-                      <select 
-                        value={editForm.cell_number} 
-                        onChange={(e) => setEditForm({ ...editForm, cell_number: e.target.value })} 
-                        required 
-                        style={{
+                      <Dropdown
+                        variant="form"
+                        value={editForm.cell_number}
+                        onChange={(val) => setEditForm({ ...editForm, cell_number: val })}
+                        ariaLabel="Cell Number"
+                        placeholder="Select a cell..."
+                        name="edit_cell_number"
+                        required
+                        triggerStyle={{
                           width: '90%',
-                          padding: '10px 12px',
                           border: '2px solid #e5e7eb',
                           borderRadius: '6px',
-                          fontSize: '14px',
-                          background: '#fff',
-                          cursor: 'pointer',
-                          transition: 'border-color 0.2s ease'
                         }}
-                      >
-                        <option value="">Select a cell...</option>
-                        {availableCells.map((cell) => {
+                        options={availableCells.map((cell) => {
                           const cellDisplay = cell.cell_name ? `${cell.cell_name} - ${cell.cell_number}` : cell.cell_number;
-                          return (
-                            <option key={cell.id} value={cellDisplay}>
-                              {cellDisplay}
-                            </option>
-                          );
+                          return { value: cellDisplay, label: cellDisplay };
                         })}
-                      </select>
+                      />
                     </div>
                   </div>
                 </div>
@@ -2309,23 +2312,21 @@ const exportPdlsWithVisitorsToExcel = async () => {
                     </div>
                     <div>
                       <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#374151' }}>First Time Offender</label>
-                      <select 
-                        value={editForm.first_time_offender} 
-                        onChange={(e) => setEditForm({ ...editForm, first_time_offender: e.target.value })}
-                        style={{
+                      <Dropdown
+                        variant="form"
+                        value={editForm.first_time_offender}
+                        onChange={(val) => setEditForm({ ...editForm, first_time_offender: val })}
+                        ariaLabel="First Time Offender"
+                        triggerStyle={{
                           width: '90%',
-                          padding: '10px 12px',
                           border: '2px solid #e5e7eb',
                           borderRadius: '6px',
-                          fontSize: '14px',
-                          background: '#fff',
-                          cursor: 'pointer',
-                          transition: 'border-color 0.2s ease'
                         }}
-                      >
-                        <option value="No">No</option>
-                        <option value="Yes">Yes</option>
-                      </select>
+                        options={[
+                          { value: 'No', label: 'No' },
+                          { value: 'Yes', label: 'Yes' },
+                        ]}
+                      />
                     </div>
                   </div>
                 </div>

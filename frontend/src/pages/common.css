@@ -86,7 +86,15 @@ body {
    regardless of how many rows (or how long the cell content) are shown */
 .common-table.datas-table {
   table-layout: fixed;
-  min-width: 1100px;
+  width: 100%;
+  min-width: 0;
+}
+
+.common-table.datas-table thead th {
+  white-space: normal;
+  word-break: normal;
+  overflow-wrap: normal;
+  vertical-align: middle;
 }
 
 .common-table.datas-table th,
@@ -127,32 +135,32 @@ body {
 
 .common-table.datas-table thead th:nth-child(7),
 .common-table.datas-table tbody td:nth-child(7) {
-  width: 12%;
+  width: 10%;
 }
 
 .common-table.datas-table thead th:nth-child(8),
 .common-table.datas-table tbody td:nth-child(8) {
-  width: 9%;
+  width: 8%;
 }
 
 .common-table.datas-table thead th:nth-child(9),
 .common-table.datas-table tbody td:nth-child(9) {
-  width: 9%;
+  width: 8%;
 }
 
 .common-table.datas-table thead th:nth-child(10),
 .common-table.datas-table tbody td:nth-child(10) {
-  width: 9%;
+  width: 12%;
 }
 
 .common-table.datas-table thead th:nth-child(11),
 .common-table.datas-table tbody td:nth-child(11) {
-  width: 8%;
+  width: 11%;
 }
 
 .common-table.datas-table thead th:nth-child(12),
 .common-table.datas-table tbody td:nth-child(12) {
-  width: 84px;
+  width: 100px;
 }
 
 .common-table th,
@@ -175,7 +183,7 @@ td.card-summary {
 }
 
 .common-table thead {
-  background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+  background: #1e3a8a;
   color: white;
   font-weight: 500;
   position: relative;
@@ -215,7 +223,7 @@ td.card-summary {
 }
 
 .sortable-th:hover {
-  background: linear-gradient(135deg, #1e40af 0%, #1d4ed8 100%);
+  background: #1e40af;
 }
 
 /* Enhanced checkbox styling */

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import ReactDOM from 'react-dom';
 import QRCodeScanner from '../components/QRCodeScanner';
+import Dropdown from '../components/Dropdown';
 import { Html5Qrcode } from 'html5-qrcode';
 import api from '../services/api';
 import logger from '../utils/logger';
@@ -1599,15 +1600,18 @@ const Dashboard = () => {
 
             <div className="time-format-toggle">
               <span>Time format:</span>
-              <select
-                className="time-format-select"
+              <Dropdown
+                variant="time"
                 value={useMilitaryTime ? '24' : '12'}
-                onChange={(e) => setUseMilitaryTime(e.target.value === '24')}
-                aria-label="Time format"
-              >
-                <option value="12">12-hour (AM/PM)</option>
-                <option value="24">24-hour</option>
-              </select>
+                onChange={(val) => setUseMilitaryTime(val === '24')}
+                ariaLabel="Time format"
+                minWidth={200}
+                align="right"
+                options={[
+                  { value: '12', label: '12-hour (AM/PM)' },
+                  { value: '24', label: '24-hour' },
+                ]}
+              />
             </div>
 
             <table className="common-table card-table card-first-is-name">
