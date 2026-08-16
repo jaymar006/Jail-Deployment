@@ -3,7 +3,9 @@
   "version": "1.0.0",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "import-to-neon": "node scripts/importToNeon.js",
+    "export-neon": "node scripts/exportNeon.js"
   },
   "dependencies": {
     "bcrypt": "^5.1.1",

@@ -21,7 +21,7 @@ const OAUTH_TOKEN_PATH = process.env.GOOGLE_OAUTH_TOKEN_PATH || path.join(__dirn
  * Programmatically generates database export based on active engine (SQLite or PostgreSQL)
  * @returns {Promise<{filePath: string, fileName: string, type: 'sqlite'|'postgres'}>}
  */
-async function backupDatabase() {
+async function backupDatabase(excludeTables = []) {
   const usePostgres = !!process.env.DATABASE_URL;
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
 
@@ -32,7 +32,7 @@ async function backupDatabase() {
     const [tablesRows] = await db.query(
       "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE'"
     );
-    const tables = tablesRows.map(r => r.table_name);
+    const tables = tablesRows.map(r => r.table_name).filter(t => !excludeTables.includes(t));
 
     let sqlOutput = `-- PostgreSQL Database Backup\n`;
     sqlOutput += `-- Generated: ${new Date().toISOString()}\n\n`;

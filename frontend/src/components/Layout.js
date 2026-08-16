@@ -38,6 +38,7 @@ const SidebarContent = ({ activePath, onClose }) => {
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1.5, height: 64, py: 0, px: 1, position: 'relative', boxSizing: 'border-box' }}>
         <img src="/logo1.png" alt="Logo 1" style={{ height: 48, objectFit: 'contain' }} />
         <img src="/logo2.png" alt="Logo 2" style={{ height: 48, objectFit: 'contain' }} />
+        <img src="/logo3.png" alt="Logo 3" style={{ height: 48, objectFit: 'contain' }} />
         {onClose && (
           <IconButton
             onClick={onClose}
