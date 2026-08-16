@@ -74,7 +74,7 @@ const SettingsDialogHeader = ({ icon, title, subtitle, titleColor = '#111827' })
 );
 
 const Settings = () => {
-  const [modalOpen, setModalOpen] = useState(null); // 'username', 'password', 'telegram', 'cell', 'editCell', 'deleteAllPdls', 'deleteLogs', 'selectLogs', 'registrationCodes', 'weeklySchedule', 'systemInfo' or null
+  const [modalOpen, setModalOpen] = useState(null); // 'username', 'password', 'telegram', 'cell', 'editCell', 'deleteAllPdls', 'deleteLogs', 'selectLogs', 'registrationCodes', 'weeklySchedule', 'backup' or null
   const [newUsername, setNewUsername] = useState('');
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -83,6 +83,14 @@ const Settings = () => {
   const [telegramUsername, setTelegramUsername] = useState('');
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  // Backup settings + manual snapshot state
+  const [backupFrequency, setBackupFrequency] = useState('daily');
+  const [backupFrequencySaving, setBackupFrequencySaving] = useState(false);
+  const [backupFrequencyError, setBackupFrequencyError] = useState('');
+  const [snapshotState, setSnapshotState] = useState('idle'); // 'idle' | 'running' | 'done' | 'error'
+  const [snapshotResult, setSnapshotResult] = useState(null);
+  const [snapshotError, setSnapshotError] = useState('');
   
   // Cell management state
   const [cells, setCells] = useState([]);
@@ -270,6 +278,54 @@ const Settings = () => {
     setDeleteAllLogsConfirmation('');
     setNewCode('');
     setNewCodeDays('90');
+  };
+
+  // Load current automatic backup frequency
+  useEffect(() => {
+    const loadBackupFrequency = async () => {
+      try {
+        const response = await axios.get('/api/backup/settings');
+        if (response.data.frequency) {
+          setBackupFrequency(response.data.frequency);
+        }
+      } catch (err) {
+        console.error('Failed to load backup frequency:', err);
+      }
+    };
+    if (isAdmin) {
+      loadBackupFrequency();
+    }
+  }, [isAdmin]);
+
+  // Update automatic backup frequency
+  const handleBackupFrequencyChange = async (event) => {
+    const nextFrequency = event.target.value;
+    setBackupFrequency(nextFrequency);
+    setBackupFrequencyError('');
+    setBackupFrequencySaving(true);
+    try {
+      await axios.post('/api/backup/settings', { frequency: nextFrequency });
+    } catch (err) {
+      console.error('Failed to save backup frequency:', err);
+      setBackupFrequencyError(err.response?.data?.error || err.message);
+    } finally {
+      setBackupFrequencySaving(false);
+    }
+  };
+
+  // Manual backup (snapshot)
+  const handleSnapshot = async () => {
+    setSnapshotState('running');
+    setSnapshotError('');
+    setSnapshotResult(null);
+    try {
+      const response = await axios.post('/api/backup');
+      setSnapshotResult(response.data);
+      setSnapshotState('done');
+    } catch (err) {
+      setSnapshotError(err.response?.data?.error || err.message);
+      setSnapshotState('error');
+    }
   };
 
   const handleUsernameSubmit = async (e) => {
@@ -863,6 +919,116 @@ const Settings = () => {
             </label>
           </div>
         </div>
+
+        {isAdmin && (
+          <div style={{
+            marginTop: '24px',
+            padding: '20px',
+            background: '#f9fafb',
+            borderRadius: '12px',
+            border: '1px solid #e5e7eb'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#059669' }}>
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="17 8 12 3 7 8"/>
+                <line x1="12" y1="3" x2="12" y2="15"/>
+              </svg>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '600', color: '#111827' }}>Database Backup</h3>
+                <p style={{ margin: 0, fontSize: '14px', color: '#6b7280' }}>
+                  Automatically export to Google Drive &amp; Telegram, or take a snapshot now
+                </p>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <span style={{ fontWeight: '600', color: '#374151', fontSize: '14px' }}>
+                  Backup frequency
+                </span>
+                <FormControl size="small" fullWidth>
+                  <Select
+                    value={backupFrequency}
+                    onChange={handleBackupFrequencyChange}
+                    disabled={backupFrequencySaving}
+                  >
+                    <MenuItem value="off">Off (disabled)</MenuItem>
+                    <MenuItem value="every_6_hours">Every 6 hours</MenuItem>
+                    <MenuItem value="every_12_hours">Every 12 hours</MenuItem>
+                    <MenuItem value="daily">Daily</MenuItem>
+                    <MenuItem value="weekly">Weekly</MenuItem>
+                    <MenuItem value="monthly">Monthly</MenuItem>
+                  </Select>
+                </FormControl>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minHeight: 20 }}>
+                  {backupFrequencySaving && (
+                    <Typography variant="caption" sx={{ color: '#6b7280' }}>
+                      Saving…
+                    </Typography>
+                  )}
+                  {backupFrequencyError && (
+                    <Typography variant="caption" sx={{ color: '#dc2626' }}>
+                      {backupFrequencyError}
+                    </Typography>
+                  )}
+                </Box>
+              </div>
+
+              <Box sx={{ borderTop: '1px solid #e5e7eb', pt: 2 }}>
+                <Button
+                  onClick={handleSnapshot}
+                  disabled={snapshotState === 'running'}
+                  variant="contained"
+                  startIcon={
+                    snapshotState === 'running' ? (
+                      <CircularProgress size={16} color="inherit" />
+                    ) : (
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                        <circle cx="12" cy="13" r="4"/>
+                      </svg>
+                    )
+                  }
+                  sx={{ bgcolor: '#059669', '&:hover': { bgcolor: '#047857' } }}
+                >
+                  {snapshotState === 'running' ? 'Backing up…' : 'Take Snapshot Now'}
+                </Button>
+
+                {snapshotState === 'done' && snapshotResult && (
+                  <Box sx={{ mt: 2, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
+                    <Typography sx={{ fontSize: 13, color: '#059669', fontWeight: 600 }}>
+                      ✓ Snapshot saved: {snapshotResult.fileName}
+                    </Typography>
+                    {(snapshotResult.uploadedTo || []).map((dest) => (
+                      <Typography key={dest} sx={{ fontSize: 12, fontWeight: 700, color: '#059669', bgcolor: '#d1fae5', borderRadius: '12px', px: 1, py: 0.25 }}>
+                        {dest}
+                      </Typography>
+                    ))}
+                    {snapshotResult.link && (
+                      <Button
+                        href={snapshotResult.link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        size="small"
+                        variant="outlined"
+                        color="inherit"
+                      >
+                        Open in Drive
+                      </Button>
+                    )}
+                  </Box>
+                )}
+
+                {snapshotState === 'error' && (
+                  <Typography sx={{ mt: 2, fontSize: 13, color: '#dc2626' }}>
+                    ✗ Backup failed: {snapshotError}
+                  </Typography>
+                )}
+              </Box>
+            </div>
+          </div>
+        )}
 
         {/* System Information (moved from card/modal to bottom section) */}
         <div style={{

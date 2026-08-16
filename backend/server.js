@@ -12,8 +12,8 @@ const visitorRoutes = require('./routes/visitorRoutes');
 const authRoutes = require('./routes/authRoutes');
 const cellRoutes = require('./routes/cellRoutes');
 const scheduleRoutes = require('./routes/scheduleRoutes');
-const cron = require('node-cron');
 const backupService = require('./services/backupService');
+const backupRoutes = require('./routes/backupRoutes');
 
 const app = express();
 
@@ -84,6 +84,7 @@ app.use('/api/cells', cellRoutes);
 app.use('/api/schedule', scheduleRoutes);
 app.use('/api', visitorRoutes);
 app.use('/auth', authRoutes);
+app.use('/api/backup', backupRoutes);
 
 const errorHandler = require('./middleware/errorHandler');
 app.use(errorHandler);
@@ -193,17 +194,9 @@ const startServer = async () => {
         }
       }, 1000);
 
-      // Initialize automatic database backup and cleanup cron job (runs every day at midnight)
-      cron.schedule('0 0 * * *', async () => {
-        try {
-          logger.info('⏰ Starting scheduled database backup and cleanup...');
-          const report = await backupService.runScheduledBackup();
-          logger.info(`✅ Scheduled backup completed successfully: ${report.backupFile}`);
-        } catch (error) {
-          logger.error('❌ Scheduled backup failed:', error.message);
-        }
-      });
-      logger.info('⏰ Database backup and cleanup cron job scheduled (daily at midnight)');
+      // Initialize automatic database backup scheduler (frequency configurable from the Settings UI)
+      const backupScheduler = require('./services/backupScheduler');
+      backupScheduler.start();
 
       // Run a backup on startup if explicitly requested via environment variable (useful for testing/verifying)
       if (process.env.RUN_BACKUP_ON_STARTUP === 'true') {

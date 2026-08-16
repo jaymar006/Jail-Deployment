@@ -1,4 +1,5 @@
-const TelegramBot = require('node-telegram-bot-api');
+const ntba = require('node-telegram-bot-api');
+const TelegramBot = ntba.TelegramBot || ntba.default || ntba;
 const db = require('../config/db');
 
 // Initialize Telegram Bot with error handling

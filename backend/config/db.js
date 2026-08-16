@@ -148,6 +148,11 @@ CREATE TABLE IF NOT EXISTS weekly_cell_schedule (
   updated_at TEXT DEFAULT (datetime('now')),
   PRIMARY KEY (day_key, cell_id)
 );
+
+CREATE TABLE IF NOT EXISTS settings (
+  key TEXT PRIMARY KEY,
+  value TEXT
+);
 `;
 
 sqliteDb.serialize(() => {

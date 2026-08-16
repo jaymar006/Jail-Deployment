@@ -338,6 +338,10 @@ const initializeSchema = async () => {
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
           updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
           PRIMARY KEY (day_key, cell_id)
+        )`,
+        `CREATE TABLE IF NOT EXISTS settings (
+          key VARCHAR(255) PRIMARY KEY,
+          value TEXT
         )`
       ];
 

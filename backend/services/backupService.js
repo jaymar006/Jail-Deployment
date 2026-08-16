@@ -17,6 +17,35 @@ try {
 const OAUTH_TOKEN_PATH = process.env.GOOGLE_OAUTH_TOKEN_PATH || path.join(__dirname, '..', 'google-drive-token.json');
 
 /**
+ * Finds an existing Google Drive folder by name (reusing it if present) or
+ * creates a new one. Returns the folder ID.
+ * @param {object} drive - Google Drive API client
+ * @param {string} folderName - Name of the folder to find or create
+ * @param {string|null} parentId - ID of the parent folder, or null for root
+ * @returns {Promise<string>} Folder ID
+ */
+async function ensureDriveFolder(drive, folderName, parentId = null) {
+  const escapedName = folderName.replace(/'/g, "\\'");
+  const res = await drive.files.list({
+    q: `name='${escapedName}' and mimeType='application/vnd.google-apps.folder' and trashed=false`,
+    spaces: 'drive',
+    fields: 'files(id)',
+  });
+  if (res.data.files && res.data.files.length > 0) {
+    return res.data.files[0].id;
+  }
+  const createRes = await drive.files.create({
+    resource: {
+      name: folderName,
+      mimeType: 'application/vnd.google-apps.folder',
+      ...(parentId ? { parents: [parentId] } : {}),
+    },
+    fields: 'id',
+  });
+  return createRes.data.id;
+}
+
+/**
  * 1. BACKUP DATABASE
  * Programmatically generates database export based on active engine (SQLite or PostgreSQL)
  * @returns {Promise<{filePath: string, fileName: string, type: 'sqlite'|'postgres'}>}
@@ -195,10 +224,16 @@ async function uploadToGoogleDrive(filePath, fileName) {
   // Define Google Drive API client
   const drive = google.drive({ version: 'v3', auth });
 
-  const folderId = process.env.GOOGLE_DRIVE_FOLDER_ID;
-  if (!folderId) {
-    logger.warn('⚠️ GOOGLE_DRIVE_FOLDER_ID is not set in environment variables. Uploading to root of Service Account Google Drive.');
+  let parentFolderId = process.env.GOOGLE_DRIVE_FOLDER_ID;
+  if (!parentFolderId) {
+    const parentFolderName = process.env.GOOGLE_DRIVE_BACKUP_FOLDER_NAME || 'Jail Backups';
+    parentFolderId = await ensureDriveFolder(drive, parentFolderName);
+    logger.info(`📁 Parent backup folder: ${parentFolderName} (${parentFolderId})`);
   }
+  const now = new Date();
+  const dateFolderName = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  const folderId = await ensureDriveFolder(drive, dateFolderName, parentFolderId);
+  logger.info(`📁 Backups folder: ${parentFolderId}/${dateFolderName} (${folderId})`);
 
   const fileMetadata = {
     name: fileName,
@@ -271,7 +306,8 @@ async function uploadToTelegram(filePath, fileName) {
   }
 
   // Use node-telegram-bot-api (which is already a dependency)
-  const TelegramBot = require('node-telegram-bot-api');
+  const ntba = require('node-telegram-bot-api');
+  const TelegramBot = ntba.TelegramBot || ntba.default || ntba;
   const botInstance = new TelegramBot(botToken, { polling: false });
 
   logger.info(`📤 Sending backup ${fileName} to Telegram chat ${chatId}...`);
@@ -390,10 +426,72 @@ async function runScheduledBackup() {
   }
 }
 
+/**
+ * ORCHESTRATION FUNCTION (MANUAL)
+ * One-shot backup from the Settings UI: exports the database, uploads to
+ * Telegram and/or Google Drive (whichever are configured), and removes the
+ * local temp file. Unlike runScheduledBackup it performs NO record cleanup.
+ */
+async function runManualBackup() {
+  let tempFilePath = null;
+
+  try {
+    // 1. Export database to a local file
+    const { filePath, fileName } = await backupDatabase(['account_lockouts']);
+    tempFilePath = filePath;
+
+    const uploadedTo = [];
+    let fileId = null;
+    let link = null;
+
+    // 2a. Upload to Telegram (if configured)
+    if (process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_BACKUP_CHAT_ID) {
+      try {
+        const telegramRes = await uploadToTelegram(filePath, fileName);
+        uploadedTo.push('Telegram');
+        fileId = fileId || telegramRes.message_id;
+        link = link || `Sent to Telegram Chat ${process.env.TELEGRAM_BACKUP_CHAT_ID}`;
+      } catch (tgError) {
+        logger.error(`⚠️ Manual backup Telegram upload failed: ${tgError.message}`);
+      }
+    }
+
+    // 2b. Upload to Google Drive (if configured)
+    try {
+      const driveRes = await uploadToGoogleDrive(filePath, fileName);
+      uploadedTo.push('Google Drive');
+      fileId = fileId || driveRes.id;
+      link = link || driveRes.webViewLink || null;
+    } catch (driveError) {
+      logger.error(`⚠️ Manual backup Google Drive upload failed: ${driveError.message}`);
+    }
+
+    if (uploadedTo.length === 0) {
+      throw new Error('Backup upload failed: neither Google Drive nor Telegram is configured or reachable.');
+    }
+
+    logger.info(`🎉 Manual backup completed successfully! (Uploaded to: ${uploadedTo.join(', ')})`);
+    return {
+      success: true,
+      fileName,
+      fileId,
+      link,
+      uploadedTo,
+    };
+  } finally {
+    // 3. Delete local temporary file
+    if (tempFilePath && fs.existsSync(tempFilePath)) {
+      fs.unlinkSync(tempFilePath);
+      logger.debug(`Removed temporary local backup file: ${tempFilePath}`);
+    }
+  }
+}
+
 module.exports = {
   backupDatabase,
   uploadToTelegram,
   uploadToGoogleDrive,
   cleanupOldRecords,
-  runScheduledBackup
+  runScheduledBackup,
+  runManualBackup
 };
