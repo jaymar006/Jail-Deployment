@@ -230,8 +230,16 @@ async function uploadToGoogleDrive(filePath, fileName) {
     parentFolderId = await ensureDriveFolder(drive, parentFolderName);
     logger.info(`📁 Parent backup folder: ${parentFolderName} (${parentFolderId})`);
   }
-  const now = new Date();
-  const dateFolderName = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  // Name the dated folder by the LOCAL business date (Asia/Manila by default),
+  // not the server's UTC date — otherwise Render (UTC) would label a backup
+  // taken after 8PM Manila time as "yesterday". Override with BACKUP_TIMEZONE.
+  const backupTimeZone = process.env.BACKUP_TIMEZONE || 'Asia/Manila';
+  const dateFolderName = new Intl.DateTimeFormat('en-CA', {
+    timeZone: backupTimeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date());
   const folderId = await ensureDriveFolder(drive, dateFolderName, parentFolderId);
   logger.info(`📁 Backups folder: ${parentFolderId}/${dateFolderName} (${folderId})`);
 
@@ -324,11 +332,19 @@ async function uploadToTelegram(filePath, fileName) {
 
   logger.info(`📤 Sending backup ${fileName} to Telegram chat ${chatId}...`);
 
-  const response = await botInstance.sendDocument(chatId, filePath, {}, {
+  // Guard against the Telegram Bot API hanging indefinitely (which would block
+  // the rest of the backup cycle, e.g. the Google Drive upload). Default 30s.
+  const timeoutMs = Number(process.env.TELEGRAM_BACKUP_TIMEOUT_MS) || 30000;
+  const sendPromise = botInstance.sendDocument(chatId, filePath, {}, {
     filename: fileName,
     contentType: fileName.endsWith('.sql') ? 'text/plain' : 'application/octet-stream'
   });
+  const timeoutPromise = new Promise((_, reject) => {
+    const timer = setTimeout(() => reject(new Error(`Telegram upload timed out after ${timeoutMs}ms`)), timeoutMs);
+    sendPromise.then(() => clearTimeout(timer), () => clearTimeout(timer));
+  });
 
+  const response = await Promise.race([sendPromise, timeoutPromise]);
   logger.info(`✅ Uploaded to Telegram successfully. Message ID: ${response.message_id}`);
   return response;
 }
@@ -363,39 +379,38 @@ async function runScheduledBackup() {
     );
     const hasTelegram = !!(process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_BACKUP_CHAT_ID);
 
-    // 2a. Upload to Telegram (if configured)
-    if (hasTelegram) {
-      try {
-        const telegramRes = await uploadToTelegram(filePath, fileName);
-        uploadResult = {
-          name: fileName,
-          id: telegramRes.message_id,
-          webViewLink: `Sent to Telegram Chat ${process.env.TELEGRAM_BACKUP_CHAT_ID}`
-        };
-        uploadedTo.push('Telegram');
-      } catch (tgError) {
-        logger.error(`⚠️ Telegram upload failed: ${tgError.message}`);
-        if (!hasGoogleDrive) throw tgError; // Throw if no fallback
-      }
-    }
-
-    // 2b. Upload to Google Drive (if configured and Telegram hasn't already handled it, or as parallel)
+    // 2a. Upload to Google Drive first (primary destination)
     if (hasGoogleDrive) {
       try {
         const driveRes = await uploadToGoogleDrive(filePath, fileName);
-        // Only override uploadResult if Telegram didn't write it, but log success
-        if (!uploadResult) {
-          uploadResult = driveRes;
-        }
+        uploadResult = {
+          name: fileName,
+          id: driveRes.id,
+          folderId: driveRes.folderId,
+          webViewLink: driveRes.folderLink || driveRes.webViewLink
+        };
         uploadedTo.push('Google Drive');
       } catch (driveError) {
         logger.error(`⚠️ Google Drive upload failed: ${driveError.message}`);
-        // If we successfully uploaded to Telegram, do not fail the backup cycle
-        if (uploadedTo.includes('Telegram')) {
-          logger.warn('🔔 Continuing backup cycle because Telegram backup was successful.');
-        } else {
-          throw driveError; // No successful upload, fail the backup cycle
+        if (!hasTelegram) throw driveError; // Throw if no fallback
+      }
+    }
+
+    // 2b. Upload to Telegram (secondary, best-effort)
+    if (hasTelegram) {
+      try {
+        const telegramRes = await uploadToTelegram(filePath, fileName);
+        if (!uploadResult) {
+          uploadResult = {
+            name: fileName,
+            id: telegramRes.message_id,
+            webViewLink: `Sent to Telegram Chat ${process.env.TELEGRAM_BACKUP_CHAT_ID}`
+          };
         }
+        uploadedTo.push('Telegram');
+      } catch (tgError) {
+        logger.error(`⚠️ Telegram upload failed: ${tgError.message}`);
+        // If Drive already succeeded, do not fail the backup cycle
       }
     }
 
@@ -456,7 +471,17 @@ async function runManualBackup() {
     let fileId = null;
     let link = null;
 
-    // 2a. Upload to Telegram (if configured)
+    // 2a. Upload to Google Drive first (primary destination)
+    try {
+      const driveRes = await uploadToGoogleDrive(filePath, fileName);
+      uploadedTo.push('Google Drive');
+      fileId = fileId || driveRes.id;
+      link = link || driveRes.folderLink || driveRes.webViewLink || null;
+    } catch (driveError) {
+      logger.error(`⚠️ Manual backup Google Drive upload failed: ${driveError.message}`);
+    }
+
+    // 2b. Upload to Telegram (secondary, best-effort)
     if (process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_BACKUP_CHAT_ID) {
       try {
         const telegramRes = await uploadToTelegram(filePath, fileName);
@@ -466,16 +491,6 @@ async function runManualBackup() {
       } catch (tgError) {
         logger.error(`⚠️ Manual backup Telegram upload failed: ${tgError.message}`);
       }
-    }
-
-    // 2b. Upload to Google Drive (if configured)
-    try {
-      const driveRes = await uploadToGoogleDrive(filePath, fileName);
-      uploadedTo.push('Google Drive');
-      fileId = fileId || driveRes.id;
-      link = link || driveRes.folderLink || driveRes.webViewLink || null;
-    } catch (driveError) {
-      logger.error(`⚠️ Manual backup Google Drive upload failed: ${driveError.message}`);
     }
 
     if (uploadedTo.length === 0) {
