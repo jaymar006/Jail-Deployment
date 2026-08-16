@@ -620,7 +620,7 @@
 .time-format-toggle {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: space-between;
   gap: 10px;
   margin: 12px 0 20px;
   flex-wrap: wrap;
@@ -635,6 +635,12 @@
 .time-format-toggle .time-format-title {
   color: #0f172a;
   font-size: 15px;
+}
+
+.time-format-toggle .time-format-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .time-format-toggle .time-format-separator {

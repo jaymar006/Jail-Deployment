@@ -9,6 +9,7 @@ import IconButton from '@mui/material/IconButton';
 import Avatar from '@mui/material/Avatar';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
+import Divider from '@mui/material/Divider';
 import ListItemIcon from '@mui/material/ListItemIcon';
 import Breadcrumbs from '@mui/material/Breadcrumbs';
 import MuiLink from '@mui/material/Link';
@@ -123,39 +124,62 @@ const Header = ({ activePage, breadcrumbs = [], onMenuClick }) => {
           </Button>
         )}
         {isAuthenticated && (
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Typography variant="body2" sx={{ fontWeight: 600, display: { xs: 'none', sm: 'block' } }}>
-              {username}
-            </Typography>
-            {role === 'admin' && (
-              <Typography
-                variant="caption"
-                sx={{
-                  display: { xs: 'none', sm: 'inline-flex' },
-                  fontWeight: 700,
-                  color: '#2563eb',
-                  bgcolor: '#dbeafe',
-                  borderRadius: '6px',
-                  px: 0.75,
-                  py: 0.25,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.04em',
-                }}
-              >
-                Admin
-              </Typography>
-            )}
-            <IconButton
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            <Button
               onClick={(e) => setAnchorEl(e.currentTarget)}
-              size="small"
+              color="inherit"
               aria-label="User account menu"
-              sx={{ ml: 0.5 }}
+              sx={{ textTransform: 'none', gap: 1.25, px: 1, py: 0.5, minWidth: 0 }}
             >
+              <Box sx={{ textAlign: 'right', display: { xs: 'none', sm: 'block' } }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, justifyContent: 'flex-end' }}>
+                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                    {username}
+                  </Typography>
+                  {role === 'admin' && (
+                    <Box
+                      component="span"
+                      sx={{
+                        fontWeight: 700,
+                        color: '#2563eb',
+                        bgcolor: '#dbeafe',
+                        borderRadius: '6px',
+                        px: 0.75,
+                        py: 0.25,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.04em',
+                        fontSize: 11,
+                      }}
+                    >
+                      Admin
+                    </Box>
+                  )}
+                </Box>
+                <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', fontSize: 12 }}>
+                  {role ? `Role: ${role}` : 'Signed in'}
+                </Typography>
+              </Box>
               <Avatar sx={{ width: 32, height: 32, bgcolor: 'primary.main', fontSize: 14 }}>
                 {(username || '?').charAt(0).toUpperCase()}
               </Avatar>
-            </IconButton>
-            <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={() => setAnchorEl(null)}>
+            </Button>
+            <Menu
+              anchorEl={anchorEl}
+              open={Boolean(anchorEl)}
+              onClose={() => setAnchorEl(null)}
+              anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+              transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+              slotProps={{ paper: { sx: { minWidth: 220, mt: 0.5 } } }}
+            >
+              <Box sx={{ px: 2, py: 1.5 }}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 700, lineHeight: 1.2 }}>
+                  {username}
+                </Typography>
+                <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.25 }}>
+                  {role ? `Role: ${role}` : 'Signed in'}
+                </Typography>
+              </Box>
+              <Divider />
               <MenuItem component={Link} to="/settings" onClick={() => setAnchorEl(null)}>
                 <ListItemIcon>
                   <SettingsIcon fontSize="small" />

@@ -1576,20 +1576,22 @@ const Dashboard = () => {
 
             <div className="time-format-toggle">
               <span className="time-format-title">Allowed Visitors</span>
-              <span className="time-format-separator">|</span>
-              <span>Time format:</span>
-              <Dropdown
-                variant="time"
-                value={useMilitaryTime ? '24' : '12'}
-                onChange={(val) => setUseMilitaryTime(val === '24')}
-                ariaLabel="Time format"
-                minWidth={200}
-                align="right"
-                options={[
-                  { value: '12', label: '12-hour (AM/PM)' },
-                  { value: '24', label: '24-hour' },
-                ]}
-              />
+              <span className="time-format-controls">
+                <span className="time-format-separator">|</span>
+                <span>Time format:</span>
+                <Dropdown
+                  variant="time"
+                  value={useMilitaryTime ? '24' : '12'}
+                  onChange={(val) => setUseMilitaryTime(val === '24')}
+                  ariaLabel="Time format"
+                  minWidth={200}
+                  align="right"
+                  options={[
+                    { value: '12', label: '12-hour (AM/PM)' },
+                    { value: '24', label: '24-hour' },
+                  ]}
+                />
+              </span>
             </div>
 
             <table className="common-table card-table card-first-is-name">
@@ -1649,11 +1651,12 @@ const Dashboard = () => {
                           <button
                             className="common-button edit no-print"
                             onClick={(e) => { e.stopPropagation(); openEditModalForRow(v); }}
+                            title="Edit"
+                            aria-label="Edit"
                           >
                             <svg className="button-icon" viewBox="0 0 24 24">
                               <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
                             </svg>
-                            Edit
                           </button>
                         </div>
                       </td>
