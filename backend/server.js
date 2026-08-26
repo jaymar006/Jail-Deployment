@@ -107,10 +107,21 @@ const buildPath = fs.existsSync(path.join(__dirname, 'public'))
   : path.join(__dirname, '..', 'frontend', 'build');
 
 if (fs.existsSync(buildPath)) {
-  app.use(express.static(buildPath));
+  app.use(express.static(buildPath, {
+    setHeaders: (res, filePath) => {
+      if (filePath.endsWith('.html')) {
+        // Never cache HTML - it references hashed asset filenames.
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      } else if (/[/\\]static[/\\]/.test(filePath)) {
+        // Hashed assets are safe to cache forever.
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      }
+    },
+  }));
 
   // Fallback route to serve index.html for client-side routing
   app.get('*', (req, res) => {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.sendFile(path.join(buildPath, 'index.html'));
   });
 }

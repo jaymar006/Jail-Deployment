@@ -5,11 +5,22 @@ const findUserByUsername = async (username) => {
   return rows[0];
 };
 
-const createUser = async (username, password, telegramUsername, role = 'user') => {
-  const [result] = await db.query(
-    'INSERT INTO users (username, password, telegram_username, role) VALUES (?, ?, ?, ?)', 
-    [username, password, telegramUsername || null, role]
-  );
+const createUser = async (username, password, telegramUsername, role = 'user', email = '') => {
+  const usePostgres = !!process.env.DATABASE_URL;
+  let result;
+  if (usePostgres) {
+    // PostgreSQL schema has no email column
+    [result] = await db.query(
+      'INSERT INTO users (username, password, telegram_username, role) VALUES (?, ?, ?, ?)',
+      [username, password, telegramUsername || null, role]
+    );
+  } else {
+    // SQLite schema requires a NOT NULL UNIQUE email
+    [result] = await db.query(
+      'INSERT INTO users (username, password, email, telegram_username, role) VALUES (?, ?, ?, ?, ?)',
+      [username, password, email || '', telegramUsername || null, role]
+    );
+  }
   return result.insertId;
 };
 

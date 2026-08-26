@@ -420,7 +420,7 @@ const Logs = () => {
       <div className="common-container">
         <main>
           {/* Filter Controls */}
-            <div className="search-filter-container">
+            <div className="search-filter-container logs-filters">
               <div className="search-filter-grid">
                 {/* Search Section */}
                 <div className="search-filter-item search-group">

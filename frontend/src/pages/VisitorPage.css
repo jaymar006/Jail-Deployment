@@ -214,17 +214,41 @@
 }
 
 @media print {
-  body.print-only-id-preview * {
-    visibility: hidden !important;
+  /* Print uses a dedicated #print-root (cloned cards appended to body by JS).
+     Everything else on the page is removed from layout entirely - no blank
+     leading pages, no reliance on visibility tricks. */
+  body.print-only-id-preview > *:not(#print-root) {
+    display: none !important;
   }
-  body.print-only-id-preview #id-preview-container,
-  body.print-only-id-preview #id-preview-container * {
+
+  /* Counter Dashboard.css's global "body * { visibility: hidden }" print rule,
+     which otherwise blanks out our cloned cards too. */
+  body.print-only-id-preview,
+  body.print-only-id-preview #print-root,
+  body.print-only-id-preview #print-root * {
     visibility: visible !important;
   }
-  body.print-only-id-preview #id-preview-container {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
+
+  /* Preserve the exact on-screen card design:
+     fixed dimensions, centered, one ID per sheet, exact colors. */
+  body.print-only-id-preview #print-root .id-card {
+    position: relative !important;
+    display: flex !important;
+    flex-direction: row !important;
+    justify-content: space-between !important;
+    width: 612px !important;
+    height: 486px !important;
+    max-width: none !important;
+    margin: 0 auto !important;
+    overflow: hidden !important;
+    break-after: page;
+    page-break-after: always;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  body.print-only-id-preview #print-root .id-card:last-child {
+    break-after: auto;
+    page-break-after: auto;
   }
 }

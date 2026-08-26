@@ -408,6 +408,15 @@ const VisitorPage = () => {
   // Get selected visitors data
   const selectedVisitors = visitors.filter(visitor => selectedVisitorIds.includes(visitor.id));
 
+  // While any part of the ID workflow is active, keep every row fully
+  // expanded and ignore collapse toggles (mobile card view hides details).
+  const idWorkflowActive = isSelecting || showIdPreview || selectedVisitorIds.length > 0;
+
+  // Name of the visitor currently targeted by the camera modal (for header display)
+  const cameraVisitorName = cameraVisitorId != null
+    ? (visitors.find(v => v.id === cameraVisitorId)?.name || '')
+    : '';
+
   const toggleCollapse = (id) => {
     setCollapsedIds(prev => {
       const next = new Set(prev);
@@ -415,6 +424,156 @@ const VisitorPage = () => {
       else next.add(id);
       return next;
     });
+  };
+
+  // Print: clone cards into a dedicated print root so the rest of the app is
+  // display:none (no blank leading pages) and each card paginates to its own sheet.
+  const handlePrintSelected = async () => {
+    try {
+      const container = document.getElementById('id-preview-container');
+      if (!container) {
+        alert('ID preview container not found.');
+        return;
+      }
+
+      const printRoot = document.createElement('div');
+      printRoot.id = 'print-root';
+      Array.from(container.children).forEach((card) => {
+        const clone = card.cloneNode(true);
+        clone.querySelectorAll('.id-photo-btn').forEach((btn) => btn.remove());
+
+        // cloneNode does NOT copy <canvas> pixels (QR codes) - swap each
+        // cloned canvas for an <img> carrying the original's bitmap.
+        const srcCanvases = card.querySelectorAll('canvas');
+        const dstCanvases = clone.querySelectorAll('canvas');
+        srcCanvases.forEach((cv, i) => {
+          const dst = dstCanvases[i];
+          if (!dst || typeof cv.toDataURL !== 'function') return;
+          const img = document.createElement('img');
+          img.src = cv.toDataURL('image/png');
+          img.style.width = `${cv.clientWidth}px`;
+          img.style.height = `${cv.clientHeight}px`;
+          img.style.display = 'block';
+          if (dst.className) img.className = dst.className;
+          dst.replaceWith(img);
+        });
+
+        printRoot.appendChild(clone);
+      });
+
+      document.body.appendChild(printRoot);
+      document.body.classList.add('print-only-id-preview');
+
+      // Wait until every image (backgrounds, logos, QR data-URLs) is loaded
+      // AND decoded. Newly appended imgs often reach window.print() before
+      // their bitmaps are ready, which prints empty boxes - waiting makes
+      // the output deterministic instead of working "on the second try".
+      await Promise.all(Array.from(printRoot.querySelectorAll('img')).map((img) => {
+        if (img.complete && img.naturalWidth > 0) {
+          return img.decode ? img.decode().catch(() => {}) : Promise.resolve();
+        }
+        return new Promise((resolve) => {
+          let settled = false;
+          const done = () => {
+            if (settled) return;
+            settled = true;
+            img.removeEventListener('load', done);
+            img.removeEventListener('error', done);
+            if (img.decode) img.decode().catch(() => {});
+            resolve();
+          };
+          img.addEventListener('load', done);
+          img.addEventListener('error', done);
+          // Safety valve: never block the print dialog for more than 4s.
+          setTimeout(done, 4000);
+        });
+      }));
+
+      // Let layout/paint settle twice before snapshotting.
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+
+      const cleanup = () => {
+        document.body.classList.remove('print-only-id-preview');
+        if (printRoot.parentNode) printRoot.parentNode.removeChild(printRoot);
+        window.removeEventListener('afterprint', cleanup);
+      };
+      window.addEventListener('afterprint', cleanup);
+
+      window.print();
+    } catch (error) {
+      console.error('Print error:', error);
+      alert('An error occurred while trying to print. Please try again.');
+    }
+  };
+
+  // Save: single ID downloads a PNG directly; multiple IDs are bundled
+  // into one zip archive instead of triggering many separate downloads.
+  const handleSaveIds = async () => {
+    const container = document.getElementById('id-preview-container');
+    if (!container) {
+      alert('ID preview container not found.');
+      return;
+    }
+    const cards = Array.from(container.querySelectorAll('.id-card'));
+    if (!cards.length) {
+      alert('No ID cards to save.');
+      return;
+    }
+
+    // Render every card first; abort early (nothing downloaded) on failure.
+    const exports = [];
+    for (let i = 0; i < cards.length; i++) {
+      const visitor = selectedVisitors[i];
+      const name = (visitor?.name || `visitor_${visitor?.id || i + 1}`).replace(/\s+/g, '_');
+      try {
+        // eslint-disable-next-line no-await-in-loop
+        const dataUrl = await toPng(cards[i], {
+          pixelRatio: 3,
+          filter: (node) => !(node.classList && node.classList.contains('id-photo-btn')),
+        });
+        exports.push({ name, dataUrl });
+      } catch (error) {
+        console.error('Error rendering image:', error);
+        alert(`Failed to render the ID image for ${name}. Nothing was downloaded.`);
+        return;
+      }
+    }
+
+    try {
+      if (exports.length === 1) {
+        const link = document.createElement('a');
+        link.download = `${exports[0].name}_ID.png`;
+        link.href = exports[0].dataUrl;
+        link.click();
+        return;
+      }
+
+      const JSZip = (await import('jszip')).default;
+      const zip = new JSZip();
+      const usedNames = new Set();
+      exports.forEach(({ name, dataUrl }) => {
+        let fileName = `${name}_ID.png`;
+        let n = 2;
+        while (usedNames.has(fileName)) {
+          fileName = `${name}_${n}_ID.png`;
+          n++;
+        }
+        usedNames.add(fileName);
+        zip.file(fileName, dataUrl.split(',')[1], { base64: true });
+      });
+
+      const stamp = new Date().toISOString().slice(0, 10);
+      const blob = await zip.generateAsync({ type: 'blob' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.download = `Visitor_IDs_${stamp}.zip`;
+      link.href = url;
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+    } catch (error) {
+      console.error('Error saving images:', error);
+      alert('Failed to save the visitor ID images.');
+    }
   };
 
   return (
@@ -456,12 +615,12 @@ const VisitorPage = () => {
                 visitors.map(visitor => (
                   <tr
                     key={visitor.id}
-                    className={collapsedIds.has(visitor.id) ? 'card-expanded' : 'card-collapsed'}
-                    onClick={() => toggleCollapse(visitor.id)}
-                    style={{ cursor: 'pointer' }}
+                    className={(idWorkflowActive || collapsedIds.has(visitor.id)) ? 'card-expanded' : 'card-collapsed'}
+                    onClick={() => { if (!idWorkflowActive) toggleCollapse(visitor.id); }}
+                    style={{ cursor: idWorkflowActive ? 'default' : 'pointer' }}
                   >
                     {isSelecting && (
-                      <td>
+                      <td className="select-cell">
                         <input
                           type="checkbox"
                           checked={selectedVisitorIds.includes(visitor.id)}
@@ -479,17 +638,27 @@ const VisitorPage = () => {
                     <td data-label="Contact Number">{visitor.contact_number}</td>
                     <td data-label="Actions">
                       <div className="action-buttons-row">
-                        <button className="common-button edit" onClick={() => openEditModal(visitor)}>
+                        <button
+                          type="button"
+                          className="common-button edit icon-button"
+                          title="Edit visitor"
+                          aria-label="Edit visitor"
+                          onClick={() => openEditModal(visitor)}
+                        >
                           <svg className="button-icon" viewBox="0 0 24 24">
                             <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
                           </svg>
-                          Edit
                         </button>
-                        <button className="common-button delete" onClick={() => handleDeleteVisitor(visitor.id)}>
+                        <button
+                          type="button"
+                          className="common-button delete icon-button"
+                          title="Delete visitor"
+                          aria-label="Delete visitor"
+                          onClick={() => handleDeleteVisitor(visitor.id)}
+                        >
                           <svg className="button-icon" viewBox="0 0 24 24">
                             <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
                           </svg>
-                          Delete
                         </button>
                       </div>
                     </td>
@@ -943,12 +1112,23 @@ const VisitorPage = () => {
                           <img src="/logo3.png" alt="Logo 3" style={{ margin: 0, width: '66px', height: '66px', objectFit: 'contain' }} />
                         </div>
                         <div className="id-card-title" style={{ fontWeight: 'bold', marginTop: '5px', marginBottom: '10px', fontSize: '1rem', textAlign: 'center' }}>Visitator's Identification Card</div>
-                        <div className="id-card-photo-placeholder" style={{ width: '180px', height: '180px', backgroundColor: '#ccc', margin: '10px auto', display: 'block', flexShrink: 0, textAlign: 'center', lineHeight: '180px', fontWeight: 'bold', color: '#666' }}>
+                        <div className="id-card-photo-placeholder" style={{ width: '180px', height: '180px', backgroundColor: '#ccc', margin: '10px auto', display: 'block', flexShrink: 0, textAlign: 'center', lineHeight: '180px', fontWeight: 'bold', color: '#666', position: 'relative' }}>
                           {capturedPhotos[visitor.id] ? (
-                            <img src={capturedPhotos[visitor.id]} alt="Captured" style={{ width: '180px', height: '180px', objectFit: 'cover', borderRadius: '4px' }} />
+                            <img src={capturedPhotos[visitor.id]} alt={visitor.name} style={{ width: '180px', height: '180px', objectFit: 'cover', borderRadius: '4px' }} />
                           ) : (
                             '2x2 Photo'
                           )}
+                          <button
+                            type="button"
+                            className={`id-photo-btn ${capturedPhotos[visitor.id] ? 'has-photo' : ''}`}
+                            title={capturedPhotos[visitor.id] ? `Retake photo — ${visitor.name}` : `Add photo — ${visitor.name}`}
+                            aria-label={capturedPhotos[visitor.id] ? `Retake photo for ${visitor.name}` : `Add photo for ${visitor.name}`}
+                            onClick={(e) => { e.stopPropagation(); openCameraForVisitor(visitor.id); }}
+                          >
+                            <svg viewBox="0 0 24 24">
+                              <path d="M12 15.2a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4zM9 2L7.17 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2h-3.17L15 2H9zm3 15a5 5 0 1 1 0-10 5 5 0 0 1 0 10z"/>
+                            </svg>
+                          </button>
                         </div>
                         <div style={{ textAlign: 'center', fontWeight: 'bold', marginTop: '5px' }}>Visitor</div>
                         <div className="id-card-info" style={{ fontSize: '0.9rem', marginTop: '5px', textAlign: 'center' }}>
@@ -994,71 +1174,13 @@ const VisitorPage = () => {
                 </svg>
                 Close Preview
               </button>
-              <button className="common-button" onClick={() => {
-                try {
-                  const container = document.getElementById('id-preview-container');
-                  if (!container) {
-                    alert('ID preview container not found.');
-                    return;
-                  }
-
-                  document.body.classList.add('print-only-id-preview');
-
-                  // Listen for afterprint event to remove the class
-                  const removePrintClass = () => {
-                    document.body.classList.remove('print-only-id-preview');
-                    window.removeEventListener('afterprint', removePrintClass);
-                  };
-                  window.addEventListener('afterprint', removePrintClass);
-
-                  // Trigger print directly
-                  window.print();
-                } catch (error) {
-                  console.error('Print error:', error);
-                  alert('An error occurred while trying to print. Please try again.');
-                }
-              }}>
+              <button className="common-button" onClick={handlePrintSelected}>
                 <svg className="button-icon" viewBox="0 0 24 24">
                   <path d="M19 8H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zm-3 11H8v-5h8v5zm3-7c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm-1-9H6v4h12V3z"/>
                 </svg>
                 Print Selected IDs
               </button>
-              <button className="common-button" onClick={() => {
-                if (selectedVisitorIds.length !== 1) {
-                  alert('Please select exactly one visitor to add a photo.');
-                  return;
-                }
-                openCameraForVisitor(selectedVisitorIds[0]);
-              }}>
-                <svg className="button-icon" viewBox="0 0 24 24">
-                  <path d="M12 2C13.1 2 14 2.9 14 4C14 5.1 13.1 6 12 6C10.9 6 10 5.1 10 4C10 2.9 10.9 2 12 2ZM21 9V7L15 1H5C3.89 1 3 1.89 3 3V21A2 2 0 0 0 5 23H19A2 2 0 0 0 21 21V9M19 9H14V4H5V21H19V9Z"/>
-                </svg>
-                Add Photo
-              </button>
-              <button className="common-button save" onClick={() => {
-                if (selectedVisitorIds.length !== 1) {
-                  alert('Please select exactly one visitor to save.');
-                  return;
-                }
-                const container = document.getElementById('id-preview-container');
-                if (!container) {
-                  alert('ID preview container not found.');
-                  return;
-                }
-                toPng(container, { pixelRatio: 3 })
-                  .then((dataUrl) => {
-                    const link = document.createElement('a');
-                    const visitorName = selectedVisitors[0]?.name || 'visitor_id';
-                    const safeName = visitorName.replace(/\s+/g, '_');
-                    link.download = `${safeName}_ID.png`;
-                    link.href = dataUrl;
-                    link.click();
-                  })
-                  .catch((error) => {
-                    console.error('Error saving image:', error);
-                    alert('Failed to save visitor ID as image.');
-                  });
-              }}>
+              <button className="common-button save" onClick={handleSaveIds}>
                 <svg className="button-icon" viewBox="0 0 24 24">
                   <path d="M17 3H5C3.89 3 3 3.9 3 5V19C3 20.1 3.89 21 5 21H19C20.1 21 21 20.1 21 19V7L17 3M19 19H5V5H16.17L19 7.83V19M12 12C10.34 12 9 13.34 9 15S10.34 18 12 18 15 16.66 15 15 13.66 12 12 12M6 6H15V10H6V6Z"/>
                 </svg>
@@ -1073,7 +1195,9 @@ const VisitorPage = () => {
           <Modal onClose={closeCameraModal}>
             <div style={{ maxWidth: '400px', width: '100%' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', paddingBottom: '10px', borderBottom: '1px solid #dee2e6' }}>
-                <h5 style={{ margin: 0, fontSize: '1.25rem', fontWeight: '500' }}>Capture Photo</h5>
+                <h5 style={{ margin: 0, fontSize: '1.25rem', fontWeight: '500' }}>
+                  Capture Photo{cameraVisitorName ? ` — ${cameraVisitorName}` : ''}
+                </h5>
                 <button type="button" style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#6b7280' }} aria-label="Close" onClick={closeCameraModal}>
                   <span aria-hidden="true">&times;</span>
                 </button>

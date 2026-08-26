@@ -1,4 +1,4 @@
-/* ID Preview Styles */
+﻿/* ID Preview Styles */
 #id-preview-container {
   display: flex;
   gap: 20px;
@@ -145,7 +145,7 @@
 }
 
 /* Mobile Responsive Styles */
-@media (max-width: 768px) {
+@media screen and (max-width: 768px) {
   #id-preview-container {
     flex-direction: column;
     align-items: center;
@@ -195,7 +195,7 @@
   }
 }
 
-@media (max-width: 480px) {
+@media screen and (max-width: 480px) {
   .id-card {
     max-width: 100%;
   }
@@ -220,5 +220,62 @@
     height: 70px;
     line-height: 70px;
     font-size: 0.75rem;
+  }
+}
+/* Per-card photo capture button */
+.id-photo-btn {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background-color: rgba(17, 24, 39, 0.75);
+  color: #ffffff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  z-index: 20;
+  transition: opacity 0.15s ease, background-color 0.15s ease, transform 0.1s ease;
+}
+
+.id-photo-btn svg {
+  width: 18px;
+  height: 18px;
+  fill: currentColor;
+}
+
+.id-photo-btn:hover {
+  background-color: rgba(17, 24, 39, 0.95);
+}
+
+.id-photo-btn:active {
+  transform: scale(0.92);
+}
+
+/* Once a photo exists, keep the card clean - reveal retake only on hover/focus */
+.id-photo-btn.has-photo {
+  opacity: 0;
+}
+
+.id-card:hover .id-photo-btn.has-photo,
+.id-photo-btn.has-photo:focus-visible {
+  opacity: 1;
+}
+
+@media screen and (max-width: 768px) {
+  .id-photo-btn {
+    width: 28px;
+    height: 28px;
+    right: 3px;
+    bottom: 3px;
+  }
+
+  .id-photo-btn svg {
+    width: 15px;
+    height: 15px;
   }
 }

@@ -540,6 +540,19 @@ td.card-summary {
   height: 12px;
 }
 
+/* Icon-only action buttons (no text label) */
+.action-buttons-row .common-button.icon-button {
+  width: 32px;
+  min-width: 32px;
+  height: 30px;
+  padding: 0;
+}
+
+.action-buttons-row .common-button.icon-button .button-icon {
+  width: 16px;
+  height: 16px;
+}
+
 /* Icon styles for buttons */
 .button-icon {
   width: 16px;
@@ -991,6 +1004,12 @@ td.card-summary {
     margin-bottom: 14px;
   }
 
+  /* Logs on phone: search bar only */
+  .logs-filters .sort-group,
+  .logs-filters .filter-group {
+    display: none;
+  }
+
   .search-filter-grid {
     flex-direction: column;
     align-items: stretch;
@@ -1224,6 +1243,12 @@ td.card-summary {
   }
 }
 
+/* Card summary cell: mobile-only collapsed/expanded card header.
+   Hidden on desktop so it never shows as an extra table column. */
+.common-table.card-table td.card-summary {
+  display: none;
+}
+
 /* ===== Stacked card table layout for phones ===== */
 /* Opt-in via `card-table` class + `data-label` on each <td>. */
 @media (max-width: 768px) {
@@ -1388,5 +1413,13 @@ td.card-summary {
   /* Tables whose first detail cell is the name (already shown in the header) */
   .common-table.card-table.card-first-is-name tbody tr.card-expanded td:first-child {
     display: none;
+  }
+
+  /* Exception: ID-selection checkbox cells must stay visible in expanded rows */
+  .common-table.card-table tbody tr.card-expanded td.select-cell {
+    display: table-cell !important;
+    width: auto;
+    vertical-align: middle;
+    padding: 4px 8px 10px 0;
   }
 }

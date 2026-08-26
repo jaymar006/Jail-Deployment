@@ -26,6 +26,7 @@ const initDefaultUser = async () => {
     }
 
     const adminUsername = process.env.ADMIN_USERNAME || 'admin';
+    const adminEmail = process.env.ADMIN_EMAIL || '';
 
     console.log('🔐 No admin user found. Creating default admin user...');
     const hashedPassword = await bcrypt.hash(adminPassword, 10);
@@ -34,7 +35,8 @@ const initDefaultUser = async () => {
       adminUsername,
       hashedPassword,
       '',
-      'admin'
+      'admin',
+      adminEmail
     );
 
     console.log(`✅ Default admin user created successfully!`);
