@@ -1,10 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import axios from '../services/api';
 import * as XLSX from 'xlsx';
 import SkeletonTable from '../components/SkeletonTable';
 import Dropdown from '../components/Dropdown';
+import useTableState from '../hooks/useTableState';
+import TablePagination from '../components/TablePagination';
+import FilterChips from '../components/FilterChips';
+import SortIndicator from '../components/SortIndicator';
+import BulkActionBar from '../components/BulkActionBar';
+import EmptyState from '../components/EmptyState';
 import './common.css';
 
 const Modal = ({ children, onClose, wide = false }) => {
@@ -111,11 +117,15 @@ const toYMD = (value) => {
 const Datas = () => {
   const [pdls, setPdls] = useState([]);
   const [loadingPdls, setLoadingPdls] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
   const [sortOption, setSortOption] = useState('none');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
   const [expandedIds, setExpandedIds] = useState(() => new Set());
+
+  // Table state via shared hook (search, sort, pagination, selection, filter chips)
+  const table = useTableState({
+    data: pdls,
+    searchFields: ['last_name', 'first_name', 'middle_name', 'criminal_case_no', 'offense_charge', 'court_branch', 'cell_number'],
+    defaultPageSize: 20,
+  });
 
   const toggleCollapse = (id) => {
     setExpandedIds(prev => {
@@ -126,15 +136,7 @@ const Datas = () => {
     });
   };
 
-  // New: track column and direction for header sorting
-  const [sortColumn, setSortColumn] = useState(null); // e.g., 'last_name'
-  const [sortDirection, setSortDirection] = useState('asc'); // 'asc' | 'desc'
-  
-  // New state for checkbox selection
-  const [selectedPdlIds, setSelectedPdlIds] = useState([]);
-  const [selectAll, setSelectAll] = useState(false);
-
-  // Filter states for Show Only functionality
+  // Filter states for Show Only functionality (date filter — custom to this page)
   const [filterType, setFilterType] = useState('all'); // 'all', 'year', 'month', 'day'
   const [filterValue, setFilterValue] = useState('');
 
@@ -142,37 +144,14 @@ const Datas = () => {
   const fileInputVisitorsRef = useRef(null);
   const tableWrapperRef = useRef(null);
 
-  const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
-
-  // Initialize sortOption from URL query param
-  useEffect(() => {
-    const sort = searchParams.get('sort');
-    if (sort) {
-      setSortOption(sort);
-    }
-  }, [searchParams]);
-
-  // Update URL query param when sortOption changes
-  useEffect(() => {
-    if (sortOption && sortOption !== 'none') {
-      setSearchParams({ sort: sortOption });
-    } else {
-      setSearchParams({});
-    }
-  }, [sortOption, setSearchParams]);
-
-  // Reset current page to 1 when search term changes
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm]);
 
   // Reset table scroll position when page changes
   useEffect(() => {
     if (tableWrapperRef.current) {
       tableWrapperRef.current.scrollTop = 0;
     }
-  }, [currentPage]);
+  }, [table.currentPage]);
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -495,56 +474,26 @@ const Datas = () => {
     }
   };
 
-  // Handle click on header to set sortColumn and toggle direction
-  const onHeaderClick = (columnKey) => {
-    if (sortColumn === columnKey) {
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortColumn(columnKey);
-      setSortDirection('asc');
-    }
-  };
+  // Sorting now handled by useTableState hook's onSort method
 
-  // Handle individual checkbox change
-  const handlePdlCheckboxChange = (pdlId) => {
-    setSelectedPdlIds((prevSelected) => {
-      if (prevSelected.includes(pdlId)) {
-        return prevSelected.filter(id => id !== pdlId);
-      } else {
-        return [...prevSelected, pdlId];
-      }
-    });
-  };
-
-  // Handle select all checkbox change
-  const handleSelectAllChange = () => {
-    if (selectAll) {
-      setSelectedPdlIds([]);
-      setSelectAll(false);
-    } else {
-      setSelectedPdlIds(currentPdls.map(pdl => pdl.id));
-      setSelectAll(true);
-    }
-  };
+  // Selection now handled by useTableState hook
 
   // Handle bulk delete
   const handleBulkDelete = async () => {
-    if (selectedPdlIds.length === 0) {
+    if (table.selectedIds.length === 0) {
       alert('Please select at least one PDL to delete.');
       return;
     }
 
-    const confirmMessage = `Are you sure you want to delete ${selectedPdlIds.length} PDL(s)? This action cannot be undone.`;
+    const confirmMessage = `Are you sure you want to delete ${table.selectedIds.length} PDL(s)? This action cannot be undone.`;
     if (!window.confirm(confirmMessage)) return;
 
     try {
-      // Delete each selected PDL
-      const deletePromises = selectedPdlIds.map(id => axios.delete(`/pdls/${id}`));
+      const deletePromises = table.selectedIds.map(id => axios.delete(`/pdls/${id}`));
       await Promise.all(deletePromises);
       
-      alert(`${selectedPdlIds.length} PDL(s) successfully deleted.`);
-      setSelectedPdlIds([]);
-      setSelectAll(false);
+      alert(`${table.selectedIds.length} PDL(s) successfully deleted.`);
+      table.clearSelection();
       await fetchPdls();
     } catch (err) {
       console.error('Failed to delete PDLs:', err);
@@ -1171,224 +1120,117 @@ const Datas = () => {
     }
   };
 
-  // Filter PDLs based on search term and date filters
-  const filterPdls = (pdls) => {
-    let filtered = pdls;
-
-    // Apply date filter
-    if (filterType !== 'all' && filterValue) {
-      filtered = filtered.filter(pdl => {
-        const arrestDate = pdl.arrest_date ? new Date(pdl.arrest_date) : null;
-        const commitmentDate = pdl.commitment_date ? new Date(pdl.commitment_date) : null;
-        
-        switch (filterType) {
-          case 'year':
-            const year = parseInt(filterValue);
-            return (arrestDate && arrestDate.getFullYear() === year) || 
-                   (commitmentDate && commitmentDate.getFullYear() === year);
-          case 'month':
-            const [yearMonth, month] = filterValue.split('-');
-            const yearNum = parseInt(yearMonth);
-            const monthNum = parseInt(month);
-            return (arrestDate && arrestDate.getFullYear() === yearNum && (arrestDate.getMonth() + 1) === monthNum) ||
-                   (commitmentDate && commitmentDate.getFullYear() === yearNum && (commitmentDate.getMonth() + 1) === monthNum);
-          case 'day':
-            const [yearDay, monthDay, day] = filterValue.split('-');
-            const yearDayNum = parseInt(yearDay);
-            const monthDayNum = parseInt(monthDay);
-            const dayNum = parseInt(day);
-            return (arrestDate && arrestDate.getFullYear() === yearDayNum && 
-                   (arrestDate.getMonth() + 1) === monthDayNum && arrestDate.getDate() === dayNum) ||
-                   (commitmentDate && commitmentDate.getFullYear() === yearDayNum && 
-                   (commitmentDate.getMonth() + 1) === monthDayNum && commitmentDate.getDate() === dayNum);
-          default:
-            return true;
+  // Date filter (custom to this page, applied on top of hook's search)
+  const filteredByDatePdls = React.useMemo(() => {
+    if (filterType === 'all' || !filterValue) return table.filteredData;
+    return table.filteredData.filter(pdl => {
+      const arrestDate = pdl.arrest_date ? new Date(pdl.arrest_date) : null;
+      const commitmentDate = pdl.commitment_date ? new Date(pdl.commitment_date) : null;
+      switch (filterType) {
+        case 'year': {
+          const year = parseInt(filterValue);
+          return (arrestDate && arrestDate.getFullYear() === year) ||
+                 (commitmentDate && commitmentDate.getFullYear() === year);
         }
-      });
-    }
-
-    // Apply search filter
-    if (searchTerm.trim()) {
-      const searchLower = searchTerm.toLowerCase().trim();
-      filtered = filtered.filter(pdl => {
-        // Search in cell number - check both full format and extract parts
-        let cellMatches = false;
-        if (pdl.cell_number) {
-          const cellLower = pdl.cell_number.toLowerCase();
-          // Check if search matches the full cell number string
-          if (cellLower.includes(searchLower)) {
-            cellMatches = true;
-          } else {
-            // Extract cell name and number parts for separate matching
-            // Format is "Name - Number" or just "Number"
-            if (cellLower.includes(' - ')) {
-              const [cellName, cellNumber] = cellLower.split(' - ');
-              if (cellName.includes(searchLower) || cellNumber.includes(searchLower)) {
-                cellMatches = true;
-              }
-            } else {
-              // If no " - " separator, treat entire value as number
-              if (cellLower.includes(searchLower)) {
-                cellMatches = true;
-              }
-            }
-          }
+        case 'month': {
+          const [ym, m] = filterValue.split('-');
+          const y = parseInt(ym), mo = parseInt(m);
+          return (arrestDate && arrestDate.getFullYear() === y && (arrestDate.getMonth() + 1) === mo) ||
+                 (commitmentDate && commitmentDate.getFullYear() === y && (commitmentDate.getMonth() + 1) === mo);
         }
-        
-        return (
-          (pdl.last_name && pdl.last_name.toLowerCase().includes(searchLower)) ||
-          (pdl.first_name && pdl.first_name.toLowerCase().includes(searchLower)) ||
-          (pdl.middle_name && pdl.middle_name.toLowerCase().includes(searchLower)) ||
-          (pdl.criminal_case_no && pdl.criminal_case_no.toLowerCase().includes(searchLower)) ||
-          (pdl.offense_charge && pdl.offense_charge.toLowerCase().includes(searchLower)) ||
-          (pdl.court_branch && pdl.court_branch.toLowerCase().includes(searchLower)) ||
-          cellMatches
-        );
-      });
-    }
-
-    return filtered;
-  };
-
-  const filteredSortedPdls = filterPdls(pdls)
-    .sort((a, b) => {
-      // Preserve existing explicit sort options if set
-      const cellA = parseInt(a.cell_number, 10) || 0;
-      const cellB = parseInt(b.cell_number, 10) || 0;
-      if (sortOption === 'cell') {
-        return cellA - cellB;
-      } else if (sortOption === 'alphabetical') {
-        if (cellA !== cellB) return cellA - cellB;
-        return a.last_name.localeCompare(b.last_name);
-      } else if (sortOption === 'alphabeticalWithCell') {
-        const lastNameCompare = a.last_name.localeCompare(b.last_name);
-        if (lastNameCompare !== 0) return lastNameCompare;
-        return cellA - cellB;
+        case 'day': {
+          const [yd, md, d] = filterValue.split('-');
+          const y2 = parseInt(yd), m2 = parseInt(md), d2 = parseInt(d);
+          return (arrestDate && arrestDate.getFullYear() === y2 && (arrestDate.getMonth() + 1) === m2 && arrestDate.getDate() === d2) ||
+                 (commitmentDate && commitmentDate.getFullYear() === y2 && (commitmentDate.getMonth() + 1) === m2 && commitmentDate.getDate() === d2);
+        }
+        default: return true;
       }
-
-      // New header sorting if sortColumn is set
-      if (!sortColumn) return 0;
-      const aVal = (a[sortColumn] ?? '').toString().toLowerCase();
-      const bVal = (b[sortColumn] ?? '').toString().toLowerCase();
-      if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
-      if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
-      return 0;
     });
+  }, [table.filteredData, filterType, filterValue]);
 
-  const resolvedPageSize = pageSize === 'all' ? filteredSortedPdls.length : pageSize;
-  const totalPages = Math.max(1, Math.ceil(filteredSortedPdls.length / (resolvedPageSize || 1)));
-  const startIndex = (currentPage - 1) * resolvedPageSize;
-  const currentPdls = filteredSortedPdls.slice(startIndex, startIndex + resolvedPageSize);
-
-  const handlePageSizeChange = (e) => {
-    const val = e.target.value;
-    setPageSize(val === 'all' ? 'all' : Number(val));
-    setCurrentPage(1);
-  };
-
-  // Smart pagination: Generate page numbers with ellipsis
-  const getPaginationPages = () => {
-    const pages = [];
-    const maxVisible = 7; // Maximum number of page buttons to show
-    const sidePages = 2; // Number of pages to show on each side of current page
-
-    if (totalPages <= maxVisible) {
-      // Show all pages if total is less than max
-      return Array.from({ length: totalPages }, (_, i) => i + 1);
+  // Apply dropdown sort option on top of date-filtered data
+  const filteredSortedPdls = React.useMemo(() => {
+    const arr = [...filteredByDatePdls];
+    if (sortOption === 'cell') {
+      arr.sort((a, b) => (parseInt(a.cell_number, 10) || 0) - (parseInt(b.cell_number, 10) || 0));
+    } else if (sortOption === 'alphabetical') {
+      arr.sort((a, b) => {
+        const cA = parseInt(a.cell_number, 10) || 0, cB = parseInt(b.cell_number, 10) || 0;
+        if (cA !== cB) return cA - cB;
+        return a.last_name.localeCompare(b.last_name);
+      });
+    } else if (sortOption === 'alphabeticalWithCell') {
+      arr.sort((a, b) => {
+        const cmp = a.last_name.localeCompare(b.last_name);
+        if (cmp !== 0) return cmp;
+        return (parseInt(a.cell_number, 10) || 0) - (parseInt(b.cell_number, 10) || 0);
+      });
     }
+    return arr;
+  }, [filteredByDatePdls, sortOption]);
 
-    // Always show first page
-    pages.push(1);
+  // Paginated data from the fully filtered+sorted set
+  const currentPdls = React.useMemo(() => {
+    if (table.pageSize === 'all') return filteredSortedPdls;
+    const start = (table.currentPage - 1) * table.pageSize;
+    return filteredSortedPdls.slice(start, start + table.pageSize);
+  }, [filteredSortedPdls, table.currentPage, table.pageSize]);
 
-    let startPage = Math.max(2, currentPage - sidePages);
-    let endPage = Math.min(totalPages - 1, currentPage + sidePages);
+  const resolvedTotalPages = React.useMemo(() => {
+    const ps = table.pageSize === 'all' ? filteredSortedPdls.length : table.pageSize;
+    return Math.max(1, Math.ceil(filteredSortedPdls.length / (ps || 1)));
+  }, [filteredSortedPdls.length, table.pageSize]);
 
-    // Adjust if we're near the start
-    if (currentPage <= sidePages + 2) {
-      endPage = Math.min(maxVisible - 1, totalPages - 1);
-    }
-
-    // Adjust if we're near the end
-    if (currentPage >= totalPages - sidePages - 1) {
-      startPage = Math.max(2, totalPages - maxVisible + 2);
-    }
-
-    // Add ellipsis after first page if needed
-    if (startPage > 2) {
-      pages.push('ellipsis-start');
-    }
-
-    // Add middle pages
-    for (let i = startPage; i <= endPage; i++) {
-      pages.push(i);
-    }
-
-    // Add ellipsis before last page if needed
-    if (endPage < totalPages - 1) {
-      pages.push('ellipsis-end');
-    }
-
-    // Always show last page
-    if (totalPages > 1) {
-      pages.push(totalPages);
-    }
-
-    return pages;
-  };
-
-  // Update selectAll state when individual checkboxes change
-  useEffect(() => {
-    if (currentPdls.length === 0) {
-      setSelectAll(false);
-    } else {
-      setSelectAll(selectedPdlIds.length === currentPdls.length);
-    }
-  }, [selectedPdlIds, currentPdls]);
-
+  // CSV Export
   const exportToExcel = () => {
-    const dataToExport = filteredSortedPdls.map(pdl => {
-      return {
-        'Last Name': pdl.last_name || '',
-        'First Name': pdl.first_name || '',
-        'Middle Name': pdl.middle_name || '',
-        'Cell Number': formatCellNumber(pdl.cell_number),
-        'Criminal Case No.': pdl.criminal_case_no || '',
-        'Offense Charge': pdl.offense_charge || '',
-        'Court Branch': pdl.court_branch || '',
-        'Date of Arrest': pdl.arrest_date || '',
-        'Date of Commitment': pdl.commitment_date || '',
-        'First Time Offender': pdl.first_time_offender === 1 || pdl.first_time_offender === '1' ? 'Yes' : 'No',
-      };
-    });
-
+    const dataToExport = filteredSortedPdls.map(pdl => ({
+      'Last Name': pdl.last_name || '',
+      'First Name': pdl.first_name || '',
+      'Middle Name': pdl.middle_name || '',
+      'Cell Number': formatCellNumber(pdl.cell_number),
+      'Criminal Case No.': pdl.criminal_case_no || '',
+      'Offense Charge': pdl.offense_charge || '',
+      'Court Branch': pdl.court_branch || '',
+      'Date of Arrest': pdl.arrest_date || '',
+      'Date of Commitment': pdl.commitment_date || '',
+      'First Time Offender': pdl.first_time_offender === 1 || pdl.first_time_offender === '1' ? 'Yes' : 'No',
+    }));
     const worksheet = XLSX.utils.json_to_sheet(dataToExport);
-
-    // Set column widths to fit content approximately
     worksheet['!cols'] = [
-      { wch: 15 }, // Last Name
-      { wch: 18 }, // First Name
-      { wch: 15 }, // Middle Name
-      { wch: 20 }, // Cell Number (wider to accommodate cell name)
-      { wch: 20 }, // Criminal Case No.
-      { wch: 30 }, // Offense Charge
-      { wch: 20 }, // Court Branch
-      { wch: 15 }, // Date of Arrest
-      { wch: 15 }, // Date of Commitment
-      { wch: 18 }, // First Time Offender
+      { wch: 18 }, { wch: 18 }, { wch: 18 }, { wch: 14 },
+      { wch: 18 }, { wch: 22 }, { wch: 14 }, { wch: 14 },
+      { wch: 16 }, { wch: 16 },
     ];
-
-    const range = XLSX.utils.decode_range(worksheet['!ref']);
-    for (let C = range.s.c; C <= range.e.c; ++C) {
-      const cellAddress = XLSX.utils.encode_cell({ r: 0, c: C });
-      if (!worksheet[cellAddress]) continue;
-      if (!worksheet[cellAddress].s) worksheet[cellAddress].s = {};
-      worksheet[cellAddress].s.font = { bold: true };
-    }
-
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'PDLs');
-    XLSX.writeFile(workbook, 'PDLs_export.xlsx');
+    XLSX.writeFile(workbook, `PDL_Export_${new Date().toISOString().split('T')[0]}.xlsx`);
   };
+
+  // Refresh data
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try { await fetchPdls(); } finally { setIsRefreshing(false); }
+  };
+
+  // Build filter chips for display
+  const filterChips = React.useMemo(() => {
+    const chips = [];
+    if (table.searchTerm) chips.push({ key: 'search', label: 'Search', value: table.searchTerm });
+    if (filterType !== 'all' && filterValue) {
+      const label = filterType === 'year' ? `Year: ${filterValue}` :
+                    filterType === 'month' ? `Month: ${filterValue}` : `Day: ${filterValue}`;
+      chips.push({ key: 'date', label: 'Date', value: label.replace(/^(Year|Month|Day): /, '') });
+    }
+    return chips;
+  }, [table.searchTerm, filterType, filterValue]);
+
+  const handleClearFilterChip = (key) => {
+    if (key === 'search') table.setSearchTerm('');
+    if (key === 'date') { setFilterType('all'); setFilterValue(''); }
+  };
+
 
 // Export PDL with Visitors
 const exportPdlsWithVisitorsToExcel = async () => {
@@ -1487,31 +1329,10 @@ const exportPdlsWithVisitorsToExcel = async () => {
       </style>
 
       <main>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '24px' }}>
-            {/* Left group */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-              {/* Add PDL Button */}
-              <button className="common-button add" type="button" onClick={() => setShowAddModal(true)}>
-                <svg className="button-icon" viewBox="0 0 24 24">
-                  <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
-                </svg>
-                Add a PDL
-              </button>
-
-              {/* Delete Selected Button (conditional) */}
-              {selectedPdlIds.length > 0 && (
-                <button className="common-button delete" type="button" onClick={handleBulkDelete}>
-                  <svg className="button-icon" viewBox="0 0 24 24">
-                    <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
-                  </svg>
-                  Delete Selected ({selectedPdlIds.length})
-                </button>
-              )}
-            </div>
-
-            {/* Right group: Data Tools */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-              {(isImportingPdls || isImporting) && (
+        {/* Data Tools and Import progress */}
+        <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '16px' }}>
+            {/* Import Progress */}
+            {(isImportingPdls || isImporting) && (
                 <div style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -1530,20 +1351,38 @@ const exportPdlsWithVisitorsToExcel = async () => {
                   Importing... ({isImportingPdls ? pdlImportProgress.current : importProgress.current}/{isImportingPdls ? pdlImportProgress.total : importProgress.total})
                 </div>
               )}
-              <div style={{ position: 'relative', display: 'inline-block' }} data-dropdown>
-                <button
-                  className="common-button secondary"
-                  type="button"
-                  onClick={() => setDataToolsOpen(!dataToolsOpen)}
-                  style={{ position: 'relative' }}
-                >
-                  <svg className="button-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
-                  </svg>
-                  Data Tools
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginLeft: '4px' }}>
-                    <polyline points="6 9 12 15 18 9"/>
-                  </svg>
+              <input ref={fileInputRef} type="file" accept=".xlsx,.xls" style={{ display: 'none' }} onChange={handleImportFileChange} />
+              <input ref={fileInputVisitorsRef} type="file" accept=".xlsx,.xls" style={{ display: 'none' }} onChange={handleImportPdlsWithVisitorsFileChange} />
+        </div>
+
+        <FilterChips chips={filterChips} onClear={handleClearFilterChip} onClearAll={() => { table.clearAllFilters(); setFilterType('all'); setFilterValue(''); }} />
+
+        {/* Toolbar */}
+        <div className="table-toolbar">
+          <div className="table-toolbar-left">
+            <input
+              type="text"
+              className="table-search-input"
+              placeholder="Search PDLs, names, cases..."
+              value={table.searchTerm}
+              onChange={(e) => table.setSearchTerm(e.target.value)}
+              aria-label="Search PDLs"
+            />
+          </div>
+          <div className="table-toolbar-right">
+            <div className="table-toolbar-actions">
+              <button className={`toolbar-icon-btn ${isRefreshing ? 'spinning' : ''}`} onClick={handleRefresh} disabled={isRefreshing} title="Refresh data">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+              </button>
+              <div
+                className="data-tools-dropdown-wrap"
+                data-dropdown
+                style={{ position: 'relative', display: 'inline-block' }}
+                onMouseEnter={() => setDataToolsOpen(true)}
+                onMouseLeave={() => setDataToolsOpen(false)}
+              >
+                <button className="toolbar-icon-btn" title="Data Tools">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
                 </button>
                 {dataToolsOpen && (
                   <div style={{
@@ -1559,13 +1398,9 @@ const exportPdlsWithVisitorsToExcel = async () => {
                     minWidth: '260px',
                     overflow: 'hidden'
                   }}>
-                    {/* Export Section */}
                     <div style={dataToolsSectionStyle}>Export</div>
                     <button
-                      onClick={() => {
-                        exportToExcel();
-                        setDataToolsOpen(false);
-                      }}
+                      onClick={() => { exportToExcel(); setDataToolsOpen(false); }}
                       style={dataToolsItemStyle}
                       onMouseEnter={(e) => e.currentTarget.style.background = '#f9fafb'}
                       onMouseLeave={(e) => e.currentTarget.style.background = 'white'}
@@ -1576,10 +1411,7 @@ const exportPdlsWithVisitorsToExcel = async () => {
                       Export PDL
                     </button>
                     <button
-                      onClick={() => {
-                        exportVisitorsToExcelLinkHandler();
-                        setDataToolsOpen(false);
-                      }}
+                      onClick={() => { exportVisitorsToExcelLinkHandler(); setDataToolsOpen(false); }}
                       style={{ ...dataToolsItemStyle, borderTop: '1px solid #f3f4f6' }}
                       onMouseEnter={(e) => e.currentTarget.style.background = '#f9fafb'}
                       onMouseLeave={(e) => e.currentTarget.style.background = 'white'}
@@ -1589,8 +1421,6 @@ const exportPdlsWithVisitorsToExcel = async () => {
                       </svg>
                       Export PDL with Visitors
                     </button>
-
-                    {/* Import Section */}
                     <div style={dataToolsSectionStyle}>Import</div>
                     <button
                       onClick={() => {
@@ -1639,14 +1469,9 @@ const exportPdlsWithVisitorsToExcel = async () => {
                       </svg>
                       Import PDL with Visitors
                     </button>
-
-                    {/* Template Section */}
                     <div style={dataToolsSectionStyle}>Download Template</div>
                     <button
-                      onClick={() => {
-                        downloadPdlTemplateLinkHandler();
-                        setDataToolsOpen(false);
-                      }}
+                      onClick={() => { downloadPdlTemplateLinkHandler(); setDataToolsOpen(false); }}
                       style={dataToolsItemStyle}
                       onMouseEnter={(e) => e.currentTarget.style.background = '#fffbeb'}
                       onMouseLeave={(e) => e.currentTarget.style.background = 'white'}
@@ -1659,10 +1484,7 @@ const exportPdlsWithVisitorsToExcel = async () => {
                       PDL Template
                     </button>
                     <button
-                      onClick={() => {
-                        downloadPdlWithVisitorsTemplateLinkHandler();
-                        setDataToolsOpen(false);
-                      }}
+                      onClick={() => { downloadPdlWithVisitorsTemplateLinkHandler(); setDataToolsOpen(false); }}
                       style={{ ...dataToolsItemStyle, borderTop: '1px solid #f3f4f6' }}
                       onMouseEnter={(e) => e.currentTarget.style.background = '#fffbeb'}
                       onMouseLeave={(e) => e.currentTarget.style.background = 'white'}
@@ -1677,123 +1499,73 @@ const exportPdlsWithVisitorsToExcel = async () => {
                   </div>
                 )}
               </div>
-              <input ref={fileInputRef} type="file" accept=".xlsx,.xls" style={{ display: 'none' }} onChange={handleImportFileChange} />
-              <input ref={fileInputVisitorsRef} type="file" accept=".xlsx,.xls" style={{ display: 'none' }} onChange={handleImportPdlsWithVisitorsFileChange} />
             </div>
-        </div>
-
-        <div className="search-filter-container">
-          <div className="search-filter-grid">
-            {/* Search Section */}
-            <div className="search-filter-item search-group">
-              <label className="filter-label">
-                Search:
-              </label>
-              <div className="search-input-wrapper">
-                <input
-                  type="text"
-                  placeholder="Search PDLs, names, cases..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  aria-label="Search PDLs"
-                />
-                {searchTerm && (
-                  <button
-                    onClick={() => setSearchTerm('')}
-                    className="search-clear-btn"
-                    title="Clear search"
-                  >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <line x1="18" y1="6" x2="6" y2="18"/>
-                      <line x1="6" y1="6" x2="18" y2="18"/>
-                    </svg>
-                  </button>
-                )}
-              </div>
-            </div>
-            
-            {/* Sort Section */}
-            <div className="search-filter-item sort-group">
-              <label className="filter-label">
-                Sort:
-              </label>
+            <Dropdown
+              value={sortOption}
+              onChange={(val) => setSortOption(val)}
+              ariaLabel="Sort Options"
+              minWidth={180}
+              options={[
+                { value: 'none', label: 'No Sort' },
+                { value: 'cell', label: 'Sort by Cell' },
+                { value: 'alphabetical', label: 'Alphabetical + Cell' },
+                { value: 'alphabeticalWithCell', label: 'Alphabetical' },
+              ]}
+            />
+            <Dropdown
+              value={filterType}
+              onChange={(val) => { setFilterType(val); setFilterValue(''); }}
+              ariaLabel="Filter type"
+              minWidth={140}
+              options={[
+                { value: 'all', label: 'All Dates' },
+                { value: 'year', label: 'By Year' },
+                { value: 'month', label: 'By Month' },
+                { value: 'day', label: 'By Day' },
+              ]}
+            />
+            {filterType !== 'all' && (
               <Dropdown
-                value={sortOption}
-                onChange={(val) => setSortOption(val)}
-                ariaLabel="Sort Options"
-                minWidth={220}
+                value={filterValue}
+                onChange={(val) => setFilterValue(val)}
+                ariaLabel={`Select ${filterType}`}
+                minWidth={200}
                 options={[
-                  { value: 'none', label: 'No Sort' },
-                  { value: 'cell', label: 'Sort by Cell' },
-                  { value: 'alphabetical', label: 'Sort Alphabetically with Cell' },
-                  { value: 'alphabeticalWithCell', label: 'Sort Alphabetically' },
-                ]}
-              />
-            </div>
-            
-            {/* Show Only Section */}
-            <div className="search-filter-item filter-group">
-              <label className="filter-label">
-                Show Only:
-              </label>
-              <Dropdown
-                value={filterType}
-                onChange={(val) => {
-                  setFilterType(val);
-                  setFilterValue('');
-                }}
-                ariaLabel="Filter type"
-                minWidth={160}
-                options={[
-                  { value: 'all', label: 'All Records' },
-                  { value: 'year', label: 'By Year' },
-                  { value: 'month', label: 'By Month' },
-                  { value: 'day', label: 'By Day' },
-                ]}
-              />
-              
-              {filterType !== 'all' && (
-                <Dropdown
-                  value={filterValue}
-                  onChange={(val) => setFilterValue(val)}
-                  ariaLabel={`Select ${filterType}`}
-                  minWidth={240}
-                  options={[
-                    { value: '', label: `Select ${filterType}...` },
-                    ...(filterType === 'year'
-                      ? getUniqueYears().map((year) => ({ value: year, label: String(year) }))
-                      : filterType === 'month'
-                      ? getUniqueYears().map((year) =>
-                          getUniqueMonths(year).map((month) => ({
-                            value: `${year}-${month}`,
-                            label: new Date(year, month - 1).toLocaleDateString('en-US', {
-                              year: 'numeric',
-                              month: 'long',
-                            }),
+                  { value: '', label: `Select ${filterType}...` },
+                  ...(filterType === 'year'
+                    ? getUniqueYears().map((year) => ({ value: year, label: String(year) }))
+                    : filterType === 'month'
+                    ? getUniqueYears().map((year) =>
+                        getUniqueMonths(year).map((month) => ({
+                          value: `${year}-${month}`,
+                          label: new Date(year, month - 1).toLocaleDateString('en-US', { year: 'numeric', month: 'long' }),
+                        }))
+                      ).flat()
+                    : getUniqueYears().map((year) =>
+                        getUniqueMonths(year).map((month) =>
+                          getUniqueDays(year, month).map((day) => ({
+                            value: `${year}-${month}-${day}`,
+                            label: new Date(year, month - 1, day).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
                           }))
                         ).flat()
-                      : getUniqueYears().map((year) =>
-                          getUniqueMonths(year).map((month) =>
-                            getUniqueDays(year, month).map((day) => ({
-                              value: `${year}-${month}-${day}`,
-                              label: new Date(year, month - 1, day).toLocaleDateString('en-US', {
-                                year: 'numeric',
-                                month: 'long',
-                                day: 'numeric',
-                              }),
-                            }))
-                          ).flat()
-                        ).flat()),
-                  ]}
-                />
-              )}
-              
-              <div className="records-count-badge">
-                Showing: {filteredSortedPdls.length} of {pdls.length} records
-              </div>
-            </div>
+                      ).flat()),
+                ]}
+              />
+            )}
+            <button className="common-button add" type="button" onClick={() => setShowAddModal(true)}>
+              <svg className="button-icon" viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+              Add PDL
+            </button>
           </div>
         </div>
+
+        {/* Bulk action bar */}
+        <BulkActionBar
+          count={table.selectedIds.length}
+          onDelete={handleBulkDelete}
+          onExport={exportToExcel}
+          onClear={table.clearSelection}
+        />
         
         <div className="table-wrapper" ref={tableWrapperRef}>
           {loadingPdls ? (
@@ -1805,21 +1577,21 @@ const exportPdlsWithVisitorsToExcel = async () => {
               <th>
                 <input
                   type="checkbox"
-                  checked={selectAll}
-                  onChange={handleSelectAllChange}
+                  checked={table.selectAll}
+                  onChange={table.toggleSelectAll}
                   style={{ marginRight: '8px' }}
                 />
               </th>
-              <th className="sortable-th" onClick={() => onHeaderClick('last_name')}>Last Name</th>
-              <th className="sortable-th" onClick={() => onHeaderClick('first_name')}>First Name</th>
-              <th className="sortable-th" onClick={() => onHeaderClick('middle_name')}>Middle Name</th>
-              <th className="sortable-th" onClick={() => onHeaderClick('cell_number')}>Cell Number</th>
-              <th className="sortable-th" onClick={() => onHeaderClick('criminal_case_no')}>Criminal Case No.</th>
-              <th className="sortable-th" onClick={() => onHeaderClick('offense_charge')}>Offense Charge</th>
-              <th className="sortable-th" onClick={() => onHeaderClick('court_branch')}>Court Branch</th>
-              <th className="sortable-th" onClick={() => onHeaderClick('arrest_date')}>Date of Arrest</th>
-              <th className="sortable-th" onClick={() => onHeaderClick('commitment_date')}>Date of Commitment</th>
-              <th className="sortable-th" onClick={() => onHeaderClick('first_time_offender')}>First Time Offender</th>
+              <th className="sortable-th" onClick={() => table.onSort('last_name')}>Last Name <SortIndicator column="last_name" currentSort={table.sortColumn} direction={table.sortDirection} /></th>
+              <th className="sortable-th" onClick={() => table.onSort('first_name')}>First Name <SortIndicator column="first_name" currentSort={table.sortColumn} direction={table.sortDirection} /></th>
+              <th className="sortable-th" onClick={() => table.onSort('middle_name')}>Middle Name <SortIndicator column="middle_name" currentSort={table.sortColumn} direction={table.sortDirection} /></th>
+              <th className="sortable-th" onClick={() => table.onSort('cell_number')}>Cell Number <SortIndicator column="cell_number" currentSort={table.sortColumn} direction={table.sortDirection} /></th>
+              <th className="sortable-th" onClick={() => table.onSort('criminal_case_no')}>Criminal Case No. <SortIndicator column="criminal_case_no" currentSort={table.sortColumn} direction={table.sortDirection} /></th>
+              <th className="sortable-th" onClick={() => table.onSort('offense_charge')}>Offense Charge <SortIndicator column="offense_charge" currentSort={table.sortColumn} direction={table.sortDirection} /></th>
+              <th className="sortable-th" onClick={() => table.onSort('court_branch')}>Court Branch <SortIndicator column="court_branch" currentSort={table.sortColumn} direction={table.sortDirection} /></th>
+              <th className="sortable-th" onClick={() => table.onSort('arrest_date')}>Date of Arrest <SortIndicator column="arrest_date" currentSort={table.sortColumn} direction={table.sortDirection} /></th>
+              <th className="sortable-th" onClick={() => table.onSort('commitment_date')}>Date of Commitment <SortIndicator column="commitment_date" currentSort={table.sortColumn} direction={table.sortDirection} /></th>
+              <th className="sortable-th" onClick={() => table.onSort('first_time_offender')}>First Time Offender <SortIndicator column="first_time_offender" currentSort={table.sortColumn} direction={table.sortDirection} /></th>
               <th>Actions</th>
             </tr>
           </thead>
@@ -1834,8 +1606,8 @@ const exportPdlsWithVisitorsToExcel = async () => {
                 <td onClick={(e) => e.stopPropagation()}>
                   <input
                     type="checkbox"
-                    checked={selectedPdlIds.includes(pdl.id)}
-                    onChange={() => handlePdlCheckboxChange(pdl.id)}
+                    checked={table.selectedIds.includes(pdl.id)}
+                    onChange={() => table.toggleSelect(pdl.id)}
                     onClick={(e) => e.stopPropagation()}
                   />
                 </td>
@@ -1855,7 +1627,7 @@ const exportPdlsWithVisitorsToExcel = async () => {
                 <td data-label="Date of Commitment">{formatDate(pdl.commitment_date)}</td>
                 <td data-label="First Time Offender">{pdl.first_time_offender === 1 || pdl.first_time_offender === '1' ? 'Yes' : 'No'}</td>
                 <td onClick={(e) => e.stopPropagation()} data-label="Actions">
-                  <div className="action-buttons-row">
+                  <div className="action-buttons-row table-row-hover-actions">
                     <button 
                       className="common-button edit" 
                       onClick={(e) => {
@@ -1890,97 +1662,27 @@ const exportPdlsWithVisitorsToExcel = async () => {
           )}
         </div>
 
-        {(totalPages > 1 || pageSize === 'all') && (
-          <div className="pagination-container">
-            <Dropdown
-              variant="pagination"
-              value={String(pageSize)}
-              onChange={(val) => handlePageSizeChange({ target: { value: val } })}
-              ariaLabel="Rows per page"
-              minWidth={140}
-              align="right"
-              direction="up"
-              options={[
-                { value: '10', label: '10 per page' },
-                { value: '25', label: '25 per page' },
-                { value: '50', label: '50 per page' },
-                { value: '100', label: '100 per page' },
-                { value: 'all', label: 'All' },
-              ]}
-            />
-            <button
-              className="pagination-button pagination-nav"
-              onClick={() => setCurrentPage(1)}
-              disabled={currentPage === 1}
-              aria-label="Go to first page"
-              title="First page"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <polyline points="11 17 6 12 11 7"/>
-                <polyline points="18 17 13 12 18 7"/>
-              </svg>
-            </button>
-            <button
-              className="pagination-button pagination-nav"
-              onClick={() => setCurrentPage(currentPage - 1)}
-              disabled={currentPage === 1}
-              aria-label="Go to previous page"
-              title="Previous page"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <polyline points="15 18 9 12 15 6"/>
-              </svg>
-            </button>
-            
-            {getPaginationPages().map((pageNum, index) => {
-              if (pageNum === 'ellipsis-start' || pageNum === 'ellipsis-end') {
-                return (
-                  <span key={`ellipsis-${index}`} className="pagination-ellipsis">
-                    ...
-                  </span>
-                );
-              }
-              return (
-                <button
-                  key={pageNum}
-                  className={`pagination-button ${currentPage === pageNum ? 'active' : ''}`}
-                  onClick={() => setCurrentPage(pageNum)}
-                  aria-label={`Go to page ${pageNum}`}
-                  aria-current={currentPage === pageNum ? 'page' : undefined}
-                >
-                  {pageNum}
-                </button>
-              );
-            })}
+        {/* Empty state */}
+        {!loadingPdls && filteredSortedPdls.length === 0 && (
+          <EmptyState
+            title={pdls.length === 0 ? "No PDL records yet" : "No PDL records found"}
+            description={pdls.length === 0 ? "Add your first PDL to get started." : "Try adjusting your search or filters."}
+            actionLabel={pdls.length === 0 ? "Add a PDL" : "Clear filters"}
+            onAction={pdls.length === 0 ? () => setShowAddModal(true) : () => { table.clearAllFilters(); setFilterType('all'); setFilterValue(''); }}
+          />
+        )}
 
-            <button
-              className="pagination-button pagination-nav"
-              onClick={() => setCurrentPage(currentPage + 1)}
-              disabled={currentPage === totalPages}
-              aria-label="Go to next page"
-              title="Next page"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <polyline points="9 18 15 12 9 6"/>
-              </svg>
-            </button>
-            <button
-              className="pagination-button pagination-nav"
-              onClick={() => setCurrentPage(totalPages)}
-              disabled={currentPage === totalPages}
-              aria-label="Go to last page"
-              title="Last page"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <polyline points="13 17 18 12 13 7"/>
-                <polyline points="6 17 11 12 6 7"/>
-              </svg>
-            </button>
-            
-            <div className="pagination-info">
-              {pageSize === 'all' ? `Showing all ${filteredSortedPdls.length} rows` : `Page ${currentPage} of ${totalPages}`}
-            </div>
-          </div>
+        {/* Pagination */}
+        {filteredSortedPdls.length > 0 && (
+          <TablePagination
+            currentPage={table.currentPage}
+            totalPages={resolvedTotalPages}
+            totalItems={pdls.length}
+            filteredItems={filteredSortedPdls.length}
+            pageSize={table.pageSize}
+            onPageChange={table.setCurrentPage}
+            onPageSizeChange={table.setPageSize}
+          />
         )}
       </main>
 

@@ -6,7 +6,9 @@ import CellsDropdown from '../components/CellsDropdown';
 import { Html5Qrcode } from 'html5-qrcode';
 import api from '../services/api';
 import logger from '../utils/logger';
+import EmptyState from '../components/EmptyState';
 import './Dashboard.css';
+import './common.css';
 
 const Modal = ({ children, onClose }) => {
   // Prevent body scroll when modal is open and ensure overlay covers everything
@@ -1346,9 +1348,20 @@ const Dashboard = () => {
     }
   };
 
-  const filteredVisitors = visitors.filter(
+  const [todaySearchTerm, setTodaySearchTerm] = useState('');
+  const todayVisitors = visitors.filter(
     v => getDateString(v.scan_date || v.time_in) === currentDateString
   );
+  const filteredVisitors = React.useMemo(() => {
+    if (!todaySearchTerm.trim()) return todayVisitors;
+    const term = todaySearchTerm.toLowerCase().trim();
+    return todayVisitors.filter(v =>
+      (v.visitor_name && v.visitor_name.toLowerCase().includes(term)) ||
+      (v.pdl_name && v.pdl_name.toLowerCase().includes(term)) ||
+      (v.purpose && v.purpose.toLowerCase().includes(term)) ||
+      (v.cell && v.cell.toLowerCase().includes(term))
+    );
+  }, [todayVisitors, todaySearchTerm]);
 
   const handleToggleSelectAll = () => {
     if (selectAll) {
@@ -1594,6 +1607,24 @@ const Dashboard = () => {
               </span>
             </div>
 
+            <div className="print-only" style={{ textAlign: 'center' }}>Today's Visitor Table</div>
+
+            <div className="table-toolbar dashboard-toolbar">
+              <div className="table-toolbar-left">
+                <input
+                  type="text"
+                  className="table-search-input"
+                  placeholder="Search today's visitors..."
+                  value={todaySearchTerm}
+                  onChange={(e) => setTodaySearchTerm(e.target.value)}
+                  aria-label="Search today's visitors"
+                />
+              </div>
+              <div className="table-toolbar-right">
+                <span className="records-count-badge">Showing: {filteredVisitors.length} of {todayVisitors.length} records</span>
+              </div>
+            </div>
+
             <table className="common-table card-table card-first-is-name">
               <thead>
                 <tr>
@@ -1615,7 +1646,14 @@ const Dashboard = () => {
               </thead>
               <tbody>
                 {filteredVisitors.length === 0 ? (
-                  <tr><td colSpan="6" className="no-data" style={{ fontStyle: 'italic', color: '#6b7280' }}>No records found</td></tr>
+                  <tr>
+                    <td colSpan="8" style={{ padding: 0 }}>
+                      <EmptyState
+                        title="No visitors today"
+                        description={todaySearchTerm ? 'No visitors match your search.' : "Today's visitation records will appear here."}
+                      />
+                    </td>
+                  </tr>
                 ) : (
                   filteredVisitors.map(v => (
                     <tr
@@ -1647,7 +1685,7 @@ const Dashboard = () => {
                       <td data-label="Time In">{formatTime(v.time_in)}</td>
                       <td data-label="Time Out">{v.time_out ? formatTime(v.time_out) : ''}</td>
                       <td className="no-print" data-label="Actions" style={{ textAlign: 'center' }}>
-                        <div style={{ display: 'flex', justifyContent: 'center' }}>
+                        <div className="table-row-hover-actions" style={{ display: 'flex', justifyContent: 'center' }}>
                           <button
                             className="common-button edit no-print"
                             onClick={(e) => { e.stopPropagation(); openEditModalForRow(v); }}
