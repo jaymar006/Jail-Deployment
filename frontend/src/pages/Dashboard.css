@@ -643,31 +643,48 @@
   gap: 10px;
 }
 
-.time-format-toggle .time-format-separator {
-  color: #cbd5e1;
-  font-weight: 400;
+.time-format-toggle .time-format-label {
+  color: #0f172a;
+  font-weight: 500;
+  font-size: 13px;
 }
 
-.time-format-select {
-  padding: 5px 8px;
-  border: 2px solid #bfdbfe;
-  background: #fff;
-  color: #1d4ed8;
-  border-radius: 4px;
-  font-weight: 500;
+/* Segmented 12hr / 24hr switch */
+.time-format-switch {
+  display: inline-flex;
+  align-items: stretch;
+  border: 1px solid #bfdbfe;
+  border-radius: 0;
+  background: #eef2ff;
+  overflow: hidden;
+}
+
+.time-format-switch button {
+  flex: 1 1 0;
+  border: none;
+  background: transparent;
+  color: #64748b;
   font-size: 12px;
+  font-weight: 600;
+  padding: 6px 18px;
+  border-radius: 0;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
-.time-format-select:hover {
-  border-color: #2563eb;
+.time-format-switch button.active {
+  background: #2563eb;
+  color: #fff;
 }
 
-.time-format-select:focus {
-  outline: none;
-  border-color: #2563eb;
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+.time-format-switch button.active {
+  background: #2563eb;
+  color: #fff;
+  box-shadow: 0 1px 4px rgba(37, 99, 235, 0.35);
+}
+
+.time-format-switch button:hover:not(.active) {
+  color: #1d4ed8;
 }
 
 @media (max-width: 768px) {

@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import ReactDOM from 'react-dom';
 import QRCodeScanner from '../components/QRCodeScanner';
-import Dropdown from '../components/Dropdown';
 import CellsDropdown from '../components/CellsDropdown';
 import { Html5Qrcode } from 'html5-qrcode';
 import api from '../services/api';
@@ -1556,20 +1555,29 @@ const Dashboard = () => {
             <div className="time-format-toggle">
               <span className="time-format-title">Allowed Visitors</span>
               <span className="time-format-controls">
-                <span className="time-format-separator">|</span>
-                <span>Time format:</span>
-                <Dropdown
-                  variant="time"
-                  value={useMilitaryTime ? '24' : '12'}
-                  onChange={(val) => setUseMilitaryTime(val === '24')}
-                  ariaLabel="Time format"
-                  minWidth={200}
-                  align="right"
-                  options={[
-                    { value: '12', label: '12-hour (AM/PM)' },
-                    { value: '24', label: '24-hour' },
-                  ]}
-                />
+                <span className="time-format-label">Time format:</span>
+                <div
+                  className="time-format-switch"
+                  role="group"
+                  aria-label="Time format"
+                >
+                  <button
+                    type="button"
+                    className={!useMilitaryTime ? 'active' : ''}
+                    onClick={() => setUseMilitaryTime(false)}
+                    aria-pressed={!useMilitaryTime}
+                  >
+                    12hr
+                  </button>
+                  <button
+                    type="button"
+                    className={useMilitaryTime ? 'active' : ''}
+                    onClick={() => setUseMilitaryTime(true)}
+                    aria-pressed={useMilitaryTime}
+                  >
+                    24hr
+                  </button>
+                </div>
               </span>
             </div>
 
