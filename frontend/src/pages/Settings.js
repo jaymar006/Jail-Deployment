@@ -46,7 +46,7 @@ const SettingsDialog = ({ open, onClose, maxWidth = 'sm', fullWidth = true, chil
     fullWidth={fullWidth}
     PaperProps={{
       sx: {
-        borderRadius: '16px',
+        borderRadius: '6px',
         boxShadow: '0 24px 48px rgba(15, 23, 42, 0.18), 0 4px 12px rgba(15, 23, 42, 0.08)',
         border: '1px solid rgba(0, 0, 0, 0.06)',
         overflow: 'hidden',

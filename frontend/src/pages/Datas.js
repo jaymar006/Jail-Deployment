@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import ReactDOM from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import axios from '../services/api';
 import * as XLSX from 'xlsx';
@@ -11,42 +10,10 @@ import FilterChips from '../components/FilterChips';
 import SortIndicator from '../components/SortIndicator';
 import BulkActionBar from '../components/BulkActionBar';
 import EmptyState from '../components/EmptyState';
+import AppModal from '../components/AppModal';
+import ColumnVisibility from '../components/ColumnVisibility';
+import useColumnVisibility from '../hooks/useColumnVisibility';
 import './common.css';
-
-const Modal = ({ children, onClose, wide = false }) => {
-  // Prevent body scroll when modal is open and ensure overlay covers everything
-  React.useEffect(() => {
-    const originalOverflow = document.body.style.overflow;
-    const originalHtmlOverflow = document.documentElement.style.overflow;
-    const originalBgColor = document.body.style.backgroundColor;
-    const originalHtmlBgColor = document.documentElement.style.backgroundColor;
-    
-    // Prevent scrolling on both body and html
-    document.body.style.overflow = 'hidden';
-    document.documentElement.style.overflow = 'hidden';
-    
-    // Ensure background doesn't show white behind modal
-    document.body.style.backgroundColor = '#f9fafb';
-    document.documentElement.style.backgroundColor = '#f9fafb';
-    
-    return () => {
-      document.body.style.overflow = originalOverflow;
-      document.documentElement.style.overflow = originalHtmlOverflow;
-      document.body.style.backgroundColor = originalBgColor;
-      document.documentElement.style.backgroundColor = originalHtmlBgColor;
-    };
-  }, []);
-
-  // Render modal at document body level to ensure it covers everything
-  return ReactDOM.createPortal(
-    <div className="common-modal" onClick={onClose}>
-      <div className={`common-modal-content ${wide ? 'wide' : ''}`} onClick={e => e.stopPropagation()}>
-        {children}
-      </div>
-    </div>,
-    document.body
-  );
-};
 
 // eslint-disable-next-line no-unused-vars
 const formatDateOnly = (dateStr) => {
@@ -125,6 +92,24 @@ const Datas = () => {
     data: pdls,
     searchFields: ['last_name', 'first_name', 'middle_name', 'criminal_case_no', 'offense_charge', 'court_branch', 'cell_number'],
     defaultPageSize: 20,
+  });
+
+  // Column visibility (persisted per table); Actions + select checkbox stay locked
+  const pdlColumns = [
+    { key: 'last_name', label: 'Last Name' },
+    { key: 'first_name', label: 'First Name' },
+    { key: 'middle_name', label: 'Middle Name' },
+    { key: 'cell_number', label: 'Cell Number' },
+    { key: 'criminal_case_no', label: 'Criminal Case No.' },
+    { key: 'offense_charge', label: 'Offense Charge' },
+    { key: 'court_branch', label: 'Court Branch' },
+    { key: 'arrest_date', label: 'Date of Arrest' },
+    { key: 'commitment_date', label: 'Date of Commitment' },
+    { key: 'first_time_offender', label: 'First Time Offender' },
+  ];
+  const colVis = useColumnVisibility({
+    storageKey: 'datas.visibleColumns',
+    allColumns: pdlColumns,
   });
 
   const toggleCollapse = (id) => {
@@ -1378,10 +1363,14 @@ const exportPdlsWithVisitorsToExcel = async () => {
                 className="data-tools-dropdown-wrap"
                 data-dropdown
                 style={{ position: 'relative', display: 'inline-block' }}
-                onMouseEnter={() => setDataToolsOpen(true)}
-                onMouseLeave={() => setDataToolsOpen(false)}
               >
-                <button className="toolbar-icon-btn" title="Data Tools">
+                <button
+                  className={`toolbar-icon-btn${dataToolsOpen ? ' active' : ''}`}
+                  title="Data Tools"
+                  aria-haspopup="menu"
+                  aria-expanded={dataToolsOpen}
+                  onClick={() => setDataToolsOpen(o => !o)}
+                >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
                 </button>
                 {dataToolsOpen && (
@@ -1499,6 +1488,14 @@ const exportPdlsWithVisitorsToExcel = async () => {
                   </div>
                 )}
               </div>
+              <ColumnVisibility
+                columns={pdlColumns}
+                isVisible={colVis.isVisible}
+                onToggle={colVis.toggleColumn}
+                onShowAll={() => colVis.setAll(true)}
+                onHideAll={() => colVis.setAll(false)}
+                align="right"
+              />
             </div>
             <Dropdown
               value={sortOption}
@@ -1582,16 +1579,16 @@ const exportPdlsWithVisitorsToExcel = async () => {
                   style={{ marginRight: '8px' }}
                 />
               </th>
-              <th className="sortable-th" onClick={() => table.onSort('last_name')}>Last Name <SortIndicator column="last_name" currentSort={table.sortColumn} direction={table.sortDirection} /></th>
-              <th className="sortable-th" onClick={() => table.onSort('first_name')}>First Name <SortIndicator column="first_name" currentSort={table.sortColumn} direction={table.sortDirection} /></th>
-              <th className="sortable-th" onClick={() => table.onSort('middle_name')}>Middle Name <SortIndicator column="middle_name" currentSort={table.sortColumn} direction={table.sortDirection} /></th>
-              <th className="sortable-th" onClick={() => table.onSort('cell_number')}>Cell Number <SortIndicator column="cell_number" currentSort={table.sortColumn} direction={table.sortDirection} /></th>
-              <th className="sortable-th" onClick={() => table.onSort('criminal_case_no')}>Criminal Case No. <SortIndicator column="criminal_case_no" currentSort={table.sortColumn} direction={table.sortDirection} /></th>
-              <th className="sortable-th" onClick={() => table.onSort('offense_charge')}>Offense Charge <SortIndicator column="offense_charge" currentSort={table.sortColumn} direction={table.sortDirection} /></th>
-              <th className="sortable-th" onClick={() => table.onSort('court_branch')}>Court Branch <SortIndicator column="court_branch" currentSort={table.sortColumn} direction={table.sortDirection} /></th>
-              <th className="sortable-th" onClick={() => table.onSort('arrest_date')}>Date of Arrest <SortIndicator column="arrest_date" currentSort={table.sortColumn} direction={table.sortDirection} /></th>
-              <th className="sortable-th" onClick={() => table.onSort('commitment_date')}>Date of Commitment <SortIndicator column="commitment_date" currentSort={table.sortColumn} direction={table.sortDirection} /></th>
-              <th className="sortable-th" onClick={() => table.onSort('first_time_offender')}>First Time Offender <SortIndicator column="first_time_offender" currentSort={table.sortColumn} direction={table.sortDirection} /></th>
+              {colVis.isVisible('last_name') && <th className="sortable-th" onClick={() => table.onSort('last_name')}>Last Name <SortIndicator column="last_name" currentSort={table.sortColumn} direction={table.sortDirection} /></th>}
+              {colVis.isVisible('first_name') && <th className="sortable-th" onClick={() => table.onSort('first_name')}>First Name <SortIndicator column="first_name" currentSort={table.sortColumn} direction={table.sortDirection} /></th>}
+              {colVis.isVisible('middle_name') && <th className="sortable-th" onClick={() => table.onSort('middle_name')}>Middle Name <SortIndicator column="middle_name" currentSort={table.sortColumn} direction={table.sortDirection} /></th>}
+              {colVis.isVisible('cell_number') && <th className="sortable-th" onClick={() => table.onSort('cell_number')}>Cell Number <SortIndicator column="cell_number" currentSort={table.sortColumn} direction={table.sortDirection} /></th>}
+              {colVis.isVisible('criminal_case_no') && <th className="sortable-th" onClick={() => table.onSort('criminal_case_no')}>Criminal Case No. <SortIndicator column="criminal_case_no" currentSort={table.sortColumn} direction={table.sortDirection} /></th>}
+              {colVis.isVisible('offense_charge') && <th className="sortable-th" onClick={() => table.onSort('offense_charge')}>Offense Charge <SortIndicator column="offense_charge" currentSort={table.sortColumn} direction={table.sortDirection} /></th>}
+              {colVis.isVisible('court_branch') && <th className="sortable-th" onClick={() => table.onSort('court_branch')}>Court Branch <SortIndicator column="court_branch" currentSort={table.sortColumn} direction={table.sortDirection} /></th>}
+              {colVis.isVisible('arrest_date') && <th className="sortable-th" onClick={() => table.onSort('arrest_date')}>Date of Arrest <SortIndicator column="arrest_date" currentSort={table.sortColumn} direction={table.sortDirection} /></th>}
+              {colVis.isVisible('commitment_date') && <th className="sortable-th" onClick={() => table.onSort('commitment_date')}>Date of Commitment <SortIndicator column="commitment_date" currentSort={table.sortColumn} direction={table.sortDirection} /></th>}
+              {colVis.isVisible('first_time_offender') && <th className="sortable-th" onClick={() => table.onSort('first_time_offender')}>First Time Offender <SortIndicator column="first_time_offender" currentSort={table.sortColumn} direction={table.sortDirection} /></th>}
               <th>Actions</th>
             </tr>
           </thead>
@@ -1611,21 +1608,23 @@ const exportPdlsWithVisitorsToExcel = async () => {
                     onClick={(e) => e.stopPropagation()}
                   />
                 </td>
-                <td data-label="Last Name">{pdl.last_name}</td>
-                <td data-label="First Name">{pdl.first_name}</td>
-                <td data-label="Middle Name">{pdl.middle_name}</td>
-                <td data-label="Cell Number">
-                  {(() => {
-                    const cell = availableCells.find(c => c.cell_number === pdl.cell_number);
-                    return cell && cell.cell_name ? `${cell.cell_name} - ${pdl.cell_number}` : pdl.cell_number;
-                  })()}
-                </td>
-                <td data-label="Criminal Case No.">{pdl.criminal_case_no}</td>
-                <td data-label="Offense Charge">{pdl.offense_charge}</td>
-                <td data-label="Court Branch">{pdl.court_branch}</td>
-                <td data-label="Date of Arrest">{formatDate(pdl.arrest_date)}</td>
-                <td data-label="Date of Commitment">{formatDate(pdl.commitment_date)}</td>
-                <td data-label="First Time Offender">{pdl.first_time_offender === 1 || pdl.first_time_offender === '1' ? 'Yes' : 'No'}</td>
+                {colVis.isVisible('last_name') && <td data-label="Last Name">{pdl.last_name}</td>}
+                {colVis.isVisible('first_name') && <td data-label="First Name">{pdl.first_name}</td>}
+                {colVis.isVisible('middle_name') && <td data-label="Middle Name">{pdl.middle_name}</td>}
+                {colVis.isVisible('cell_number') && (
+                  <td data-label="Cell Number">
+                    {(() => {
+                      const cell = availableCells.find(c => c.cell_number === pdl.cell_number);
+                      return cell && cell.cell_name ? `${cell.cell_name} - ${pdl.cell_number}` : pdl.cell_number;
+                    })()}
+                  </td>
+                )}
+                {colVis.isVisible('criminal_case_no') && <td data-label="Criminal Case No.">{pdl.criminal_case_no}</td>}
+                {colVis.isVisible('offense_charge') && <td data-label="Offense Charge">{pdl.offense_charge}</td>}
+                {colVis.isVisible('court_branch') && <td data-label="Court Branch">{pdl.court_branch}</td>}
+                {colVis.isVisible('arrest_date') && <td data-label="Date of Arrest">{formatDate(pdl.arrest_date)}</td>}
+                {colVis.isVisible('commitment_date') && <td data-label="Date of Commitment">{formatDate(pdl.commitment_date)}</td>}
+                {colVis.isVisible('first_time_offender') && <td data-label="First Time Offender">{pdl.first_time_offender === 1 || pdl.first_time_offender === '1' ? 'Yes' : 'No'}</td>}
                 <td onClick={(e) => e.stopPropagation()} data-label="Actions">
                   <div className="action-buttons-row table-row-hover-actions">
                     <button 
@@ -1687,10 +1686,33 @@ const exportPdlsWithVisitorsToExcel = async () => {
       </main>
 
       {showAddModal && (
-        <Modal onClose={() => setShowAddModal(false)} wide={true}>
-          <div className="add-pdl-modal" style={{ maxHeight: '90vh', overflowY: 'auto' }}>
-            <h3 className="add-pdl-title">Add a PDL</h3>
-            <form onSubmit={handleAddSubmit}>
+        <AppModal
+          open={showAddModal}
+          onClose={() => setShowAddModal(false)}
+          title="Add a PDL"
+          subtitle="Register a new person deprived of liberty"
+          tone="blue"
+          titleColor="#1d4ed8"
+          titleIcon={
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1d4ed8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/>
+            </svg>
+          }
+          maxWidth="md"
+          maxContentWidth={760}
+          actions={
+            <>
+              <button type="button" onClick={() => setShowAddModal(false)} className="common-button cancel">
+                Cancel
+              </button>
+              <button type="submit" form="add-pdl-form" className="common-button">
+                Submit
+              </button>
+            </>
+          }
+        >
+          <div className="add-pdl-modal">
+            <form id="add-pdl-form" onSubmit={handleAddSubmit}>
               <div className="add-pdl-sections">
                 <div className="add-pdl-section">
                   <h4>Personal Information</h4>
@@ -1816,29 +1838,39 @@ const exportPdlsWithVisitorsToExcel = async () => {
                   </div>
                 </div>
               </div>
-
-              <div className="add-pdl-actions">
-                <button type="submit" className="common-button">
-                  Submit
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowAddModal(false)}
-                  className="common-button cancel"
-                >
-                  Cancel
-                </button>
-              </div>
             </form>
           </div>
-        </Modal>
+        </AppModal>
       )}
 
       {showEditModal && (
-        <Modal onClose={() => setShowEditModal(false)} wide={true}>
-          <div style={{ maxHeight: '90vh', overflowY: 'auto' }}>
-            <h3 style={{ textAlign: 'center', marginBottom: '24px', fontSize: '24px', fontWeight: '600', color: '#111827' }}>Edit PDL</h3>
-            <form onSubmit={handleEditSubmit}>
+        <AppModal
+          open={showEditModal}
+          onClose={() => setShowEditModal(false)}
+          title="Edit PDL"
+          subtitle="Update the details of this person deprived of liberty"
+          tone="slate"
+          titleColor="#111827"
+          titleIcon={
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#4b5563" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>
+            </svg>
+          }
+          maxWidth="md"
+          maxContentWidth={760}
+          actions={
+            <>
+              <button type="button" onClick={() => setShowEditModal(false)} className="common-button cancel">
+                Cancel
+              </button>
+              <button type="submit" form="edit-pdl-form" className="common-button">
+                Submit
+              </button>
+            </>
+          }
+        >
+          <div>
+            <form id="edit-pdl-form" onSubmit={handleEditSubmit}>
               <div style={{ 
                 display: 'grid', 
                 gridTemplateColumns: '1fr 1fr', 
@@ -2098,88 +2130,75 @@ const exportPdlsWithVisitorsToExcel = async () => {
                 </div>
               </div>
 
-              <div className="common-modal-buttons" style={{ 
-                display: 'flex', 
-                justifyContent: 'center', 
-                gap: '12px',
-                marginTop: '24px',
-                paddingBottom: '20px'
-              }}>
-                <button 
-                  type="submit"
-                  className="common-button"
-                >
-                  Submit
-                </button>
-                <button 
-                  type="button" 
-                  onClick={() => setShowEditModal(false)}
-                  className="common-button cancel"
-                >
-                  Cancel
-                </button>
-              </div>
             </form>
           </div>
-        </Modal>
+        </AppModal>
       )}
 
       {/* Duplicate PDL Selection Modal */}
       {showDuplicateModal && (
-        <Modal onClose={() => setShowDuplicateModal(false)}>
+        <AppModal
+          open={showDuplicateModal}
+          onClose={() => {
+            setShowDuplicateModal(false);
+            setCurrentVisitorData(null);
+            setDuplicatePdls([]);
+          }}
+          title="Select PDL for Visitor"
+          subtitle="Multiple PDLs matched the visitor's last name"
+          tone="slate"
+          titleColor="#111827"
+          maxContentWidth={520}
+        >
           <div>
-            <h3 style={{ textAlign: 'center', marginBottom: '20px', fontSize: '20px', fontWeight: '600', color: '#111827' }}>
-              Select PDL for Visitor
-            </h3>
-            <div style={{ marginBottom: '20px' }}>
-              <p style={{ marginBottom: '10px', fontWeight: '500', color: '#374151' }}>
-                Multiple PDLs found with matching last name. Please select which PDL to add the visitor to:
-              </p>
-              <p style={{ marginBottom: '8px', fontSize: '14px', color: '#6b7280' }}>
-                <strong>Visitor:</strong> {currentVisitorData?.name}
-              </p>
-              <p style={{ marginBottom: '15px', fontSize: '13px', color: '#9ca3af', fontStyle: 'italic' }}>
-                Note: The system found PDLs with the same last name but different first names. Please verify the correct PDL.
-              </p>
-            </div>
-            
-            <div style={{ maxHeight: '300px', overflowY: 'auto', marginBottom: '20px' }}>
-              {duplicatePdls.map((pdl) => (
-                <div
-                  key={pdl.id}
-                  onClick={() => handleDuplicatePdlSelection(pdl.id)}
-                  style={{
-                    padding: '12px',
-                    border: '2px solid #e5e7eb',
-                    borderRadius: '8px',
-                    marginBottom: '8px',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease',
-                    background: '#fff'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.target.style.borderColor = '#4b5563';
-                    e.target.style.background = '#f8fafc';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.target.style.borderColor = '#e5e7eb';
-                    e.target.style.background = '#fff';
-                  }}
-                >
-                  <div style={{ fontWeight: '600', color: '#111827', marginBottom: '4px' }}>
-                    {pdl.last_name}, {pdl.first_name} {pdl.middle_name}
-                  </div>
-                  <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '2px' }}>
-                    Cell: {pdl.cell_number} | Case: {pdl.criminal_case_no || 'N/A'}
-                  </div>
-                  <div style={{ fontSize: '11px', color: '#9ca3af' }}>
-                    Last Name: ✓ Match | First Name: {pdl.first_name.toLowerCase() === (currentVisitorData?.pdlFirst || '').toLowerCase() ? '✓ Match' : '✗ Different'}
-                  </div>
+            <p style={{ marginBottom: '10px', fontWeight: '500', color: '#374151' }}>
+              Multiple PDLs found with matching last name. Please select which PDL to add the visitor to:
+            </p>
+            <p style={{ marginBottom: '8px', fontSize: '14px', color: '#6b7280' }}>
+              <strong>Visitor:</strong> {currentVisitorData?.name}
+            </p>
+            <p style={{ marginBottom: '15px', fontSize: '13px', color: '#9ca3af', fontStyle: 'italic' }}>
+              Note: The system found PDLs with the same last name but different first names. Please verify the correct PDL.
+            </p>
+          </div>
+
+          <div style={{ maxHeight: '300px', overflowY: 'auto', marginBottom: '20px' }}>
+            {duplicatePdls.map((pdl) => (
+              <div
+                key={pdl.id}
+                onClick={() => handleDuplicatePdlSelection(pdl.id)}
+                style={{
+                  padding: '12px',
+                  border: '2px solid #e5e7eb',
+                  borderRadius: '8px',
+                  marginBottom: '8px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  background: '#fff'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.borderColor = '#4b5563';
+                  e.target.style.background = '#f8fafc';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.borderColor = '#e5e7eb';
+                  e.target.style.background = '#fff';
+                }}
+              >
+                <div style={{ fontWeight: '600', color: '#111827', marginBottom: '4px' }}>
+                  {pdl.last_name}, {pdl.first_name} {pdl.middle_name}
                 </div>
-              ))}
-            </div>
-            
-            <div style={{ display: 'flex', justifyContent: 'center', gap: '12px' }}>
+                <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '2px' }}>
+                  Cell: {pdl.cell_number} | Case: {pdl.criminal_case_no || 'N/A'}
+                </div>
+                <div style={{ fontSize: '11px', color: '#9ca3af' }}>
+                  Last Name: ✓ Match | First Name: {pdl.first_name.toLowerCase() === (currentVisitorData?.pdlFirst || '').toLowerCase() ? '✓ Match' : '✗ Different'}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '12px' }}>
               <button
                 onClick={() => {
                   setShowDuplicateModal(false);
@@ -2201,238 +2220,235 @@ const exportPdlsWithVisitorsToExcel = async () => {
                 Cancel
               </button>
             </div>
-          </div>
-        </Modal>
+        </AppModal>
       )}
 
       {/* Import Summary Modal */}
       {showImportSummaryModal && (
-        <Modal onClose={() => setShowImportSummaryModal(false)}>
-          <div style={{ maxWidth: '800px', maxHeight: '80vh' }}>
-            <h3 style={{ textAlign: 'center', marginBottom: '20px', fontSize: '20px', fontWeight: '600', color: '#111827' }}>
-              Import Summary
-            </h3>
-            
-            <div style={{ marginBottom: '20px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '15px' }}>
-                <div style={{ textAlign: 'center', flex: 1 }}>
-                  <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#10b981' }}>
-                    {importSummary.success.length}
-                  </div>
-                  <div style={{ fontSize: '14px', color: '#6b7280' }}>Successfully Added</div>
+        <AppModal
+          open={showImportSummaryModal}
+          onClose={() => setShowImportSummaryModal(false)}
+          title="Import Summary"
+          subtitle="Results of the visitor import"
+          tone="green"
+          titleColor="#047857"
+          maxWidth="md"
+          maxContentWidth={700}
+          actions={
+            <button onClick={() => setShowImportSummaryModal(false)} className="common-button cancel">
+              Close
+            </button>
+          }
+        >
+          <div style={{ marginBottom: '20px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '15px' }}>
+              <div style={{ textAlign: 'center', flex: 1 }}>
+                <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#10b981' }}>
+                  {importSummary.success.length}
                 </div>
-                <div style={{ textAlign: 'center', flex: 1 }}>
-                  <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#f59e0b' }}>
-                    {importSummary.skipped.length}
-                  </div>
-                  <div style={{ fontSize: '14px', color: '#6b7280' }}>Skipped</div>
+                <div style={{ fontSize: '14px', color: '#6b7280' }}>Successfully Added</div>
+              </div>
+              <div style={{ textAlign: 'center', flex: 1 }}>
+                <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#f59e0b' }}>
+                  {importSummary.skipped.length}
                 </div>
-                <div style={{ textAlign: 'center', flex: 1 }}>
-                  <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#ef4444' }}>
-                    {importSummary.errors.length}
-                  </div>
-                  <div style={{ fontSize: '14px', color: '#6b7280' }}>Errors</div>
+                <div style={{ fontSize: '14px', color: '#6b7280' }}>Skipped</div>
+              </div>
+              <div style={{ textAlign: 'center', flex: 1 }}>
+                <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#ef4444' }}>
+                  {importSummary.errors.length}
                 </div>
+                <div style={{ fontSize: '14px', color: '#6b7280' }}>Errors</div>
               </div>
             </div>
-
-            <div style={{ maxHeight: '400px', overflowY: 'auto', marginBottom: '20px' }}>
-              {/* Successfully Added */}
-              {importSummary.success.length > 0 && (
-                <div style={{ marginBottom: '20px' }}>
-                  <h4 style={{ color: '#10b981', marginBottom: '10px', fontSize: '16px', fontWeight: '600' }}>
-                    ✅ Successfully Added ({importSummary.success.length})
-                  </h4>
-                  {importSummary.success.map((item, index) => (
-                    <div key={index} style={{ 
-                      padding: '8px 12px', 
-                      background: '#f0fdf4', 
-                      border: '1px solid #bbf7d0', 
-                      borderRadius: '6px', 
-                      marginBottom: '4px',
-                      fontSize: '13px'
-                    }}>
-                      <strong>{item.visitor}</strong> → {item.pdl}
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Skipped */}
-              {importSummary.skipped.length > 0 && (
-                <div style={{ marginBottom: '20px' }}>
-                  <h4 style={{ color: '#f59e0b', marginBottom: '10px', fontSize: '16px', fontWeight: '600' }}>
-                    ⚠️ Skipped ({importSummary.skipped.length})
-                  </h4>
-                  {importSummary.skipped.map((item, index) => (
-                    <div key={index} style={{ 
-                      padding: '8px 12px', 
-                      background: '#fffbeb', 
-                      border: '1px solid #fed7aa', 
-                      borderRadius: '6px', 
-                      marginBottom: '4px',
-                      fontSize: '13px'
-                    }}>
-                      <strong>{item.visitor}</strong> → {item.pdl}
-                      <div style={{ fontSize: '11px', color: '#92400e', marginTop: '2px' }}>
-                        {item.reason === 'already_exists' ? 'Already exists' : 
-                         item.reason === 'empty_pdl_declined' ? 'Empty PDL declined' :
-                         item.reason === 'pdl_not_found' ? 'PDL not found' : 'Unknown reason'}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Errors */}
-              {importSummary.errors.length > 0 && (
-                <div style={{ marginBottom: '20px' }}>
-                  <h4 style={{ color: '#ef4444', marginBottom: '10px', fontSize: '16px', fontWeight: '600' }}>
-                    ❌ Errors ({importSummary.errors.length})
-                  </h4>
-                  {importSummary.errors.map((item, index) => (
-                    <div key={index} style={{ 
-                      padding: '8px 12px', 
-                      background: '#fef2f2', 
-                      border: '1px solid #fecaca', 
-                      borderRadius: '6px', 
-                      marginBottom: '4px',
-                      fontSize: '13px'
-                    }}>
-                      <strong>{item.visitor}</strong> → {item.pdl}
-                      <div style={{ fontSize: '11px', color: '#dc2626', marginTop: '2px' }}>
-                        {item.error}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-            
-            <div style={{ display: 'flex', justifyContent: 'center' }}>
-              <button
-                onClick={() => setShowImportSummaryModal(false)}
-                className="common-button cancel"
-              >
-                Close
-              </button>
-            </div>
           </div>
-        </Modal>
+
+          <div style={{ maxHeight: '400px', overflowY: 'auto', marginBottom: '20px' }}>
+            {/* Successfully Added */}
+            {importSummary.success.length > 0 && (
+              <div style={{ marginBottom: '20px' }}>
+                <h4 style={{ color: '#10b981', marginBottom: '10px', fontSize: '16px', fontWeight: '600' }}>
+                  ✅ Successfully Added ({importSummary.success.length})
+                </h4>
+                {importSummary.success.map((item, index) => (
+                  <div key={index} style={{ 
+                    padding: '8px 12px', 
+                    background: '#f0fdf4', 
+                    border: '1px solid #bbf7d0', 
+                    borderRadius: '6px', 
+                    marginBottom: '4px',
+                    fontSize: '13px'
+                  }}>
+                    <strong>{item.visitor}</strong> → {item.pdl}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Skipped */}
+            {importSummary.skipped.length > 0 && (
+              <div style={{ marginBottom: '20px' }}>
+                <h4 style={{ color: '#f59e0b', marginBottom: '10px', fontSize: '16px', fontWeight: '600' }}>
+                  ⚠️ Skipped ({importSummary.skipped.length})
+                </h4>
+                {importSummary.skipped.map((item, index) => (
+                  <div key={index} style={{ 
+                    padding: '8px 12px', 
+                    background: '#fffbeb', 
+                    border: '1px solid #fed7aa', 
+                    borderRadius: '6px', 
+                    marginBottom: '4px',
+                    fontSize: '13px'
+                  }}>
+                    <strong>{item.visitor}</strong> → {item.pdl}
+                    <div style={{ fontSize: '11px', color: '#92400e', marginTop: '2px' }}>
+                      {item.reason === 'already_exists' ? 'Already exists' : 
+                       item.reason === 'empty_pdl_declined' ? 'Empty PDL declined' :
+                       item.reason === 'pdl_not_found' ? 'PDL not found' : 'Unknown reason'}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Errors */}
+            {importSummary.errors.length > 0 && (
+              <div style={{ marginBottom: '20px' }}>
+                <h4 style={{ color: '#ef4444', marginBottom: '10px', fontSize: '16px', fontWeight: '600' }}>
+                  ❌ Errors ({importSummary.errors.length})
+                </h4>
+                {importSummary.errors.map((item, index) => (
+                  <div key={index} style={{ 
+                    padding: '8px 12px', 
+                    background: '#fef2f2', 
+                    border: '1px solid #fecaca', 
+                    borderRadius: '6px', 
+                    marginBottom: '4px',
+                    fontSize: '13px'
+                  }}>
+                    <strong>{item.visitor}</strong> → {item.pdl}
+                    <div style={{ fontSize: '11px', color: '#dc2626', marginTop: '2px' }}>
+                      {item.error}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </AppModal>
       )}
 
       {/* PDL Import Summary Modal */}
       {showPdlImportSummaryModal && (
-        <Modal onClose={() => setShowPdlImportSummaryModal(false)}>
-          <div style={{ maxWidth: '800px', maxHeight: '80vh' }}>
-            <h3 style={{ textAlign: 'center', marginBottom: '20px', fontSize: '20px', fontWeight: '600', color: '#111827' }}>
-              PDL Import Summary
-            </h3>
-            
-            <div style={{ marginBottom: '20px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '15px' }}>
-                <div style={{ textAlign: 'center', flex: 1 }}>
-                  <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#10b981' }}>
-                    {pdlImportSummary.success.length}
-                  </div>
-                  <div style={{ fontSize: '14px', color: '#6b7280' }}>Successfully Added</div>
+        <AppModal
+          open={showPdlImportSummaryModal}
+          onClose={() => setShowPdlImportSummaryModal(false)}
+          title="PDL Import Summary"
+          subtitle="Results of the PDL import"
+          tone="green"
+          titleColor="#047857"
+          maxWidth="md"
+          maxContentWidth={700}
+          actions={
+            <button onClick={() => setShowPdlImportSummaryModal(false)} className="common-button cancel">
+              Close
+            </button>
+          }
+        >
+          <div style={{ marginBottom: '20px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '15px' }}>
+              <div style={{ textAlign: 'center', flex: 1 }}>
+                <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#10b981' }}>
+                  {pdlImportSummary.success.length}
                 </div>
-                <div style={{ textAlign: 'center', flex: 1 }}>
-                  <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#f59e0b' }}>
-                    {pdlImportSummary.skipped.length}
-                  </div>
-                  <div style={{ fontSize: '14px', color: '#6b7280' }}>Skipped</div>
+                <div style={{ fontSize: '14px', color: '#6b7280' }}>Successfully Added</div>
+              </div>
+              <div style={{ textAlign: 'center', flex: 1 }}>
+                <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#f59e0b' }}>
+                  {pdlImportSummary.skipped.length}
                 </div>
-                <div style={{ textAlign: 'center', flex: 1 }}>
-                  <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#ef4444' }}>
-                    {pdlImportSummary.errors.length}
-                  </div>
-                  <div style={{ fontSize: '14px', color: '#6b7280' }}>Errors</div>
+                <div style={{ fontSize: '14px', color: '#6b7280' }}>Skipped</div>
+              </div>
+              <div style={{ textAlign: 'center', flex: 1 }}>
+                <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#ef4444' }}>
+                  {pdlImportSummary.errors.length}
                 </div>
+                <div style={{ fontSize: '14px', color: '#6b7280' }}>Errors</div>
               </div>
             </div>
-
-            <div style={{ maxHeight: '400px', overflowY: 'auto', marginBottom: '20px' }}>
-              {/* Successfully Added */}
-              {pdlImportSummary.success.length > 0 && (
-                <div style={{ marginBottom: '20px' }}>
-                  <h4 style={{ color: '#10b981', marginBottom: '10px', fontSize: '16px', fontWeight: '600' }}>
-                    ✅ Successfully Added ({pdlImportSummary.success.length})
-                  </h4>
-                  {pdlImportSummary.success.map((item, index) => (
-                    <div key={index} style={{ 
-                      padding: '8px 12px', 
-                      background: '#f0fdf4', 
-                      border: '1px solid #bbf7d0', 
-                      borderRadius: '6px', 
-                      marginBottom: '4px',
-                      fontSize: '13px'
-                    }}>
-                      <strong>{item.pdl}</strong>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Skipped */}
-              {pdlImportSummary.skipped.length > 0 && (
-                <div style={{ marginBottom: '20px' }}>
-                  <h4 style={{ color: '#f59e0b', marginBottom: '10px', fontSize: '16px', fontWeight: '600' }}>
-                    ⚠️ Skipped ({pdlImportSummary.skipped.length})
-                  </h4>
-                  {pdlImportSummary.skipped.map((item, index) => (
-                    <div key={index} style={{ 
-                      padding: '8px 12px', 
-                      background: '#fffbeb', 
-                      border: '1px solid #fed7aa', 
-                      borderRadius: '6px', 
-                      marginBottom: '4px',
-                      fontSize: '13px'
-                    }}>
-                      <strong>{item.pdl}</strong>
-                      <div style={{ fontSize: '11px', color: '#92400e', marginTop: '2px' }}>
-                        Already exists
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Errors */}
-              {pdlImportSummary.errors.length > 0 && (
-                <div style={{ marginBottom: '20px' }}>
-                  <h4 style={{ color: '#ef4444', marginBottom: '10px', fontSize: '16px', fontWeight: '600' }}>
-                    ❌ Errors ({pdlImportSummary.errors.length})
-                  </h4>
-                  {pdlImportSummary.errors.map((item, index) => (
-                    <div key={index} style={{ 
-                      padding: '8px 12px', 
-                      background: '#fef2f2', 
-                      border: '1px solid #fecaca', 
-                      borderRadius: '6px', 
-                      marginBottom: '4px',
-                      fontSize: '13px'
-                    }}>
-                      <strong>{item.pdl}</strong>
-                      <div style={{ fontSize: '11px', color: '#dc2626', marginTop: '2px' }}>
-                        {item.error}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-            
-            <div style={{ display: 'flex', justifyContent: 'center' }}>
-              <button
-                onClick={() => setShowPdlImportSummaryModal(false)}
-                className="common-button cancel"
-              >
-                Close
-              </button>
-            </div>
           </div>
-        </Modal>
+
+          <div style={{ maxHeight: '400px', overflowY: 'auto', marginBottom: '20px' }}>
+            {/* Successfully Added */}
+            {pdlImportSummary.success.length > 0 && (
+              <div style={{ marginBottom: '20px' }}>
+                <h4 style={{ color: '#10b981', marginBottom: '10px', fontSize: '16px', fontWeight: '600' }}>
+                  ✅ Successfully Added ({pdlImportSummary.success.length})
+                </h4>
+                {pdlImportSummary.success.map((item, index) => (
+                  <div key={index} style={{ 
+                    padding: '8px 12px', 
+                    background: '#f0fdf4', 
+                    border: '1px solid #bbf7d0', 
+                    borderRadius: '6px', 
+                    marginBottom: '4px',
+                    fontSize: '13px'
+                  }}>
+                    <strong>{item.pdl}</strong>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Skipped */}
+            {pdlImportSummary.skipped.length > 0 && (
+              <div style={{ marginBottom: '20px' }}>
+                <h4 style={{ color: '#f59e0b', marginBottom: '10px', fontSize: '16px', fontWeight: '600' }}>
+                  ⚠️ Skipped ({pdlImportSummary.skipped.length})
+                </h4>
+                {pdlImportSummary.skipped.map((item, index) => (
+                  <div key={index} style={{ 
+                    padding: '8px 12px', 
+                    background: '#fffbeb', 
+                    border: '1px solid #fed7aa', 
+                    borderRadius: '6px', 
+                    marginBottom: '4px',
+                    fontSize: '13px'
+                  }}>
+                    <strong>{item.pdl}</strong>
+                    <div style={{ fontSize: '11px', color: '#92400e', marginTop: '2px' }}>
+                      Already exists
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Errors */}
+            {pdlImportSummary.errors.length > 0 && (
+              <div style={{ marginBottom: '20px' }}>
+                <h4 style={{ color: '#ef4444', marginBottom: '10px', fontSize: '16px', fontWeight: '600' }}>
+                  ❌ Errors ({pdlImportSummary.errors.length})
+                </h4>
+                {pdlImportSummary.errors.map((item, index) => (
+                  <div key={index} style={{ 
+                    padding: '8px 12px', 
+                    background: '#fef2f2', 
+                    border: '1px solid #fecaca', 
+                    borderRadius: '6px', 
+                    marginBottom: '4px',
+                    fontSize: '13px'
+                  }}>
+                    <strong>{item.pdl}</strong>
+                    <div style={{ fontSize: '11px', color: '#dc2626', marginTop: '2px' }}>
+                      {item.error}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </AppModal>
       )}
 
     </div>

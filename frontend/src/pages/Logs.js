@@ -8,6 +8,8 @@ import FilterChips from '../components/FilterChips';
 import SortIndicator from '../components/SortIndicator';
 import EmptyState from '../components/EmptyState';
 import QuickViewPanel, { QVField, QVSection } from '../components/QuickViewPanel';
+import ColumnVisibility from '../components/ColumnVisibility';
+import useColumnVisibility from '../hooks/useColumnVisibility';
 import './Dashboard.css';
 import './common.css';
 import * as XLSX from 'xlsx';
@@ -29,6 +31,22 @@ const Logs = () => {
     data: allowedVisitors,
     searchFields: ['visitor_name', 'pdl_name', 'relationship', 'cell', 'contact_number'],
     defaultPageSize: 20,
+  });
+
+  // Column visibility (persisted per table)
+  const logColumns = [
+    { key: 'visitor_name', label: 'Visitor Name' },
+    { key: 'contact_number', label: 'Contact Number' },
+    { key: 'pdl_name', label: 'PDL Visited' },
+    { key: 'relationship', label: 'Relationship' },
+    { key: 'cell', label: 'Cell' },
+    { key: 'time_in', label: 'Time In' },
+    { key: 'time_out', label: 'Time Out' },
+    { key: 'scan_date', label: 'Date' },
+  ];
+  const colVis = useColumnVisibility({
+    storageKey: 'logs.visibleColumns',
+    allColumns: logColumns,
   });
 
   const toggleCollapse = (id) => {
@@ -286,6 +304,14 @@ const Logs = () => {
                 <button className="toolbar-icon-btn" onClick={handleExtractTable} title="Export to Excel">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
                 </button>
+                <ColumnVisibility
+                  columns={logColumns}
+                  isVisible={colVis.isVisible}
+                  onToggle={colVis.toggleColumn}
+                  onShowAll={() => colVis.setAll(true)}
+                  onHideAll={() => colVis.setAll(false)}
+                  align="right"
+                />
               </div>
               <Dropdown
                 value={purposeFilter}
@@ -341,14 +367,14 @@ const Logs = () => {
               <table className="common-table card-table card-first-is-name">
                 <thead>
                   <tr>
-                    <th className="sortable-th" onClick={() => table.onSort('visitor_name')}>Visitor's Name <SortIndicator column="visitor_name" currentSort={table.sortColumn} direction={table.sortDirection} /></th>
-                    <th className="sortable-th" onClick={() => table.onSort('contact_number')}>Contact Number <SortIndicator column="contact_number" currentSort={table.sortColumn} direction={table.sortDirection} /></th>
-                    <th className="sortable-th" onClick={() => table.onSort('pdl_name')}>PDL Visited <SortIndicator column="pdl_name" currentSort={table.sortColumn} direction={table.sortDirection} /></th>
-                    <th className="sortable-th" onClick={() => table.onSort('relationship')}>Relationship <SortIndicator column="relationship" currentSort={table.sortColumn} direction={table.sortDirection} /></th>
-                    <th className="sortable-th" onClick={() => table.onSort('cell')}>Cell <SortIndicator column="cell" currentSort={table.sortColumn} direction={table.sortDirection} /></th>
-                    <th className="sortable-th" onClick={() => table.onSort('time_in')}>Time In <SortIndicator column="time_in" currentSort={table.sortColumn} direction={table.sortDirection} /></th>
-                    <th className="sortable-th" onClick={() => table.onSort('time_out')}>Time Out <SortIndicator column="time_out" currentSort={table.sortColumn} direction={table.sortDirection} /></th>
-                    <th className="sortable-th" onClick={() => table.onSort('time_in')}>Date <SortIndicator column="time_in" currentSort={table.sortColumn} direction={table.sortDirection} /></th>
+                    {colVis.isVisible('visitor_name') && <th className="sortable-th" onClick={() => table.onSort('visitor_name')}>Visitor's Name <SortIndicator column="visitor_name" currentSort={table.sortColumn} direction={table.sortDirection} /></th>}
+                    {colVis.isVisible('contact_number') && <th className="sortable-th" onClick={() => table.onSort('contact_number')}>Contact Number <SortIndicator column="contact_number" currentSort={table.sortColumn} direction={table.sortDirection} /></th>}
+                    {colVis.isVisible('pdl_name') && <th className="sortable-th" onClick={() => table.onSort('pdl_name')}>PDL Visited <SortIndicator column="pdl_name" currentSort={table.sortColumn} direction={table.sortDirection} /></th>}
+                    {colVis.isVisible('relationship') && <th className="sortable-th" onClick={() => table.onSort('relationship')}>Relationship <SortIndicator column="relationship" currentSort={table.sortColumn} direction={table.sortDirection} /></th>}
+                    {colVis.isVisible('cell') && <th className="sortable-th" onClick={() => table.onSort('cell')}>Cell <SortIndicator column="cell" currentSort={table.sortColumn} direction={table.sortDirection} /></th>}
+                    {colVis.isVisible('time_in') && <th className="sortable-th" onClick={() => table.onSort('time_in')}>Time In <SortIndicator column="time_in" currentSort={table.sortColumn} direction={table.sortDirection} /></th>}
+                    {colVis.isVisible('time_out') && <th className="sortable-th" onClick={() => table.onSort('time_out')}>Time Out <SortIndicator column="time_out" currentSort={table.sortColumn} direction={table.sortDirection} /></th>}
+                    {colVis.isVisible('scan_date') && <th className="sortable-th" onClick={() => table.onSort('time_in')}>Date <SortIndicator column="time_in" currentSort={table.sortColumn} direction={table.sortDirection} /></th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -359,19 +385,21 @@ const Logs = () => {
                       onClick={() => handleRowClick(v)}
                       style={{ cursor: 'pointer' }}
                     >
-                      <td data-label="Visitor's Name" style={{ color: '#2563eb', fontWeight: 500 }}>{capitalizeWords(v.visitor_name)}</td>
-                      <td data-label="Contact Number">{v.contact_number}</td>
-                      <td data-label="PDL Visited" style={{ color: '#2563eb', fontWeight: 500 }}>{capitalizeWords(v.pdl_name)}</td>
-                      <td data-label="Relationship">{v.relationship}</td>
-                      <td data-label="Cell">
-                        {(() => {
-                          const cell = availableCells.find(c => c.cell_number.toLowerCase() === v.cell.toLowerCase());
-                          return cell && cell.cell_name ? `${cell.cell_name} - ${capitalizeWords(v.cell)}` : capitalizeWords(v.cell);
-                        })()}
-                      </td>
-                      <td data-label="Time In">{v.time_in ? formatTimeOnly(v.time_in) : ''}</td>
-                      <td data-label="Time Out">{v.time_out ? formatTimeOnly(v.time_out) : ''}</td>
-                      <td data-label="Date">{v.time_in ? formatDateTime(v.time_in).split(',')[0] : ''}</td>
+                      {colVis.isVisible('visitor_name') && <td data-label="Visitor's Name" style={{ color: '#2563eb', fontWeight: 500 }}>{capitalizeWords(v.visitor_name)}</td>}
+                      {colVis.isVisible('contact_number') && <td data-label="Contact Number">{v.contact_number}</td>}
+                      {colVis.isVisible('pdl_name') && <td data-label="PDL Visited" style={{ color: '#2563eb', fontWeight: 500 }}>{capitalizeWords(v.pdl_name)}</td>}
+                      {colVis.isVisible('relationship') && <td data-label="Relationship">{v.relationship}</td>}
+                      {colVis.isVisible('cell') && (
+                        <td data-label="Cell">
+                          {(() => {
+                            const cell = availableCells.find(c => c.cell_number.toLowerCase() === v.cell.toLowerCase());
+                            return cell && cell.cell_name ? `${cell.cell_name} - ${capitalizeWords(v.cell)}` : capitalizeWords(v.cell);
+                          })()}
+                        </td>
+                      )}
+                      {colVis.isVisible('time_in') && <td data-label="Time In">{v.time_in ? formatTimeOnly(v.time_in) : ''}</td>}
+                      {colVis.isVisible('time_out') && <td data-label="Time Out">{v.time_out ? formatTimeOnly(v.time_out) : ''}</td>}
+                      {colVis.isVisible('scan_date') && <td data-label="Date">{v.time_in ? formatDateTime(v.time_in).split(',')[0] : ''}</td>}
                       <td className="card-summary">{capitalizeWords(v.visitor_name)}</td>
                     </tr>
                   ))}

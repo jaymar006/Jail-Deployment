@@ -463,7 +463,7 @@ exports.createRegistrationCode = async (req, res) => {
 
     await db.query(
       `INSERT INTO registration_codes (code, expires_at, use_limit, used_count) VALUES (?, ?, ?, 0)`,
-      [registrationCode, expiresAt, limit]
+      [registrationCode, expiresAt.toISOString(), limit]
     );
 
     res.json({ 

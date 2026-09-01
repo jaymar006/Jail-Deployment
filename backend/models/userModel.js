@@ -15,10 +15,11 @@ const createUser = async (username, password, telegramUsername, role = 'user', e
       [username, password, telegramUsername || null, role]
     );
   } else {
-    // SQLite schema requires a NOT NULL UNIQUE email
+    // SQLite schema requires a NOT NULL UNIQUE email. If none provided, generate a unique placeholder.
+    const userEmail = email || `${username.toLowerCase()}@placeholder.com`;
     [result] = await db.query(
       'INSERT INTO users (username, password, email, telegram_username, role) VALUES (?, ?, ?, ?, ?)',
-      [username, password, email || '', telegramUsername || null, role]
+      [username, password, userEmail, telegramUsername || null, role]
     );
   }
   return result.insertId;

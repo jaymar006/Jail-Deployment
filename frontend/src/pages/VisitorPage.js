@@ -1,50 +1,18 @@
 import React, { useState, useEffect, useCallback, useRef, useContext } from 'react';
-import ReactDOM from 'react-dom';
 import { VisitorContext } from '../context/VisitorContext';
 import { PageMetaContext } from '../context/PageMetaContext';
 import { useParams, useLocation } from 'react-router-dom';
 import api from '../services/api';
+import EmptyState from '../components/EmptyState';
+import AppModal from '../components/AppModal';
+import ColumnVisibility from '../components/ColumnVisibility';
+import useColumnVisibility from '../hooks/useColumnVisibility';
 import './common.css';
 import './VisitorPage.css';
 import './VisitorPageIdPreview.css';
 import { QRCodeCanvas } from 'qrcode.react';
 import ID_Background from '../assets/ID_Background.png';
 import { toPng } from 'html-to-image';
-
-const Modal = ({ children, onClose, wide = false }) => {
-  // Prevent body scroll when modal is open and ensure overlay covers everything
-  React.useEffect(() => {
-    const originalOverflow = document.body.style.overflow;
-    const originalHtmlOverflow = document.documentElement.style.overflow;
-    const originalBgColor = document.body.style.backgroundColor;
-    const originalHtmlBgColor = document.documentElement.style.backgroundColor;
-    
-    // Prevent scrolling on both body and html
-    document.body.style.overflow = 'hidden';
-    document.documentElement.style.overflow = 'hidden';
-    
-    // Ensure background doesn't show white behind modal
-    document.body.style.backgroundColor = '#f9fafb';
-    document.documentElement.style.backgroundColor = '#f9fafb';
-    
-    return () => {
-      document.body.style.overflow = originalOverflow;
-      document.documentElement.style.overflow = originalHtmlOverflow;
-      document.body.style.backgroundColor = originalBgColor;
-      document.documentElement.style.backgroundColor = originalHtmlBgColor;
-    };
-  }, []);
-
-  // Render modal at document body level to ensure it covers everything
-  return ReactDOM.createPortal(
-    <div className="common-modal" onClick={onClose}>
-      <div className={`common-modal-content ${wide ? 'wide' : ''}`} onClick={e => e.stopPropagation()}>
-        {children}
-      </div>
-    </div>,
-    document.body
-  );
-};
 
 const VisitorPage = () => {
   const { pdlId } = useParams();
@@ -81,6 +49,21 @@ const VisitorPage = () => {
   const [editingVisitorId, setEditingVisitorId] = useState(null);
   const [fetchError, setFetchError] = useState(null);
   const [pdlFetchError, setPdlFetchError] = useState(null);
+
+  // Column visibility (persisted per table); Actions/Select stay locked
+  const visitorColumns = [
+    { key: 'name', label: 'Name' },
+    { key: 'relationship', label: 'Relationship' },
+    { key: 'age', label: 'Age' },
+    { key: 'address', label: 'Address' },
+    { key: 'valid_id', label: 'Valid ID' },
+    { key: 'date_of_application', label: 'Date of Application' },
+    { key: 'contact_number', label: 'Contact Number' },
+  ];
+  const colVis = useColumnVisibility({
+    storageKey: 'visitorpage.visibleColumns',
+    allColumns: visitorColumns,
+  });
 
   // New states for Create ID feature
   const [isSelecting, setIsSelecting] = useState(false);
@@ -582,13 +565,21 @@ const VisitorPage = () => {
         {pdlFetchError && <p style={{ color: 'red' }}>{pdlFetchError}</p>}
         {fetchError && <p style={{ color: 'red' }}>{fetchError}</p>}
 
-        <div style={{ display: 'flex', gap: '10px', marginBottom: '12px' }}>
+        <div style={{ display: 'flex', gap: '10px', marginBottom: '12px', alignItems: 'center' }}>
           <button className="common-button add" onClick={openAddModal}>
             <svg className="button-icon" viewBox="0 0 24 24">
               <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
             </svg>
             Add Visitor
           </button>
+          <ColumnVisibility
+            columns={visitorColumns}
+            isVisible={colVis.isVisible}
+            onToggle={colVis.toggleColumn}
+            onShowAll={() => colVis.setAll(true)}
+            onHideAll={() => colVis.setAll(false)}
+            align="left"
+          />
         </div>
 
         <div className="visitor-table-wrapper">
@@ -596,20 +587,25 @@ const VisitorPage = () => {
             <thead>
               <tr>
                 {isSelecting && <th>Select</th>}
-                <th>Name</th>
-                <th>Relationship</th>
-                <th>Age</th>
-                <th>Address</th>
-                <th>Valid ID</th>
-                <th>Date of Application</th>
-                <th>Contact Number</th>
+                {colVis.isVisible('name') && <th>Name</th>}
+                {colVis.isVisible('relationship') && <th>Relationship</th>}
+                {colVis.isVisible('age') && <th>Age</th>}
+                {colVis.isVisible('address') && <th>Address</th>}
+                {colVis.isVisible('valid_id') && <th>Valid ID</th>}
+                {colVis.isVisible('date_of_application') && <th>Date of Application</th>}
+                {colVis.isVisible('contact_number') && <th>Contact Number</th>}
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody>
               {visitors.length === 0 ? (
                 <tr>
-                  <td colSpan={isSelecting ? "9" : "8"} className="no-visitors no-data">No visitors yet</td>
+                  <td colSpan={visitorColumns.filter(c => colVis.isVisible(c.key)).length + 1 + (isSelecting ? 1 : 0)} style={{ padding: 0 }}>
+                    <EmptyState
+                      title="No visitors yet"
+                      description="No visitors registered for this PDL. Add a visitor to get started."
+                    />
+                  </td>
                 </tr>
               ) : (
                 visitors.map(visitor => (
@@ -629,15 +625,15 @@ const VisitorPage = () => {
                         />
                       </td>
                     )}
-                    <td data-label="Name">{visitor.name}</td>
-                    <td data-label="Relationship">{visitor.relationship}</td>
-                    <td data-label="Age">{visitor.age}</td>
-                    <td data-label="Address">{visitor.address}</td>
-                    <td data-label="Valid ID">{visitor.valid_id}</td>
-                    <td data-label="Date of Application">{formatDateForTable(visitor.date_of_application)}</td>
-                    <td data-label="Contact Number">{visitor.contact_number}</td>
+                    {colVis.isVisible('name') && <td data-label="Name">{visitor.name}</td>}
+                    {colVis.isVisible('relationship') && <td data-label="Relationship">{visitor.relationship}</td>}
+                    {colVis.isVisible('age') && <td data-label="Age">{visitor.age}</td>}
+                    {colVis.isVisible('address') && <td data-label="Address">{visitor.address}</td>}
+                    {colVis.isVisible('valid_id') && <td data-label="Valid ID">{visitor.valid_id}</td>}
+                    {colVis.isVisible('date_of_application') && <td data-label="Date of Application">{formatDateForTable(visitor.date_of_application)}</td>}
+                    {colVis.isVisible('contact_number') && <td data-label="Contact Number">{visitor.contact_number}</td>}
                     <td data-label="Actions">
-                      <div className="action-buttons-row">
+                      <div className="action-buttons-row table-row-hover-actions">
                         <button
                           type="button"
                           className="common-button edit icon-button"
@@ -699,10 +695,33 @@ const VisitorPage = () => {
         )}
 
         {showAddModal && (
-          <Modal onClose={() => { setShowAddModal(false); resetForm(); setEditingVisitorId(null); }} wide={true}>
-            <div className="add-pdl-modal" style={{ maxHeight: '90vh', overflowY: 'auto' }}>
-              <h3 className="add-pdl-title">Add Visitor</h3>
-              <form onSubmit={handleAddVisitor}>
+          <AppModal
+            open={showAddModal}
+            onClose={() => { setShowAddModal(false); resetForm(); setEditingVisitorId(null); }}
+            title="Add Visitor"
+            subtitle="Register a new visitor for this PDL"
+            tone="blue"
+            titleColor="#1d4ed8"
+            titleIcon={
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1d4ed8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/>
+              </svg>
+            }
+            maxWidth="md"
+            maxContentWidth={760}
+            actions={
+              <>
+                <button type="button" onClick={() => { setShowAddModal(false); resetForm(); setEditingVisitorId(null); }} className="common-button cancel">
+                  Cancel
+                </button>
+                <button type="submit" form="add-visitor-form" className="common-button">
+                  Submit
+                </button>
+              </>
+            }
+          >
+            <div className="add-pdl-modal">
+              <form id="add-visitor-form" onSubmit={handleAddVisitor}>
                 <div className="add-pdl-sections">
                   <div className="add-pdl-section">
                     <h4>Personal Information</h4>
@@ -816,29 +835,39 @@ const VisitorPage = () => {
                     </label>
                   </div>
                 </div>
-
-                <div className="add-pdl-actions">
-                  <button type="submit" className="common-button">
-                    Submit
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => { setShowAddModal(false); resetForm(); setEditingVisitorId(null); }}
-                    className="common-button cancel"
-                  >
-                    Cancel
-                  </button>
-                </div>
               </form>
             </div>
-          </Modal>
+          </AppModal>
         )}
 
         {showEditModal && (
-          <Modal onClose={() => { setShowEditModal(false); resetForm(); setEditingVisitorId(null); }} wide={true}>
-            <div style={{ maxHeight: '90vh', overflowY: 'auto' }}>
-              <h3 style={{ textAlign: 'center', marginBottom: '24px', fontSize: '24px', fontWeight: '600', color: '#111827' }}>Edit Visitor</h3>
-              <form onSubmit={handleEditVisitor}>
+          <AppModal
+            open={showEditModal}
+            onClose={() => { setShowEditModal(false); resetForm(); setEditingVisitorId(null); }}
+            title="Edit Visitor"
+            subtitle="Update the details of this visitor"
+            tone="slate"
+            titleColor="#111827"
+            titleIcon={
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#4b5563" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>
+              </svg>
+            }
+            maxWidth="md"
+            maxContentWidth={760}
+            actions={
+              <>
+                <button type="button" onClick={() => { setShowEditModal(false); resetForm(); setEditingVisitorId(null); }} className="common-button cancel">
+                  Cancel
+                </button>
+                <button type="submit" form="edit-visitor-form" className="common-button">
+                  Submit
+                </button>
+              </>
+            }
+          >
+            <div>
+              <form id="edit-visitor-form" onSubmit={handleEditVisitor}>
                 <div style={{ 
                   display: 'grid', 
                   gridTemplateColumns: '1fr 1fr', 
@@ -1065,30 +1094,9 @@ const VisitorPage = () => {
                   </div>
                 </div>
 
-                <div className="common-modal-buttons" style={{ 
-                  display: 'flex', 
-                  justifyContent: 'center', 
-                  gap: '12px',
-                  marginTop: '24px',
-                  paddingBottom: '20px'
-                }}>
-                  <button 
-                    type="submit"
-                    className="common-button"
-                  >
-                    Submit
-                  </button>
-                  <button 
-                    type="button" 
-                    onClick={() => { setShowEditModal(false); resetForm(); setEditingVisitorId(null); }}
-                    className="common-button cancel"
-                  >
-                    Cancel
-                  </button>
-                </div>
               </form>
             </div>
-          </Modal>
+          </AppModal>
         )}
 
         {showIdPreview && (
@@ -1192,26 +1200,29 @@ const VisitorPage = () => {
 
         {/* Camera Modal */}
         {showCameraModal && (
-          <Modal onClose={closeCameraModal}>
-            <div style={{ maxWidth: '400px', width: '100%' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', paddingBottom: '10px', borderBottom: '1px solid #dee2e6' }}>
-                <h5 style={{ margin: 0, fontSize: '1.25rem', fontWeight: '500' }}>
-                  Capture Photo{cameraVisitorName ? ` — ${cameraVisitorName}` : ''}
-                </h5>
-                <button type="button" style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#6b7280' }} aria-label="Close" onClick={closeCameraModal}>
-                  <span aria-hidden="true">&times;</span>
-                </button>
-              </div>
-              <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-                <video ref={videoRef} autoPlay playsInline style={{ width: '100%', borderRadius: '8px' }} />
-                <canvas ref={canvasRef} style={{ display: 'none' }} />
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', paddingTop: '10px', borderTop: '1px solid #dee2e6' }}>
-                <button className="btn btn-primary" onClick={capturePhoto}>Capture</button>
+          <AppModal
+            open={showCameraModal}
+            onClose={closeCameraModal}
+            title={`Capture Photo${cameraVisitorName ? ` — ${cameraVisitorName}` : ''}`}
+            subtitle="Position the visitor facing the camera"
+            tone="slate"
+            titleColor="#111827"
+            titleIcon={
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#4b5563" strokeWidth="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+            }
+            maxContentWidth={400}
+            actions={
+              <>
                 <button className="btn btn-secondary" onClick={closeCameraModal}>Cancel</button>
-              </div>
+                <button className="btn btn-primary" onClick={capturePhoto}>Capture</button>
+              </>
+            }
+          >
+            <div style={{ textAlign: 'center' }}>
+              <video ref={videoRef} autoPlay playsInline style={{ width: '100%', borderRadius: '8px' }} />
+              <canvas ref={canvasRef} style={{ display: 'none' }} />
             </div>
-          </Modal>
+          </AppModal>
         )}
       </main>
     </div>

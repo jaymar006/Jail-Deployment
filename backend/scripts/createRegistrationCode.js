@@ -23,7 +23,7 @@ const createRegistrationCode = async () => {
     
     await db.query(
       `INSERT INTO registration_codes (code, expires_at) VALUES (?, ?)`,
-      [code, expiresAt]
+      [code, expiresAt.toISOString()]
     );
     
     console.log(`✅ Registration code created successfully!`);

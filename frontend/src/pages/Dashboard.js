@@ -7,43 +7,9 @@ import { Html5Qrcode } from 'html5-qrcode';
 import api from '../services/api';
 import logger from '../utils/logger';
 import EmptyState from '../components/EmptyState';
+import AppModal from '../components/AppModal';
 import './Dashboard.css';
 import './common.css';
-
-const Modal = ({ children, onClose }) => {
-  // Prevent body scroll when modal is open and ensure overlay covers everything
-  React.useEffect(() => {
-    const originalOverflow = document.body.style.overflow;
-    const originalHtmlOverflow = document.documentElement.style.overflow;
-    const originalBgColor = document.body.style.backgroundColor;
-    const originalHtmlBgColor = document.documentElement.style.backgroundColor;
-    
-    // Prevent scrolling on both body and html
-    document.body.style.overflow = 'hidden';
-    document.documentElement.style.overflow = 'hidden';
-    
-    // Ensure background doesn't show white behind modal
-    document.body.style.backgroundColor = '#f9fafb';
-    document.documentElement.style.backgroundColor = '#f9fafb';
-    
-    return () => {
-      document.body.style.overflow = originalOverflow;
-      document.documentElement.style.overflow = originalHtmlOverflow;
-      document.body.style.backgroundColor = originalBgColor;
-      document.documentElement.style.backgroundColor = originalHtmlBgColor;
-    };
-  }, []);
-
-  // Render modal at document body level to ensure it covers everything
-  return ReactDOM.createPortal(
-    <div className="common-modal" onClick={onClose}>
-      <div className="common-modal-content" onClick={e => e.stopPropagation()}>
-        {children}
-      </div>
-    </div>,
-    document.body
-  );
-};
 
 const WEEK_DAY_KEYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 
@@ -1727,20 +1693,41 @@ const Dashboard = () => {
 
         {/* Purpose Selection Modal */}
         {showPurposeModal && (
-          <Modal onClose={() => {
-            setShowPurposeModal(false);
-            setPendingScanData(null);
-            setVerifiedConjugal(false);
-            setScanLocked(false);
-            logger.debug('Purpose modal closed, scan unlocked');
-          }}>
-            <div className="purpose-modal" style={{ 
-              maxWidth: isMobile ? '95%' : '600px',
-              width: '100%',
-              padding: isMobile ? '16px' : '24px',
-              maxHeight: isMobile ? '90vh' : 'auto',
-              overflowY: isMobile ? 'auto' : 'visible'
-            }}>
+          <AppModal
+            open={showPurposeModal}
+            onClose={() => {
+              setShowPurposeModal(false);
+              setPendingScanData(null);
+              setVerifiedConjugal(false);
+              setScanLocked(false);
+              logger.debug('Purpose modal closed, scan unlocked');
+            }}
+            title="Select Visit Type"
+            subtitle="Choose conjugal or normal visit for this visitor"
+            tone="green"
+            titleColor="#059669"
+            titleIcon={
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+              </svg>
+            }
+            maxContentWidth={600}
+            actions={
+              <button
+                type="button"
+                onClick={() => {
+                  setShowPurposeModal(false);
+                  setPendingScanData(null);
+                  setVerifiedConjugal(false);
+                  setTimeout(() => setScanLocked(false), 500);
+                }}
+                className="common-button cancel"
+              >
+                Cancel
+              </button>
+            }
+          >
+            <div style={{ textAlign: 'center' }}>
               {/* Header Section */}
               <div style={{ textAlign: 'center', marginBottom: isMobile ? '20px' : '32px' }}>
                 <div style={{
@@ -1975,116 +1962,65 @@ const Dashboard = () => {
                   <p style={{ margin: '0', fontSize: isMobile ? '12px' : '13px', color: '#15803d', opacity: '0.8' }}>Regular visitation</p>
                 </button>
               </div>
-              
-              {/* Cancel Button */}
-              <div style={{ textAlign: 'center', paddingTop: isMobile ? '12px' : '16px', borderTop: '1px solid #e2e8f0' }}>
-                <button 
-                  type="button" 
-                  onClick={() => {
-                    setShowPurposeModal(false);
-                    setPendingScanData(null);
-                    setVerifiedConjugal(false);
-                    setTimeout(() => setScanLocked(false), 500);
-                  }}
-                  style={{
-                    background: '#f8fafc',
-                    color: '#475569',
-                    border: '1px solid #e2e8f0',
-                    padding: isMobile ? '14px 24px' : '12px 32px',
-                    borderRadius: '10px',
-                    fontSize: isMobile ? '15px' : '14px',
-                    fontWeight: '600',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease',
-                    boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
-                    width: isMobile ? '100%' : 'auto',
-                    minHeight: isMobile ? '48px' : 'auto'
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!isMobile) {
-                      e.target.style.background = '#f1f5f9';
-                      e.target.style.borderColor = '#cbd5e1';
-                      e.target.style.transform = 'translateY(-1px)';
-                      e.target.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (!isMobile) {
-                      e.target.style.background = '#f8fafc';
-                      e.target.style.borderColor = '#e2e8f0';
-                      e.target.style.transform = 'translateY(0)';
-                      e.target.style.boxShadow = '0 1px 2px rgba(0, 0, 0, 0.05)';
-                    }
-                  }}
-                  onTouchStart={(e) => {
-                    if (isMobile) {
-                      e.target.style.background = '#f1f5f9';
-                      e.target.style.borderColor = '#cbd5e1';
-                    }
-                  }}
-                  onTouchEnd={(e) => {
-                    if (isMobile) {
-                      setTimeout(() => {
-                        e.target.style.background = '#f8fafc';
-                        e.target.style.borderColor = '#e2e8f0';
-                      }, 150);
-                    }
-                  }}
-                >
-                  Cancel
-                </button>
-              </div>
             </div>
-          </Modal>
+          </AppModal>
         )}
 
         {/* Edit Modal */}
         {showEditModal && (
-          <Modal onClose={() => setShowEditModal(false)}>
-            <div>
-              <h3>Edit Visitor Times</h3>
-              <form onSubmit={handleEditSubmit}>
-                <label>
-                  Time In (HH:MM:SS):
-                  <input type="time" step="1" value={editTimeIn} onChange={(e) => setEditTimeIn(e.target.value)} required />
-                </label>
-                <br />
-                <label>
-                  Time Out (HH:MM:SS):
-                  <input type="time" step="1" value={editTimeOut} onChange={(e) => setEditTimeOut(e.target.value)} required />
-                </label>
-                <br />
-                <div className="common-modal-buttons">
-                  <button type="submit" className="common-button save">
-                    <svg className="button-icon" viewBox="0 0 24 24">
-                      <path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/>
-                    </svg>
-                    Save
-                  </button>
-                  <button type="button" className="common-button cancel" onClick={() => setShowEditModal(false)}>
-                    <svg className="button-icon" viewBox="0 0 24 24">
-                      <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
-                    </svg>
-                    Cancel
-                  </button>
-                </div>
-              </form>
-            </div>
-          </Modal>
+          <AppModal
+            open={showEditModal}
+            onClose={() => setShowEditModal(false)}
+            title="Edit Visitor Times"
+            subtitle="Adjust the time in / time out for this visitor"
+            tone="slate"
+            titleColor="#111827"
+            titleIcon={
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#4b5563" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            }
+            maxContentWidth={420}
+            actions={
+              <>
+                <button type="button" className="common-button cancel" onClick={() => setShowEditModal(false)}>
+                  <svg className="button-icon" viewBox="0 0 24 24">
+                    <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                  </svg>
+                  Cancel
+                </button>
+                <button type="submit" form="edit-times-form" className="common-button save">
+                  <svg className="button-icon" viewBox="0 0 24 24">
+                    <path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/>
+                  </svg>
+                  Save
+                </button>
+              </>
+            }
+          >
+            <form id="edit-times-form" onSubmit={handleEditSubmit}>
+              <label>
+                Time In (HH:MM:SS):
+                <input type="time" step="1" value={editTimeIn} onChange={(e) => setEditTimeIn(e.target.value)} required />
+              </label>
+              <br />
+              <label>
+                Time Out (HH:MM:SS):
+                <input type="time" step="1" value={editTimeOut} onChange={(e) => setEditTimeOut(e.target.value)} required />
+              </label>
+            </form>
+          </AppModal>
         )}
 
         {/* Success Confirmation Modal */}
-        {showSuccessModal && ReactDOM.createPortal(
-          <div className="common-modal" onClick={(e) => {
-            // Don't allow closing by clicking outside - must click OK
-            e.stopPropagation();
-          }} style={{ zIndex: 10000 }}>
-            <div className="common-modal-content" onClick={e => e.stopPropagation()} style={{
-              maxWidth: isMobile ? '95%' : '500px',
-              width: '100%',
-              padding: isMobile ? '20px' : '32px',
-              textAlign: 'center'
-            }}>
+        {showSuccessModal && (
+          <AppModal
+            open={showSuccessModal}
+            onClose={() => {}}
+            hideHeader
+            hideCloseButton
+            disableEscapeKeyDown
+            maxContentWidth={500}
+          >
+            <div style={{ textAlign: 'center' }}>
               {/* Success Icon */}
               <div style={{
                 width: isMobile ? '64px' : '80px',
@@ -2246,8 +2182,7 @@ const Dashboard = () => {
                 OK
               </button>
             </div>
-          </div>,
-          document.body
+          </AppModal>
         )}
 
       </main>

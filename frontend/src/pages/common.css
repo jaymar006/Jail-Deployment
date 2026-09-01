@@ -87,10 +87,10 @@ body {
   margin: 0;
 }
 
-/* Datas PDL table - fixed column widths so headers never get squeezed
-   regardless of how many rows (or how long the cell content) are shown */
+/* Datas PDL table - auto layout so hidden columns (column-visibility popup)
+   reflow correctly instead of misapplying fixed nth-child widths */
 .common-table.datas-table {
-  table-layout: fixed;
+  table-layout: auto;
   width: 100%;
   min-width: 0;
 }
@@ -108,64 +108,9 @@ body {
   word-break: break-word;
 }
 
-.common-table.datas-table thead th:nth-child(1),
-.common-table.datas-table tbody td:nth-child(1) {
+.common-table.datas-table thead th:first-child,
+.common-table.datas-table tbody td:first-child {
   width: 36px;
-}
-
-.common-table.datas-table thead th:nth-child(2),
-.common-table.datas-table tbody td:nth-child(2) {
-  width: 10%;
-}
-
-.common-table.datas-table thead th:nth-child(3),
-.common-table.datas-table tbody td:nth-child(3) {
-  width: 10%;
-}
-
-.common-table.datas-table thead th:nth-child(4),
-.common-table.datas-table tbody td:nth-child(4) {
-  width: 10%;
-}
-
-.common-table.datas-table thead th:nth-child(5),
-.common-table.datas-table tbody td:nth-child(5) {
-  width: 9%;
-}
-
-.common-table.datas-table thead th:nth-child(6),
-.common-table.datas-table tbody td:nth-child(6) {
-  width: 10%;
-}
-
-.common-table.datas-table thead th:nth-child(7),
-.common-table.datas-table tbody td:nth-child(7) {
-  width: 10%;
-}
-
-.common-table.datas-table thead th:nth-child(8),
-.common-table.datas-table tbody td:nth-child(8) {
-  width: 8%;
-}
-
-.common-table.datas-table thead th:nth-child(9),
-.common-table.datas-table tbody td:nth-child(9) {
-  width: 8%;
-}
-
-.common-table.datas-table thead th:nth-child(10),
-.common-table.datas-table tbody td:nth-child(10) {
-  width: 12%;
-}
-
-.common-table.datas-table thead th:nth-child(11),
-.common-table.datas-table tbody td:nth-child(11) {
-  width: 11%;
-}
-
-.common-table.datas-table thead th:nth-child(12),
-.common-table.datas-table tbody td:nth-child(12) {
-  width: 100px;
 }
 
 .common-table th,
@@ -1574,6 +1519,91 @@ tr:hover .common-button.grayscale {
 }
 .toolbar-icon-btn.spinning svg {
   animation: spin 0.8s linear infinite;
+}
+.toolbar-icon-btn.active {
+  background: #eff6ff;
+  border-color: #2563eb;
+  box-shadow: 0 2px 6px rgba(37,99,235,0.2);
+  color: #1d4ed8;
+}
+
+/* --- Column visibility popup --- */
+.colvis-panel {
+  position: absolute;
+  top: 100%;
+  margin-top: 4px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow: 0 6px 20px rgba(15,23,42,0.12);
+  z-index: 1050;
+  min-width: 210px;
+  overflow: hidden;
+}
+.colvis-panel-right {
+  right: 0;
+}
+.colvis-header {
+  padding: 9px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #6b7280;
+  border-bottom: 1px solid #f3f4f6;
+  background: #fafbfc;
+}
+.colvis-actions {
+  display: flex;
+  gap: 4px;
+  padding: 6px 8px;
+  border-bottom: 1px solid #f3f4f6;
+}
+.colvis-action {
+  flex: 1;
+  padding: 5px 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: #1d4ed8;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.colvis-action:hover {
+  background: #dbeafe;
+  border-color: #2563eb;
+}
+.colvis-list {
+  max-height: 260px;
+  overflow-y: auto;
+  padding: 6px;
+}
+.colvis-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+.colvis-item:hover {
+  background: #f3f4f6;
+}
+.colvis-item input[type='checkbox'] {
+  width: 15px;
+  height: 15px;
+  accent-color: #2563eb;
+  cursor: pointer;
+  flex-shrink: 0;
+  margin: 0;
+}
+.colvis-label {
+  font-size: 13px;
+  color: #374151;
+  font-weight: 500;
 }
 
 /* --- Quick view panel (slide-in from right) --- */
